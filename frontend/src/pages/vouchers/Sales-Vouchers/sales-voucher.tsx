@@ -1,7 +1,7 @@
-// src/pages/vouchers/Sales-Vouchers/sales-voucher.tsx
+// frontend/src/pages/vouchers/Sales-Vouchers/sales-voucher.tsx
 // Sales Voucher Page - Refactored using shared DRY logic
 import React, { useMemo, useState, useEffect } from 'react';
-import { Box, Button, TextField, Typography, Grid, IconButton, CircularProgress, Container, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Autocomplete, InputAdornment, Tooltip, Modal, Alert, Chip, Fab, FormControlLabel, Switch } from '@mui/material';
+import { Box, Button, TextField, Typography, Grid, IconButton, CircularProgress, Container, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Autocomplete, InputAdornment, Tooltip, Modal, Alert, Chip, Fab } from '@mui/material';
 import { Add, Remove, Visibility, Edit, CloudUpload, CheckCircle, Description } from '@mui/icons-material';
 import AddCustomerModal from '../../../components/AddCustomerModal';
 import AddProductModal from '../../../components/AddProductModal';
@@ -61,6 +61,7 @@ const SalesVoucherPage: React.FC = () => {
     fields,
     append,
     remove,
+    reset,
 
     // Data
     voucherList,
@@ -106,17 +107,6 @@ const SalesVoucherPage: React.FC = () => {
   const selectedCustomerId = watch('customer_id');
   const selectedCustomer = customerList?.find((c: any) => c.id === selectedCustomerId);
 
-  // Handle voucher click to load details
-  const handleVoucherClick = (voucher: any) => {
-    // Load the selected voucher into the form
-    setMode('view');
-    reset(voucher);
-    // Set the form with the voucher data
-    Object.keys(voucher).forEach(key => {
-      setValue(key, voucher[key]);
-    });
-  };
-
   // Enhanced customer options with "Add New"
   const enhancedCustomerOptions = [
     ...(customerList || []),
@@ -131,7 +121,6 @@ const SalesVoucherPage: React.FC = () => {
     append({
       product_id: null,
       product_name: '',
-      hsn_code: '',
       quantity: 1,
       unit_price: 0,
       discount_percentage: 0,
@@ -157,12 +146,27 @@ const SalesVoucherPage: React.FC = () => {
         if (confirm('Voucher created successfully. Generate PDF?')) {
           handleGeneratePDF(response.data);
         }
+        // Reset form and prepare for next entry
+        reset();
+        setMode('create');
+        // Fetch next voucher number
+        try {
+          const nextNumber = await voucherService.getNextVoucherNumber(config.nextNumberEndpoint);
+          setValue('voucher_number', nextNumber);
+          setValue('date', new Date().toISOString().split('T')[0]);
+        } catch (err) {
+          console.error('Failed to fetch next voucher number:', err);
+        }
       } else if (mode === 'edit') {
         response = await api.put('/sales-vouchers/' + data.id, data);
         if (confirm('Voucher updated successfully. Generate PDF?')) {
           handleGeneratePDF(response.data);
         }
       }
+      
+      // Refresh voucher list to show latest at top
+      await refreshMasterData();
+      
     } catch (error) {
       console.error('Error saving sales voucher:', error);
       alert('Failed to save sales voucher. Please try again.');
@@ -215,6 +219,49 @@ const SalesVoucherPage: React.FC = () => {
     }
   }, [mode, nextVoucherNumber, isLoading, setValue, config.nextNumberEndpoint]);
 
+  const handleVoucherClick = async (voucher: any) => {
+    try {
+      // Fetch complete voucher data including items
+      const response = await api.get(`/sales-vouchers/${voucher.id}`);
+      const fullVoucherData = response.data;
+      
+      // Load the complete voucher data into the form
+      setMode('view');
+      reset(fullVoucherData);
+    } catch (error) {
+      console.error('Error fetching voucher details:', error);
+      // Fallback to available data
+      setMode('view');
+      reset(voucher);
+    }
+  };
+  
+  // Enhanced handleEdit to fetch complete data
+  const handleEditWithData = async (voucher: any) => {
+    try {
+      const response = await api.get(`/sales-vouchers/${voucher.id}`);
+      const fullVoucherData = response.data;
+      setMode('edit');
+      reset(fullVoucherData);
+    } catch (error) {
+      console.error('Error fetching voucher details:', error);
+      handleEdit(voucher);
+    }
+  };
+  
+  // Enhanced handleView to fetch complete data
+  const handleViewWithData = async (voucher: any) => {
+    try {
+      const response = await api.get(`/sales-vouchers/${voucher.id}`);
+      const fullVoucherData = response.data;
+      setMode('view');
+      reset(fullVoucherData);
+    } catch (error) {
+      console.error('Error fetching voucher details:', error);
+      handleView(voucher);
+    }
+  };
+
   const indexContent = (
     <>
       {/* Voucher list table */}
@@ -222,29 +269,46 @@ const SalesVoucherPage: React.FC = () => {
         <Table stickyHeader size="small">
           <TableHead>
             <TableRow>
-              <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1 }}>Voucher No.</TableCell>
-              <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1 }}>Date</TableCell>
-              <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1 }}>Customer</TableCell>
-              <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1 }}>Amount</TableCell>
+              <TableCell align="center" sx={{ fontSize: 15, fontWeight: 'bold', p: 1 }}>Voucher No.</TableCell>
+              <TableCell align="center" sx={{ fontSize: 15, fontWeight: 'bold', p: 1 }}>Date</TableCell>
+              <TableCell align="center" sx={{ fontSize: 15, fontWeight: 'bold', p: 1 }}>Customer</TableCell>
+              <TableCell align="center" sx={{ fontSize: 15, fontWeight: 'bold', p: 1 }}>Amount</TableCell>
+              <TableCell align="right" sx={{ fontSize: 15, fontWeight: 'bold', p: 0, width: 40 }}></TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {latestVouchers.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} align="center">No sales vouchers available</TableCell>
+                <TableCell colSpan={5} align="center">No sales vouchers available</TableCell>
               </TableRow>
             ) : (
-              latestVouchers.map((voucher: any) => (
+              latestVouchers.slice(0, 5).map((voucher: any) => (
                 <TableRow 
                   key={voucher.id} 
                   hover 
-                  onContextMenu={(e) => handleContextMenu(e, voucher)}
-                  sx={{ cursor: 'context-menu' }}
+                  onContextMenu={(e) => { e.preventDefault(); handleContextMenu(e, voucher); }}
+                  sx={{ cursor: 'pointer' }}
                 >
-                  <TableCell sx={{ fontSize: 12, p: 1 }}>{voucher.voucher_number}</TableCell>
-                  <TableCell sx={{ fontSize: 12, p: 1 }}>{voucher.date}</TableCell>
-                  <TableCell sx={{ fontSize: 12, p: 1 }}>{voucher.customer?.name || 'N/A'}</TableCell>
-                  <TableCell sx={{ fontSize: 12, p: 1 }}>₹{voucher.total_amount?.toLocaleString() || '0'}</TableCell>
+                  <TableCell align="center" sx={{ fontSize: 12, p: 1 }} onClick={() => handleViewWithData(voucher)}>
+                    {voucher.voucher_number}
+                  </TableCell>
+                  <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>
+                    {voucher.date ? new Date(voucher.date).toLocaleDateString() : 'N/A'}
+                  </TableCell>
+                  <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>{customerList?.find((c: any) => c.id === voucher.customer_id)?.name || 'N/A'}</TableCell>
+                  <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>₹{voucher.total_amount?.toLocaleString() || '0'}</TableCell>
+                  <TableCell align="right" sx={{ fontSize: 12, p: 0 }}>
+                    <VoucherContextMenu
+                      voucher={voucher}
+                      voucherType="Sales Voucher"
+                      onView={() => handleViewWithData(voucher)}
+                      onEdit={() => handleEditWithData(voucher)}
+                      onDelete={() => handleDelete(voucher)}
+                      onPrint={() => handleGeneratePDF(voucher)}
+                      showKebab={true}
+                      onClose={() => {}}
+                    />
+                  </TableCell>
                 </TableRow>
               ))
             )}
@@ -356,27 +420,6 @@ const SalesVoucherPage: React.FC = () => {
             />
           </Grid>
 
-          {/* Shipping Toggle */}
-          <Grid size={12}>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={useDifferentShipping}
-                  onChange={(e) => setUseDifferentShipping(e.target.checked)}
-                  disabled={mode === 'view'}
-                />
-              }
-              label="Use different shipping address"
-            />
-          </Grid>
-
-          {/* Balance Display */}
-          {selectedCustomerId && (
-            <Grid size={12}>
-              <BalanceDisplay customerId={selectedCustomerId} />
-            </Grid>
-          )}
-
           <Grid size={12}>
             <TextField
               fullWidth
@@ -403,7 +446,6 @@ const SalesVoucherPage: React.FC = () => {
                 <TableHead>
                   <TableRow>
                     <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1, width: '30%' }}>Product</TableCell>
-                    <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1, textAlign: 'right' }}>HSN</TableCell>
                     <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1, textAlign: 'right' }}>Qty</TableCell>
                     <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1, textAlign: 'right' }}>Rate</TableCell>
                     <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1 }}>Disc%</TableCell>
@@ -424,7 +466,6 @@ const SalesVoucherPage: React.FC = () => {
                             onChange={(product) => {
                               setValue(`items.${index}.product_id`, product?.id || null);
                               setValue(`items.${index}.product_name`, product?.product_name || '');
-                              setValue(`items.${index}.hsn_code`, product?.hsn_code || '');
                               setValue(`items.${index}.unit_price`, product?.unit_price || 0);
                               setValue(`items.${index}.gst_rate`, product?.gst_rate || 18);
                               setValue(`items.${index}.unit`, product?.unit || '');
@@ -433,15 +474,6 @@ const SalesVoucherPage: React.FC = () => {
                             }}
                             disabled={mode === 'view'}
                             size="small"
-                          />
-                        </TableCell>
-                        <TableCell sx={{ p: 1, textAlign: 'right' }}>
-                          <TextField
-                            type="text"
-                            {...control.register(`items.${index}.hsn_code`)}
-                            disabled={mode === 'view'}
-                            size="small"
-                            sx={{ width: 80 }}
                           />
                         </TableCell>
                         <TableCell sx={{ p: 1, textAlign: 'right' }}>
@@ -481,7 +513,7 @@ const SalesVoucherPage: React.FC = () => {
                             value={watch(`items.${index}.gst_rate`) || 18}
                             onChange={(_, value) => setValue(`items.${index}.gst_rate`, value || 18)}
                             renderInput={(params) => (
-                              <TextField {...params} size="small" sx={{ width: 60 } } />
+                              <TextField {...params} size="small" sx={{ width: 60 }} />
                             )}
                             disabled={mode === 'view'}
                           />
@@ -503,7 +535,7 @@ const SalesVoucherPage: React.FC = () => {
                       </TableRow>
                       {/* Stock display below the row - only qty and unit */}
                       <TableRow>
-                        <TableCell colSpan={mode !== 'view' ? 8 : 7} sx={{ py: 0.5, pl: 2, bgcolor: 'action.hover' }}>
+                        <TableCell colSpan={mode !== 'view' ? 7 : 6} sx={{ py: 0.5, pl: 2, bgcolor: 'action.hover' }}>
                           {stockLoading[index] ? (
                             <CircularProgress size={12} />
                           ) : watch(`items.${index}.product_id`) ? (
@@ -617,7 +649,21 @@ const SalesVoucherPage: React.FC = () => {
         voucherType={config.voucherTitle}
         indexContent={indexContent}
         formContent={formContent}
-        onShowAll={handleModalOpen}
+        onShowAll={() => setShowVoucherListModal(true)}
+        modalContent={
+          <VoucherListModal
+            open={showVoucherListModal}
+            onClose={() => setShowVoucherListModal(false)}
+            voucherType="Sales Vouchers"
+            vouchers={sortedVouchers || []}
+            onVoucherClick={handleVoucherClick}
+            onEdit={handleEditWithData}
+            onView={handleViewWithData}
+            onDelete={handleDelete}
+            onGeneratePDF={handleGeneratePDF}
+            customerList={customerList}
+          />
+        }
       />
 
       {/* Modals */}
@@ -647,23 +693,10 @@ const SalesVoucherPage: React.FC = () => {
       <VoucherContextMenu
         contextMenu={contextMenu}
         onClose={handleCloseContextMenu}
-        onEdit={handleEdit}
-        onView={handleView}
+        onEdit={handleEditWithData}
+        onView={handleViewWithData}
         onDelete={handleDelete}
-      />
-
-      {/* Voucher List Modal */}
-      <VoucherListModal
-        open={showFullModal}
-        onClose={handleModalClose}
-        voucherType="Sales Vouchers"
-        vouchers={sortedVouchers || []}
-        onVoucherClick={handleVoucherClick}
-        onEdit={handleEdit}
-        onView={handleView}
-        onDelete={handleDelete}
-        onGeneratePDF={handleGeneratePDF}
-        customerList={customerList}
+        onPrint={handleGeneratePDF}
       />
     </>
   );

@@ -1,91 +1,107 @@
 # app/api/v1/vouchers/purchase_order.py
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
-from typing import List
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Query
+from sqlalchemy.orm import Session, joinedload
+from typing import List, Optional
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
 from app.models.base import User
 from app.models.vouchers import PurchaseOrder
 from app.schemas.vouchers import PurchaseOrderCreate, PurchaseOrderInDB, PurchaseOrderUpdate
+from app.services.email_service import send_voucher_email
 from app.services.voucher_service import VoucherNumberService
 import logging
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["purchase-orders"])
 
+@router.get("", response_model=List[PurchaseOrderInDB])  # Added to handle without trailing /
 @router.get("/", response_model=List[PurchaseOrderInDB])
 async def get_purchase_orders(
-    skip: int = 0,
-    limit: int = 100,
-    status: str = None,
+    skip: int = Query(0, ge=0, description="Number of records to skip (for pagination)"),
+    limit: int = Query(100, ge=1, le=500, description="Maximum number of records to return"),
+    status: Optional[str] = Query(None, description="Optional filter by voucher status (e.g., 'draft', 'approved')"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    query = db.query(PurchaseOrder).filter(
+    """Get all purchase orders"""
+    query = db.query(PurchaseOrder).options(joinedload(PurchaseOrder.vendor)).filter(
         PurchaseOrder.organization_id == current_user.organization_id
     )
     
     if status:
         query = query.filter(PurchaseOrder.status == status)
     
-    orders = query.offset(skip).limit(limit).all()
-    return orders
+    invoices = query.offset(skip).limit(limit).all()
+    return invoices
 
 @router.get("/next-number", response_model=str)
 async def get_next_purchase_order_number(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    """Get the next available purchase order number"""
     return VoucherNumberService.generate_voucher_number(
         db, "PO", current_user.organization_id, PurchaseOrder
     )
 
+# Register both "" and "/" for POST to support both /api/v1/purchase-orders and /api/v1/purchase-orders/
+@router.post("", response_model=PurchaseOrderInDB, include_in_schema=False)
 @router.post("/", response_model=PurchaseOrderInDB)
 async def create_purchase_order(
-    order: PurchaseOrderCreate,
+    invoice: PurchaseOrderCreate,
+    background_tasks: BackgroundTasks,
+    send_email: bool = False,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    """Create new purchase order"""
     try:
-        order_data = order.dict(exclude={'items'})
-        order_data['created_by'] = current_user.id
-        order_data['organization_id'] = current_user.organization_id
+        invoice_data = invoice.dict(exclude={'items'})
+        invoice_data['created_by'] = current_user.id
+        invoice_data['organization_id'] = current_user.organization_id
         
         # Generate unique voucher number if not provided or blank
-        if not order_data.get('voucher_number') or order_data['voucher_number'] == '':
-            order_data['voucher_number'] = VoucherNumberService.generate_voucher_number(
+        if not invoice_data.get('voucher_number') or invoice_data['voucher_number'] == '':
+            invoice_data['voucher_number'] = VoucherNumberService.generate_voucher_number(
                 db, "PO", current_user.organization_id, PurchaseOrder
             )
         else:
             existing = db.query(PurchaseOrder).filter(
                 PurchaseOrder.organization_id == current_user.organization_id,
-                PurchaseOrder.voucher_number == order_data['voucher_number']
+                PurchaseOrder.voucher_number == invoice_data['voucher_number']
             ).first()
             if existing:
-                order_data['voucher_number'] = VoucherNumberService.generate_voucher_number(
+                invoice_data['voucher_number'] = VoucherNumberService.generate_voucher_number(
                     db, "PO", current_user.organization_id, PurchaseOrder
                 )
         
-        db_order = PurchaseOrder(**order_data)
-        db.add(db_order)
+        db_invoice = PurchaseOrder(**invoice_data)
+        db.add(db_invoice)
         db.flush()
         
-        for item_data in order.items:
+        for item_data in invoice.items:
             from app.models.vouchers import PurchaseOrderItem
             item = PurchaseOrderItem(
-                purchase_order_id=db_order.id,
-                delivered_quantity=0.0,
-                pending_quantity=item_data.quantity,
+                purchase_order_id=db_invoice.id,
                 **item_data.dict()
             )
             db.add(item)
         
         db.commit()
-        db.refresh(db_order)
+        db.refresh(db_invoice)
         
-        logger.info(f"Purchase order {db_order.voucher_number} created by {current_user.email}")
-        return db_order
+        if send_email and db_invoice.vendor and db_invoice.vendor.email:
+            background_tasks.add_task(
+                send_voucher_email,
+                voucher_type="purchase_order",
+                voucher_id=db_invoice.id,
+                recipient_email=db_invoice.vendor.email,
+                recipient_name=db_invoice.vendor.name
+            )
+        
+        logger.info(f"Purchase order {db_invoice.voucher_number} created by {current_user.email}")
+        return db_invoice
         
     except Exception as e:
         db.rollback()
@@ -95,65 +111,60 @@ async def create_purchase_order(
             detail="Failed to create purchase order"
         )
 
-@router.get("/{order_id}", response_model=PurchaseOrderInDB)
+@router.get("/{invoice_id}", response_model=PurchaseOrderInDB)
 async def get_purchase_order(
-    order_id: int,
+    invoice_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    order = db.query(PurchaseOrder).filter(
-        PurchaseOrder.id == order_id,
+    invoice = db.query(PurchaseOrder).options(joinedload(PurchaseOrder.vendor)).filter(
+        PurchaseOrder.id == invoice_id,
         PurchaseOrder.organization_id == current_user.organization_id
     ).first()
-    if not order:
+    if not invoice:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Purchase order not found"
         )
-    return order
+    return invoice
 
-@router.put("/{order_id}", response_model=PurchaseOrderInDB)
+@router.put("/{invoice_id}", response_model=PurchaseOrderInDB)
 async def update_purchase_order(
-    order_id: int,
-    order_update: PurchaseOrderUpdate,
+    invoice_id: int,
+    invoice_update: PurchaseOrderUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     try:
-        order = db.query(PurchaseOrder).filter(
-            PurchaseOrder.id == order_id,
+        invoice = db.query(PurchaseOrder).filter(
+            PurchaseOrder.id == invoice_id,
             PurchaseOrder.organization_id == current_user.organization_id
         ).first()
-        if not order:
+        if not invoice:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Purchase order not found"
             )
         
-        update_data = order_update.dict(exclude_unset=True, exclude={'items'})
+        update_data = invoice_update.dict(exclude_unset=True, exclude={'items'})
         for field, value in update_data.items():
-            setattr(order, field, value)
+            setattr(invoice, field, value)
         
-        if order_update.items is not None:
+        if invoice_update.items is not None:
             from app.models.vouchers import PurchaseOrderItem
-            db.query(PurchaseOrderItem).filter(
-                PurchaseOrderItem.purchase_order_id == order_id
-            ).delete()
-            
-            for item_data in order_update.items:
+            db.query(PurchaseOrderItem).filter(PurchaseOrderItem.purchase_order_id == invoice_id).delete()
+            for item_data in invoice_update.items:
                 item = PurchaseOrderItem(
-                    purchase_order_id=order_id,
-                    delivered_quantity=0.0,
-                    pending_quantity=item_data.quantity,
+                    purchase_order_id=invoice_id,
                     **item_data.dict()
                 )
                 db.add(item)
         
         db.commit()
-        db.refresh(order)
+        db.refresh(invoice)
         
-        logger.info(f"Purchase order {order.voucher_number} updated by {current_user.email}")
-        return order
+        logger.info(f"Purchase order {invoice.voucher_number} updated by {current_user.email}")
+        return invoice
         
     except Exception as e:
         db.rollback()
@@ -163,32 +174,30 @@ async def update_purchase_order(
             detail="Failed to update purchase order"
         )
 
-@router.delete("/{order_id}")
+@router.delete("/{invoice_id}")
 async def delete_purchase_order(
-    order_id: int,
+    invoice_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     try:
-        order = db.query(PurchaseOrder).filter(
-            PurchaseOrder.id == order_id,
+        invoice = db.query(PurchaseOrder).filter(
+            PurchaseOrder.id == invoice_id,
             PurchaseOrder.organization_id == current_user.organization_id
         ).first()
-        if not order:
+        if not invoice:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Purchase order not found"
             )
         
         from app.models.vouchers import PurchaseOrderItem
-        db.query(PurchaseOrderItem).filter(
-            PurchaseOrderItem.purchase_order_id == order_id
-        ).delete()
+        db.query(PurchaseOrderItem).filter(PurchaseOrderItem.purchase_order_id == invoice_id).delete()
         
-        db.delete(order)
+        db.delete(invoice)
         db.commit()
         
-        logger.info(f"Purchase order {order.voucher_number} deleted by {current_user.email}")
+        logger.info(f"Purchase order {invoice.voucher_number} deleted by {current_user.email}")
         return {"message": "Purchase order deleted successfully"}
         
     except Exception as e:

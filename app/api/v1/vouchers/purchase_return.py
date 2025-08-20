@@ -1,8 +1,8 @@
 # app/api/v1/vouchers/purchase_return.py
 
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
-from sqlalchemy.orm import Session
-from typing import List
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Query
+from sqlalchemy.orm import Session, joinedload
+from typing import List, Optional
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
 from app.models.base import User
@@ -15,87 +15,93 @@ import logging
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["purchase-returns"])
 
+@router.get("", response_model=List[PurchaseReturnInDB])  # Added to handle without trailing /
 @router.get("/", response_model=List[PurchaseReturnInDB])
 async def get_purchase_returns(
-    skip: int = 0,
-    limit: int = 100,
-    status: str = None,
+    skip: int = Query(0, ge=0, description="Number of records to skip (for pagination)"),
+    limit: int = Query(100, ge=1, le=500, description="Maximum number of records to return"),
+    status: Optional[str] = Query(None, description="Optional filter by voucher status (e.g., 'draft', 'approved')"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    query = db.query(PurchaseReturn).filter(
+    """Get all purchase returns"""
+    query = db.query(PurchaseReturn).options(joinedload(PurchaseReturn.vendor)).filter(
         PurchaseReturn.organization_id == current_user.organization_id
     )
     
     if status:
         query = query.filter(PurchaseReturn.status == status)
     
-    returns = query.offset(skip).limit(limit).all()
-    return returns
+    invoices = query.offset(skip).limit(limit).all()
+    return invoices
 
 @router.get("/next-number", response_model=str)
 async def get_next_purchase_return_number(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    """Get the next available purchase return number"""
     return VoucherNumberService.generate_voucher_number(
         db, "PR", current_user.organization_id, PurchaseReturn
     )
 
+# Register both "" and "/" for POST to support both /api/v1/purchase-returns and /api/v1/purchase-returns/
+@router.post("", response_model=PurchaseReturnInDB, include_in_schema=False)
 @router.post("/", response_model=PurchaseReturnInDB)
 async def create_purchase_return(
-    return_data: PurchaseReturnCreate,
+    invoice: PurchaseReturnCreate,
     background_tasks: BackgroundTasks,
     send_email: bool = False,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    """Create new purchase return"""
     try:
-        data = return_data.dict(exclude={'items'})
-        data['created_by'] = current_user.id
-        data['organization_id'] = current_user.organization_id
+        invoice_data = invoice.dict(exclude={'items'})
+        invoice_data['created_by'] = current_user.id
+        invoice_data['organization_id'] = current_user.organization_id
         
         # Generate unique voucher number if not provided or blank
-        if not data.get('voucher_number') or data['voucher_number'] == '':
-            data['voucher_number'] = VoucherNumberService.generate_voucher_number(
+        if not invoice_data.get('voucher_number') or invoice_data['voucher_number'] == '':
+            invoice_data['voucher_number'] = VoucherNumberService.generate_voucher_number(
                 db, "PR", current_user.organization_id, PurchaseReturn
             )
         else:
             existing = db.query(PurchaseReturn).filter(
                 PurchaseReturn.organization_id == current_user.organization_id,
-                PurchaseReturn.voucher_number == data['voucher_number']
+                PurchaseReturn.voucher_number == invoice_data['voucher_number']
             ).first()
             if existing:
-                data['voucher_number'] = VoucherNumberService.generate_voucher_number(
+                invoice_data['voucher_number'] = VoucherNumberService.generate_voucher_number(
                     db, "PR", current_user.organization_id, PurchaseReturn
                 )
         
-        db_return = PurchaseReturn(**data)
-        db.add(db_return)
+        db_invoice = PurchaseReturn(**invoice_data)
+        db.add(db_invoice)
         db.flush()
         
-        for item_data in return_data.items:
+        for item_data in invoice.items:
             from app.models.vouchers import PurchaseReturnItem
             item = PurchaseReturnItem(
-                purchase_return_id=db_return.id,
+                purchase_return_id=db_invoice.id,
                 **item_data.dict()
             )
             db.add(item)
         
         db.commit()
-        db.refresh(db_return)
+        db.refresh(db_invoice)
         
-        if send_email and db_return.vendor and db_return.vendor.email:
+        if send_email and db_invoice.vendor and db_invoice.vendor.email:
             background_tasks.add_task(
                 send_voucher_email,
                 voucher_type="purchase_return",
-                voucher_id=db_return.id,
-                recipient_email=db_return.vendor.email,
-                recipient_name=db_return.vendor.name
+                voucher_id=db_invoice.id,
+                recipient_email=db_invoice.vendor.email,
+                recipient_name=db_invoice.vendor.name
             )
         
-        logger.info(f"Purchase return {db_return.voucher_number} created by {current_user.email}")
-        return db_return
+        logger.info(f"Purchase return {db_invoice.voucher_number} created by {current_user.email}")
+        return db_invoice
         
     except Exception as e:
         db.rollback()
@@ -105,60 +111,60 @@ async def create_purchase_return(
             detail="Failed to create purchase return"
         )
 
-@router.get("/{return_id}", response_model=PurchaseReturnInDB)
+@router.get("/{invoice_id}", response_model=PurchaseReturnInDB)
 async def get_purchase_return(
-    return_id: int,
+    invoice_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    return_ = db.query(PurchaseReturn).filter(
-        PurchaseReturn.id == return_id,
+    invoice = db.query(PurchaseReturn).options(joinedload(PurchaseReturn.vendor)).filter(
+        PurchaseReturn.id == invoice_id,
         PurchaseReturn.organization_id == current_user.organization_id
     ).first()
-    if not return_:
+    if not invoice:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Purchase return not found"
         )
-    return return_
+    return invoice
 
-@router.put("/{return_id}", response_model=PurchaseReturnInDB)
+@router.put("/{invoice_id}", response_model=PurchaseReturnInDB)
 async def update_purchase_return(
-    return_id: int,
-    return_update: PurchaseReturnUpdate,
+    invoice_id: int,
+    invoice_update: PurchaseReturnUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     try:
-        return_ = db.query(PurchaseReturn).filter(
-            PurchaseReturn.id == return_id,
+        invoice = db.query(PurchaseReturn).filter(
+            PurchaseReturn.id == invoice_id,
             PurchaseReturn.organization_id == current_user.organization_id
         ).first()
-        if not return_:
+        if not invoice:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Purchase return not found"
             )
         
-        update_data = return_update.dict(exclude_unset=True, exclude={'items'})
+        update_data = invoice_update.dict(exclude_unset=True, exclude={'items'})
         for field, value in update_data.items():
-            setattr(return_, field, value)
+            setattr(invoice, field, value)
         
-        if return_update.items is not None:
+        if invoice_update.items is not None:
             from app.models.vouchers import PurchaseReturnItem
-            db.query(PurchaseReturnItem).filter(PurchaseReturnItem.purchase_return_id == return_id).delete()
-            for item_data in return_update.items:
+            db.query(PurchaseReturnItem).filter(PurchaseReturnItem.purchase_return_id == invoice_id).delete()
+            for item_data in invoice_update.items:
                 item = PurchaseReturnItem(
-                    purchase_return_id=return_id,
+                    purchase_return_id=invoice_id,
                     **item_data.dict()
                 )
                 db.add(item)
         
         db.commit()
-        db.refresh(return_)
+        db.refresh(invoice)
         
-        logger.info(f"Purchase return {return_.voucher_number} updated by {current_user.email}")
-        return return_
+        logger.info(f"Purchase return {invoice.voucher_number} updated by {current_user.email}")
+        return invoice
         
     except Exception as e:
         db.rollback()
@@ -168,30 +174,30 @@ async def update_purchase_return(
             detail="Failed to update purchase return"
         )
 
-@router.delete("/{return_id}")
+@router.delete("/{invoice_id}")
 async def delete_purchase_return(
-    return_id: int,
+    invoice_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     try:
-        return_ = db.query(PurchaseReturn).filter(
-            PurchaseReturn.id == return_id,
+        invoice = db.query(PurchaseReturn).filter(
+            PurchaseReturn.id == invoice_id,
             PurchaseReturn.organization_id == current_user.organization_id
         ).first()
-        if not return_:
+        if not invoice:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Purchase return not found"
             )
         
         from app.models.vouchers import PurchaseReturnItem
-        db.query(PurchaseReturnItem).filter(PurchaseReturnItem.purchase_return_id == return_id).delete()
+        db.query(PurchaseReturnItem).filter(PurchaseReturnItem.purchase_return_id == invoice_id).delete()
         
-        db.delete(return_)
+        db.delete(invoice)
         db.commit()
         
-        logger.info(f"Purchase return {return_.voucher_number} deleted by {current_user.email}")
+        logger.info(f"Purchase return {invoice.voucher_number} deleted by {current_user.email}")
         return {"message": "Purchase return deleted successfully"}
         
     except Exception as e:

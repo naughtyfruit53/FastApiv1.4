@@ -1,8 +1,8 @@
 # app/api/v1/vouchers/sales_return.py
 
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Query
 from sqlalchemy.orm import Session, joinedload
-from typing import List, Optional  # Add Optional import
+from typing import List, Optional
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
 from app.models.base import User
@@ -15,11 +15,12 @@ import logging
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["sales-returns"])
 
+@router.get("", response_model=List[SalesReturnInDB])  # Added to handle without trailing /
 @router.get("/", response_model=List[SalesReturnInDB])
 async def get_sales_returns(
-    skip: int = 0,
-    limit: int = 100,
-    status: Optional[str] = None,  # Change to Optional[str]
+    skip: int = Query(0, ge=0, description="Number of records to skip (for pagination)"),
+    limit: int = Query(100, ge=1, le=500, description="Maximum number of records to return"),
+    status: Optional[str] = Query(None, description="Optional filter by voucher status (e.g., 'draft', 'approved')"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
@@ -31,8 +32,8 @@ async def get_sales_returns(
     if status:
         query = query.filter(SalesReturn.status == status)
     
-    returns = query.offset(skip).limit(limit).all()
-    return returns
+    invoices = query.offset(skip).limit(limit).all()
+    return invoices
 
 @router.get("/next-number", response_model=str)
 async def get_next_sales_return_number(
@@ -48,7 +49,7 @@ async def get_next_sales_return_number(
 @router.post("", response_model=SalesReturnInDB, include_in_schema=False)
 @router.post("/", response_model=SalesReturnInDB)
 async def create_sales_return(
-    return_data: SalesReturnCreate,
+    invoice: SalesReturnCreate,
     background_tasks: BackgroundTasks,
     send_email: bool = False,
     db: Session = Depends(get_db),
@@ -56,51 +57,51 @@ async def create_sales_return(
 ):
     """Create new sales return"""
     try:
-        data = return_data.dict(exclude={'items'})
-        data['created_by'] = current_user.id
-        data['organization_id'] = current_user.organization_id
+        invoice_data = invoice.dict(exclude={'items'})
+        invoice_data['created_by'] = current_user.id
+        invoice_data['organization_id'] = current_user.organization_id
         
         # Generate unique voucher number if not provided or blank
-        if not data.get('voucher_number') or data['voucher_number'] == '':
-            data['voucher_number'] = VoucherNumberService.generate_voucher_number(
+        if not invoice_data.get('voucher_number') or invoice_data['voucher_number'] == '':
+            invoice_data['voucher_number'] = VoucherNumberService.generate_voucher_number(
                 db, "SR", current_user.organization_id, SalesReturn
             )
         else:
             existing = db.query(SalesReturn).filter(
                 SalesReturn.organization_id == current_user.organization_id,
-                SalesReturn.voucher_number == data['voucher_number']
+                SalesReturn.voucher_number == invoice_data['voucher_number']
             ).first()
             if existing:
-                data['voucher_number'] = VoucherNumberService.generate_voucher_number(
+                invoice_data['voucher_number'] = VoucherNumberService.generate_voucher_number(
                     db, "SR", current_user.organization_id, SalesReturn
                 )
         
-        db_return = SalesReturn(**data)
-        db.add(db_return)
+        db_invoice = SalesReturn(**invoice_data)
+        db.add(db_invoice)
         db.flush()
         
-        for item_data in return_data.items:
+        for item_data in invoice.items:
             from app.models.vouchers import SalesReturnItem
             item = SalesReturnItem(
-                sales_return_id=db_return.id,
+                sales_return_id=db_invoice.id,
                 **item_data.dict()
             )
             db.add(item)
         
         db.commit()
-        db.refresh(db_return)
+        db.refresh(db_invoice)
         
-        if send_email and db_return.customer and db_return.customer.email:
+        if send_email and db_invoice.customer and db_invoice.customer.email:
             background_tasks.add_task(
                 send_voucher_email,
                 voucher_type="sales_return",
-                voucher_id=db_return.id,
-                recipient_email=db_return.customer.email,
-                recipient_name=db_return.customer.name
+                voucher_id=db_invoice.id,
+                recipient_email=db_invoice.customer.email,
+                recipient_name=db_invoice.customer.name
             )
         
-        logger.info(f"Sales return {db_return.voucher_number} created by {current_user.email}")
-        return db_return
+        logger.info(f"Sales return {db_invoice.voucher_number} created by {current_user.email}")
+        return db_invoice
         
     except Exception as e:
         db.rollback()
@@ -110,62 +111,60 @@ async def create_sales_return(
             detail="Failed to create sales return"
         )
 
-@router.get("/{return_id}", response_model=SalesReturnInDB)
+@router.get("/{invoice_id}", response_model=SalesReturnInDB)
 async def get_sales_return(
-    return_id: int,
+    invoice_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """Get sales return by ID"""
-    return_ = db.query(SalesReturn).options(joinedload(SalesReturn.customer)).filter(
-        SalesReturn.id == return_id,
+    invoice = db.query(SalesReturn).options(joinedload(SalesReturn.customer)).filter(
+        SalesReturn.id == invoice_id,
         SalesReturn.organization_id == current_user.organization_id
     ).first()
-    if not return_:
+    if not invoice:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Sales return not found"
         )
-    return return_
+    return invoice
 
-@router.put("/{return_id}", response_model=SalesReturnInDB)
+@router.put("/{invoice_id}", response_model=SalesReturnInDB)
 async def update_sales_return(
-    return_id: int,
-    return_update: SalesReturnUpdate,
+    invoice_id: int,
+    invoice_update: SalesReturnUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """Update sales return"""
     try:
-        return_ = db.query(SalesReturn).filter(
-            SalesReturn.id == return_id,
+        invoice = db.query(SalesReturn).filter(
+            SalesReturn.id == invoice_id,
             SalesReturn.organization_id == current_user.organization_id
         ).first()
-        if not return_:
+        if not invoice:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Sales return not found"
             )
         
-        update_data = return_update.dict(exclude_unset=True, exclude={'items'})
+        update_data = invoice_update.dict(exclude_unset=True, exclude={'items'})
         for field, value in update_data.items():
-            setattr(return_, field, value)
+            setattr(invoice, field, value)
         
-        if return_update.items is not None:
+        if invoice_update.items is not None:
             from app.models.vouchers import SalesReturnItem
-            db.query(SalesReturnItem).filter(SalesReturnItem.sales_return_id == return_id).delete()
-            for item_data in return_update.items:
+            db.query(SalesReturnItem).filter(SalesReturnItem.sales_return_id == invoice_id).delete()
+            for item_data in invoice_update.items:
                 item = SalesReturnItem(
-                    sales_return_id=return_id,
+                    sales_return_id=invoice_id,
                     **item_data.dict()
                 )
                 db.add(item)
         
         db.commit()
-        db.refresh(return_)
+        db.refresh(invoice)
         
-        logger.info(f"Sales return {return_.voucher_number} updated by {current_user.email}")
-        return return_
+        logger.info(f"Sales return {invoice.voucher_number} updated by {current_user.email}")
+        return invoice
         
     except Exception as e:
         db.rollback()
@@ -175,31 +174,30 @@ async def update_sales_return(
             detail="Failed to update sales return"
         )
 
-@router.delete("/{return_id}")
+@router.delete("/{invoice_id}")
 async def delete_sales_return(
-    return_id: int,
+    invoice_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """Delete sales return"""
     try:
-        return_ = db.query(SalesReturn).filter(
-            SalesReturn.id == return_id,
+        invoice = db.query(SalesReturn).filter(
+            SalesReturn.id == invoice_id,
             SalesReturn.organization_id == current_user.organization_id
         ).first()
-        if not return_:
+        if not invoice:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Sales return not found"
             )
         
         from app.models.vouchers import SalesReturnItem
-        db.query(SalesReturnItem).filter(SalesReturnItem.sales_return_id == return_id).delete()
+        db.query(SalesReturnItem).filter(SalesReturnItem.sales_return_id == invoice_id).delete()
         
-        db.delete(return_)
+        db.delete(invoice)
         db.commit()
         
-        logger.info(f"Sales return {return_.voucher_number} deleted by {current_user.email}")
+        logger.info(f"Sales return {invoice.voucher_number} deleted by {current_user.email}")
         return {"message": "Sales return deleted successfully"}
         
     except Exception as e:

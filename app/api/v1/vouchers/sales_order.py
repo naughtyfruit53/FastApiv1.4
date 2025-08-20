@@ -1,8 +1,8 @@
 # app/api/v1/vouchers/sales_order.py
 
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Query
 from sqlalchemy.orm import Session, joinedload
-from typing import List, Optional  # Add Optional import
+from typing import List, Optional
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
 from app.models.base import User
@@ -15,11 +15,12 @@ import logging
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["sales-orders"])
 
+@router.get("", response_model=List[SalesOrderInDB])  # Added to handle without trailing /
 @router.get("/", response_model=List[SalesOrderInDB])
 async def get_sales_orders(
-    skip: int = 0,
-    limit: int = 100,
-    status: Optional[str] = None,  # Change to Optional[str]
+    skip: int = Query(0, ge=0, description="Number of records to skip (for pagination)"),
+    limit: int = Query(100, ge=1, le=500, description="Maximum number of records to return"),
+    status: Optional[str] = Query(None, description="Optional filter by voucher status (e.g., 'draft', 'approved')"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
@@ -31,8 +32,8 @@ async def get_sales_orders(
     if status:
         query = query.filter(SalesOrder.status == status)
     
-    orders = query.offset(skip).limit(limit).all()
-    return orders
+    invoices = query.offset(skip).limit(limit).all()
+    return invoices
 
 @router.get("/next-number", response_model=str)
 async def get_next_sales_order_number(
@@ -48,7 +49,7 @@ async def get_next_sales_order_number(
 @router.post("", response_model=SalesOrderInDB, include_in_schema=False)
 @router.post("/", response_model=SalesOrderInDB)
 async def create_sales_order(
-    order: SalesOrderCreate,
+    invoice: SalesOrderCreate,
     background_tasks: BackgroundTasks,
     send_email: bool = False,
     db: Session = Depends(get_db),
@@ -56,51 +57,51 @@ async def create_sales_order(
 ):
     """Create new sales order"""
     try:
-        order_data = order.dict(exclude={'items'})
-        order_data['created_by'] = current_user.id
-        order_data['organization_id'] = current_user.organization_id
+        invoice_data = invoice.dict(exclude={'items'})
+        invoice_data['created_by'] = current_user.id
+        invoice_data['organization_id'] = current_user.organization_id
         
         # Generate unique voucher number if not provided or blank
-        if not order_data.get('voucher_number') or order_data['voucher_number'] == '':
-            order_data['voucher_number'] = VoucherNumberService.generate_voucher_number(
+        if not invoice_data.get('voucher_number') or invoice_data['voucher_number'] == '':
+            invoice_data['voucher_number'] = VoucherNumberService.generate_voucher_number(
                 db, "SO", current_user.organization_id, SalesOrder
             )
         else:
             existing = db.query(SalesOrder).filter(
                 SalesOrder.organization_id == current_user.organization_id,
-                SalesOrder.voucher_number == order_data['voucher_number']
+                SalesOrder.voucher_number == invoice_data['voucher_number']
             ).first()
             if existing:
-                order_data['voucher_number'] = VoucherNumberService.generate_voucher_number(
+                invoice_data['voucher_number'] = VoucherNumberService.generate_voucher_number(
                     db, "SO", current_user.organization_id, SalesOrder
                 )
         
-        db_order = SalesOrder(**order_data)
-        db.add(db_order)
+        db_invoice = SalesOrder(**invoice_data)
+        db.add(db_invoice)
         db.flush()
         
-        for item_data in order.items:
+        for item_data in invoice.items:
             from app.models.vouchers import SalesOrderItem
             item = SalesOrderItem(
-                sales_order_id=db_order.id,
+                sales_order_id=db_invoice.id,
                 **item_data.dict()
             )
             db.add(item)
         
         db.commit()
-        db.refresh(db_order)
+        db.refresh(db_invoice)
         
-        if send_email and db_order.customer and db_order.customer.email:
+        if send_email and db_invoice.customer and db_invoice.customer.email:
             background_tasks.add_task(
                 send_voucher_email,
                 voucher_type="sales_order",
-                voucher_id=db_order.id,
-                recipient_email=db_order.customer.email,
-                recipient_name=db_order.customer.name
+                voucher_id=db_invoice.id,
+                recipient_email=db_invoice.customer.email,
+                recipient_name=db_invoice.customer.name
             )
         
-        logger.info(f"Sales order {db_order.voucher_number} created by {current_user.email}")
-        return db_order
+        logger.info(f"Sales order {db_invoice.voucher_number} created by {current_user.email}")
+        return db_invoice
         
     except Exception as e:
         db.rollback()
@@ -110,65 +111,60 @@ async def create_sales_order(
             detail="Failed to create sales order"
         )
 
-@router.get("/{order_id}", response_model=SalesOrderInDB)
+@router.get("/{invoice_id}", response_model=SalesOrderInDB)
 async def get_sales_order(
-    order_id: int,
+    invoice_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """Get sales order by ID"""
-    order = db.query(SalesOrder).options(joinedload(SalesOrder.customer)).filter(
-        SalesOrder.id == order_id,
+    invoice = db.query(SalesOrder).options(joinedload(SalesOrder.customer)).filter(
+        SalesOrder.id == invoice_id,
         SalesOrder.organization_id == current_user.organization_id
     ).first()
-    if not order:
+    if not invoice:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Sales order not found"
         )
-    return order
+    return invoice
 
-@router.put("/{order_id}", response_model=SalesOrderInDB)
+@router.put("/{invoice_id}", response_model=SalesOrderInDB)
 async def update_sales_order(
-    order_id: int,
-    order_update: SalesOrderUpdate,
+    invoice_id: int,
+    invoice_update: SalesOrderUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """Update sales order"""
     try:
-        order = db.query(SalesOrder).filter(
-            SalesOrder.id == order_id,
+        invoice = db.query(SalesOrder).filter(
+            SalesOrder.id == invoice_id,
             SalesOrder.organization_id == current_user.organization_id
         ).first()
-        if not order:
+        if not invoice:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Sales order not found"
             )
         
-        update_data = order_update.dict(exclude_unset=True, exclude={'items'})
+        update_data = invoice_update.dict(exclude_unset=True, exclude={'items'})
         for field, value in update_data.items():
-            setattr(order, field, value)
+            setattr(invoice, field, value)
         
-        if order_update.items is not None:
+        if invoice_update.items is not None:
             from app.models.vouchers import SalesOrderItem
-            db.query(SalesOrderItem).filter(
-                SalesOrderItem.sales_order_id == order_id
-            ).delete()
-            
-            for item_data in order_update.items:
+            db.query(SalesOrderItem).filter(SalesOrderItem.sales_order_id == invoice_id).delete()
+            for item_data in invoice_update.items:
                 item = SalesOrderItem(
-                    sales_order_id=order_id,
+                    sales_order_id=invoice_id,
                     **item_data.dict()
                 )
                 db.add(item)
         
         db.commit()
-        db.refresh(order)
+        db.refresh(invoice)
         
-        logger.info(f"Sales order {order.voucher_number} updated by {current_user.email}")
-        return order
+        logger.info(f"Sales order {invoice.voucher_number} updated by {current_user.email}")
+        return invoice
         
     except Exception as e:
         db.rollback()
@@ -178,33 +174,30 @@ async def update_sales_order(
             detail="Failed to update sales order"
         )
 
-@router.delete("/{order_id}")
+@router.delete("/{invoice_id}")
 async def delete_sales_order(
-    order_id: int,
+    invoice_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """Delete sales order"""
     try:
-        order = db.query(SalesOrder).filter(
-            SalesOrder.id == order_id,
+        invoice = db.query(SalesOrder).filter(
+            SalesOrder.id == invoice_id,
             SalesOrder.organization_id == current_user.organization_id
         ).first()
-        if not order:
+        if not invoice:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Sales order not found"
             )
         
         from app.models.vouchers import SalesOrderItem
-        db.query(SalesOrderItem).filter(
-            SalesOrderItem.sales_order_id == order_id
-        ).delete()
+        db.query(SalesOrderItem).filter(SalesOrderItem.sales_order_id == invoice_id).delete()
         
-        db.delete(order)
+        db.delete(invoice)
         db.commit()
         
-        logger.info(f"Sales order {order.voucher_number} deleted by {current_user.email}")
+        logger.info(f"Sales order {invoice.voucher_number} deleted by {current_user.email}")
         return {"message": "Sales order deleted successfully"}
         
     except Exception as e:

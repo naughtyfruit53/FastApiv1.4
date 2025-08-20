@@ -1,8 +1,8 @@
 # app/api/v1/vouchers/delivery_challan.py
 
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Query
 from sqlalchemy.orm import Session, joinedload
-from typing import List, Optional  # Add Optional import
+from typing import List, Optional
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
 from app.models.base import User
@@ -15,14 +15,16 @@ import logging
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["delivery-challans"])
 
+@router.get("", response_model=List[DeliveryChallanInDB])  # Added to handle without trailing /
 @router.get("/", response_model=List[DeliveryChallanInDB])
 async def get_delivery_challans(
-    skip: int = 0,
-    limit: int = 100,
-    status: Optional[str] = None,  # Change to Optional[str]
+    skip: int = Query(0, ge=0, description="Number of records to skip (for pagination)"),
+    limit: int = Query(100, ge=1, le=500, description="Maximum number of records to return"),
+    status: Optional[str] = Query(None, description="Optional filter by voucher status (e.g., 'draft', 'approved')"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    """Get all delivery challans"""
     query = db.query(DeliveryChallan).options(joinedload(DeliveryChallan.customer)).filter(
         DeliveryChallan.organization_id == current_user.organization_id
     )
@@ -30,8 +32,8 @@ async def get_delivery_challans(
     if status:
         query = query.filter(DeliveryChallan.status == status)
     
-    items = query.offset(skip).limit(limit).all()
-    return items
+    invoices = query.offset(skip).limit(limit).all()
+    return invoices
 
 @router.get("/next-number", response_model=str)
 async def get_next_delivery_challan_number(
@@ -47,147 +49,161 @@ async def get_next_delivery_challan_number(
 @router.post("", response_model=DeliveryChallanInDB, include_in_schema=False)
 @router.post("/", response_model=DeliveryChallanInDB)
 async def create_delivery_challan(
-    challan: DeliveryChallanCreate,
+    invoice: DeliveryChallanCreate,
     background_tasks: BackgroundTasks,
     send_email: bool = False,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    """Create new delivery challan"""
     try:
-        challan_data = challan.dict(exclude={'items'})
-        challan_data['created_by'] = current_user.id
-        challan_data['organization_id'] = current_user.organization_id
+        invoice_data = invoice.dict(exclude={'items'})
+        invoice_data['created_by'] = current_user.id
+        invoice_data['organization_id'] = current_user.organization_id
         
         # Generate unique voucher number if not provided or blank
-        if not challan_data.get('voucher_number') or challan_data['voucher_number'] == '':
-            challan_data['voucher_number'] = VoucherNumberService.generate_voucher_number(
+        if not invoice_data.get('voucher_number') or invoice_data['voucher_number'] == '':
+            invoice_data['voucher_number'] = VoucherNumberService.generate_voucher_number(
                 db, "DC", current_user.organization_id, DeliveryChallan
             )
         else:
             existing = db.query(DeliveryChallan).filter(
                 DeliveryChallan.organization_id == current_user.organization_id,
-                DeliveryChallan.voucher_number == challan_data['voucher_number']
+                DeliveryChallan.voucher_number == invoice_data['voucher_number']
             ).first()
             if existing:
-                challan_data['voucher_number'] = VoucherNumberService.generate_voucher_number(
+                invoice_data['voucher_number'] = VoucherNumberService.generate_voucher_number(
                     db, "DC", current_user.organization_id, DeliveryChallan
                 )
         
-        db_challan = DeliveryChallan(**challan_data)
-        db.add(db_challan)
+        db_invoice = DeliveryChallan(**invoice_data)
+        db.add(db_invoice)
         db.flush()
         
-        for item_data in challan.items:
+        for item_data in invoice.items:
             from app.models.vouchers import DeliveryChallanItem
             item = DeliveryChallanItem(
-                delivery_challan_id=db_challan.id,
+                delivery_challan_id=db_invoice.id,
                 **item_data.dict()
             )
             db.add(item)
         
         db.commit()
-        db.refresh(db_challan)
+        db.refresh(db_invoice)
         
-        if send_email and db_challan.customer and db_challan.customer.email:
+        if send_email and db_invoice.customer and db_invoice.customer.email:
             background_tasks.add_task(
                 send_voucher_email,
                 voucher_type="delivery_challan",
-                voucher_id=db_challan.id,
-                recipient_email=db_challan.customer.email,
-                recipient_name=db_challan.customer.name
+                voucher_id=db_invoice.id,
+                recipient_email=db_invoice.customer.email,
+                recipient_name=db_invoice.customer.name
             )
         
-        logger.info(f"Delivery Challan {db_challan.voucher_number} created by {current_user.email}")
-        return db_challan
+        logger.info(f"Delivery challan {db_invoice.voucher_number} created by {current_user.email}")
+        return db_invoice
         
     except Exception as e:
         db.rollback()
-        logger.error(f"Error creating Delivery Challan: {e}")
-        raise HTTPException(status_code=500, detail="Failed to create Delivery Challan")
+        logger.error(f"Error creating delivery challan: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create delivery challan"
+        )
 
-@router.get("/{challan_id}", response_model=DeliveryChallanInDB)
+@router.get("/{invoice_id}", response_model=DeliveryChallanInDB)
 async def get_delivery_challan(
-    challan_id: int,
+    invoice_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    challan = db.query(DeliveryChallan).options(joinedload(DeliveryChallan.customer)).filter(
-        DeliveryChallan.id == challan_id,
+    invoice = db.query(DeliveryChallan).options(joinedload(DeliveryChallan.customer)).filter(
+        DeliveryChallan.id == invoice_id,
         DeliveryChallan.organization_id == current_user.organization_id
     ).first()
-    if not challan:
-        raise HTTPException(status_code=404, detail="Delivery Challan not found")
-    return challan
+    if not invoice:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Delivery challan not found"
+        )
+    return invoice
 
-@router.put("/{challan_id}", response_model=DeliveryChallanInDB)
+@router.put("/{invoice_id}", response_model=DeliveryChallanInDB)
 async def update_delivery_challan(
-    challan_id: int,
-    challan_update: DeliveryChallanUpdate,
+    invoice_id: int,
+    invoice_update: DeliveryChallanUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     try:
-        challan = db.query(DeliveryChallan).filter(
-            DeliveryChallan.id == challan_id,
+        invoice = db.query(DeliveryChallan).filter(
+            DeliveryChallan.id == invoice_id,
             DeliveryChallan.organization_id == current_user.organization_id
         ).first()
-        if not challan:
-            raise HTTPException(status_code=404, detail="Delivery Challan not found")
+        if not invoice:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Delivery challan not found"
+            )
         
-        update_data = challan_update.dict(exclude_unset=True, exclude={'items'})
+        update_data = invoice_update.dict(exclude_unset=True, exclude={'items'})
         for field, value in update_data.items():
-            setattr(challan, field, value)
+            setattr(invoice, field, value)
         
-        if challan_update.items is not None:
+        if invoice_update.items is not None:
             from app.models.vouchers import DeliveryChallanItem
-            db.query(DeliveryChallanItem).filter(
-                DeliveryChallanItem.delivery_challan_id == challan_id
-            ).delete()
-            
-            for item_data in challan_update.items:
+            db.query(DeliveryChallanItem).filter(DeliveryChallanItem.delivery_challan_id == invoice_id).delete()
+            for item_data in invoice_update.items:
                 item = DeliveryChallanItem(
-                    delivery_challan_id=challan_id,
+                    delivery_challan_id=invoice_id,
                     **item_data.dict()
                 )
                 db.add(item)
         
         db.commit()
-        db.refresh(challan)
+        db.refresh(invoice)
         
-        logger.info(f"Delivery Challan {challan.voucher_number} updated by {current_user.email}")
-        return challan
+        logger.info(f"Delivery challan {invoice.voucher_number} updated by {current_user.email}")
+        return invoice
         
     except Exception as e:
         db.rollback()
-        logger.error(f"Error updating Delivery Challan: {e}")
-        raise HTTPException(status_code=500, detail="Failed to update Delivery Challan")
+        logger.error(f"Error updating delivery challan: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update delivery challan"
+        )
 
-@router.delete("/{challan_id}")
+@router.delete("/{invoice_id}")
 async def delete_delivery_challan(
-    challan_id: int,
+    invoice_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     try:
-        challan = db.query(DeliveryChallan).filter(
-            DeliveryChallan.id == challan_id,
+        invoice = db.query(DeliveryChallan).filter(
+            DeliveryChallan.id == invoice_id,
             DeliveryChallan.organization_id == current_user.organization_id
         ).first()
-        if not challan:
-            raise HTTPException(status_code=404, detail="Delivery Challan not found")
+        if not invoice:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Delivery challan not found"
+            )
         
         from app.models.vouchers import DeliveryChallanItem
-        db.query(DeliveryChallanItem).filter(
-            DeliveryChallanItem.delivery_challan_id == challan_id
-        ).delete()
+        db.query(DeliveryChallanItem).filter(DeliveryChallanItem.delivery_challan_id == invoice_id).delete()
         
-        db.delete(challan)
+        db.delete(invoice)
         db.commit()
         
-        logger.info(f"Delivery Challan {challan.voucher_number} deleted by {current_user.email}")
-        return {"message": "Delivery Challan deleted successfully"}
+        logger.info(f"Delivery challan {invoice.voucher_number} deleted by {current_user.email}")
+        return {"message": "Delivery challan deleted successfully"}
         
     except Exception as e:
         db.rollback()
-        logger.error(f"Error deleting Delivery Challan: {e}")
-        raise HTTPException(status_code=500, detail="Failed to delete Delivery Challan")
+        logger.error(f"Error deleting delivery challan: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete delivery challan"
+        )

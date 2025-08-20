@@ -1,21 +1,30 @@
-// Purchase Order Page - Refactored using shared DRY logic  
-import React from 'react';
-import { Box, Button, TextField, Typography, Grid, IconButton, Alert, CircularProgress, Container, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Autocomplete, createFilterOptions, InputAdornment, Tooltip, Switch, FormControlLabel, Modal } from '@mui/material';
-import { Add, Remove, Visibility, Edit } from '@mui/icons-material';
+// frontend/src/pages/vouchers/Purchase-Vouchers/purchase-order.tsx
+// Purchase Order Page - Refactored using shared DRY logic
+import React, { useMemo, useState, useEffect } from 'react';
+import { Box, Button, TextField, Typography, Grid, IconButton, CircularProgress, Container, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Autocomplete, InputAdornment, Tooltip, Modal, Alert, Chip, Fab } from '@mui/material';
+import { Add, Remove, Visibility, Edit, CloudUpload, CheckCircle, Description } from '@mui/icons-material';
 import AddVendorModal from '../../../components/AddVendorModal';
 import AddProductModal from '../../../components/AddProductModal';
 import AddShippingAddressModal from '../../../components/AddShippingAddressModal';
 import VoucherContextMenu from '../../../components/VoucherContextMenu';
+import VoucherLayout from '../../../components/VoucherLayout';
 import VoucherHeaderActions from '../../../components/VoucherHeaderActions';
+import VoucherListModal from '../../../components/VoucherListModal';
+import BalanceDisplay from '../../../components/BalanceDisplay';
+import StockDisplay from '../../../components/StockDisplay';
 import ProductAutocomplete from '../../../components/ProductAutocomplete';
 import { useVoucherPage } from '../../../hooks/useVoucherPage';
 import { getVoucherConfig, numberToWords, GST_SLABS } from '../../../utils/voucherUtils';
+import { getStock } from '../../../services/masterService';
+import { voucherService } from '../../../services/vouchersService';
+import api from '../../../lib/api';  // Import api for direct call
 
 const PurchaseOrderPage: React.FC = () => {
   const config = getVoucherConfig('purchase-order');
   const {
     // State
     mode,
+    setMode,
     isLoading,
     showAddVendorModal,
     setShowAddVendorModal,
@@ -52,12 +61,17 @@ const PurchaseOrderPage: React.FC = () => {
     fields,
     append,
     remove,
+    reset,
 
     // Data
     voucherList,
     vendorList,
     productList,
+    nextVoucherNumber,
     sortedVouchers,
+    latestVouchers,
+
+    // Computed
     computedItems,
     totalAmount,
     totalSubtotal,
@@ -71,553 +85,620 @@ const PurchaseOrderPage: React.FC = () => {
     handleCreate,
     handleEdit,
     handleView,
-    handleSubmitForm,
+    handleSubmitForm: _handleSubmitForm, // Rename to avoid conflict
     handleContextMenu,
-    handleCloseContextMenu: handleContextMenuClose,
+    handleCloseContextMenu,
     handleSearch,
     handleModalOpen,
     handleModalClose,
     handleGeneratePDF,
     handleDelete,
-    handleAddVendor,
-    handleAddProduct,
-    handleAddShipping,
+    refreshMasterData,
+    getAmountInWords,
+
+    // Utilities
+    isViewMode,
   } = useVoucherPage(config);
 
-  const nameFilter = createFilterOptions();
+  // Additional state for voucher list modal
+  const [showVoucherListModal, setShowVoucherListModal] = useState(false);
 
-  return (
-    <Container maxWidth="xl" sx={{ py: 2 }}>
-      <Grid container spacing={3}>
-        {/* Left side - Voucher List */}
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 2, height: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6">Purchase Orders</Typography>
-              <VoucherHeaderActions
-                onCreate={handleCreate}
-                onSearch={handleModalOpen}
-                voucherType="Purchase Order"
-              />
-            </Box>
+  // Purchase Order specific state
+  const selectedVendorId = watch('vendor_id');
+  const selectedVendor = vendorList?.find((v: any) => v.id === selectedVendorId);
 
-            {isLoading ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                <CircularProgress />
-              </Box>
+  // Enhanced vendor options with "Add New"
+  const enhancedVendorOptions = [
+    ...(vendorList || []),
+    { id: null, name: 'Add New Vendor...' }
+  ];
+
+  // Stock data state for items
+  const [stockLoading, setStockLoading] = useState<{[key: number]: boolean}>({});
+
+  // Purchase Order specific handlers
+  const handleAddItem = () => {
+    append({
+      product_id: null,
+      product_name: '',
+      quantity: 1,
+      unit_price: 0,
+      discount_percentage: 0,
+      gst_rate: 18,
+      amount: 0,
+      unit: '',
+      current_stock: 0,
+      reorder_level: 0
+    });
+  };
+
+  // Custom submit handler to prompt for PDF after save
+  const onSubmit = async (data: any) => {
+    try {
+      if (config.hasItems !== false) {
+        data.items = computedItems;
+        data.total_amount = totalAmount;
+      }
+
+      let response;
+      if (mode === 'create') {
+        response = await api.post('/purchase-orders', data);
+        if (confirm('Voucher created successfully. Generate PDF?')) {
+          handleGeneratePDF(response.data);
+        }
+        // Reset form and prepare for next entry
+        reset();
+        setMode('create');
+        // Fetch next voucher number
+        try {
+          const nextNumber = await voucherService.getNextVoucherNumber(config.nextNumberEndpoint);
+          setValue('voucher_number', nextNumber);
+          setValue('date', new Date().toISOString().split('T')[0]);
+        } catch (err) {
+          console.error('Failed to fetch next voucher number:', err);
+        }
+      } else if (mode === 'edit') {
+        response = await api.put('/purchase-orders/' + data.id, data);
+        if (confirm('Voucher updated successfully. Generate PDF?')) {
+          handleGeneratePDF(response.data);
+        }
+      }
+      
+      // Refresh voucher list to show latest at top
+      await refreshMasterData();
+      
+    } catch (error) {
+      console.error('Error saving purchase order:', error);
+      alert('Failed to save purchase order. Please try again.');
+    }
+  };
+
+  // Function to get stock color
+  const getStockColor = (stock: number, reorder: number) => {
+    if (stock === 0) return 'error.main';
+    if (stock <= reorder) return 'warning.main';
+    return 'success.main';
+  };
+
+  // Memoize all selected products
+  const selectedProducts = useMemo(() => {
+    return fields.map((_, index) => {
+      const productId = watch(`items.${index}.product_id`);
+      return productList?.find((p: any) => p.id === productId) || null;
+    });
+  }, [fields.length, productList, ...fields.map((_, index) => watch(`items.${index}.product_id`))]);
+
+  // Effect to fetch stock when product changes
+  useEffect(() => {
+    fields.forEach((_, index) => {
+      const productId = watch(`items.${index}.product_id`);
+      if (productId) {
+        setStockLoading(prev => ({ ...prev, [index]: true }));
+        getStock({ queryKey: ['', { product_id: productId }] }).then(res => {
+          console.log('Stock Response for product ' + productId + ':', res);
+          const stockData = res[0] || { quantity: 0 };
+          setValue(`items.${index}.current_stock`, stockData.quantity);
+          setStockLoading(prev => ({ ...prev, [index]: false }));
+        }).catch(err => {
+          console.error('Failed to fetch stock:', err);
+          setStockLoading(prev => ({ ...prev, [index]: false }));
+        });
+      } else {
+        setValue(`items.${index}.current_stock`, 0);
+        setStockLoading(prev => ({ ...prev, [index]: false }));
+      }
+    });
+  }, [fields.map(f => watch(`items.${fields.indexOf(f)}.product_id`)).join(','), setValue, fields.length]);
+
+  // Manual fetch for voucher number if not loaded
+  useEffect(() => {
+    if (mode === 'create' && !nextVoucherNumber && !isLoading) {
+      voucherService.getNextVoucherNumber(config.nextNumberEndpoint)
+        .then(number => setValue('voucher_number', number))
+        .catch(err => console.error('Failed to fetch voucher number:', err));
+    }
+  }, [mode, nextVoucherNumber, isLoading, setValue, config.nextNumberEndpoint]);
+
+  const handleVoucherClick = async (voucher: any) => {
+    try {
+      // Fetch complete voucher data including items
+      const response = await api.get(`/purchase-orders/${voucher.id}`);
+      const fullVoucherData = response.data;
+      
+      // Load the complete voucher data into the form
+      setMode('view');
+      reset(fullVoucherData);
+    } catch (error) {
+      console.error('Error fetching voucher details:', error);
+      // Fallback to available data
+      setMode('view');
+      reset(voucher);
+    }
+  };
+  
+  // Enhanced handleEdit to fetch complete data
+  const handleEditWithData = async (voucher: any) => {
+    try {
+      const response = await api.get(`/purchase-orders/${voucher.id}`);
+      const fullVoucherData = response.data;
+      setMode('edit');
+      reset(fullVoucherData);
+    } catch (error) {
+      console.error('Error fetching voucher details:', error);
+      handleEdit(voucher);
+    }
+  };
+  
+  // Enhanced handleView to fetch complete data
+  const handleViewWithData = async (voucher: any) => {
+    try {
+      const response = await api.get(`/purchase-orders/${voucher.id}`);
+      const fullVoucherData = response.data;
+      setMode('view');
+      reset(fullVoucherData);
+    } catch (error) {
+      console.error('Error fetching voucher details:', error);
+      handleView(voucher);
+    }
+  };
+
+  const indexContent = (
+    <>
+      {/* Voucher list table */}
+      <TableContainer sx={{ maxHeight: 400 }}>
+        <Table stickyHeader size="small">
+          <TableHead>
+            <TableRow>
+              <TableCell align="center" sx={{ fontSize: 15, fontWeight: 'bold', p: 1 }}>Voucher No.</TableCell>
+              <TableCell align="center" sx={{ fontSize: 15, fontWeight: 'bold', p: 1 }}>Date</TableCell>
+              <TableCell align="center" sx={{ fontSize: 15, fontWeight: 'bold', p: 1 }}>Vendor</TableCell>
+              <TableCell align="center" sx={{ fontSize: 15, fontWeight: 'bold', p: 1 }}>Amount</TableCell>
+              <TableCell align="right" sx={{ fontSize: 15, fontWeight: 'bold', p: 0, width: 40 }}></TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {latestVouchers.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={5} align="center">No purchase orders available</TableCell>
+              </TableRow>
             ) : (
-              <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Sr.</TableCell>
-                      <TableCell>PO #</TableCell>
-                      <TableCell>Date</TableCell>
-                      <TableCell>Vendor</TableCell>
-                      <TableCell>Status</TableCell>
-                      <TableCell>Total</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {sortedVouchers?.map((voucher: any, index: number) => (
-                      <TableRow 
-                        key={voucher.id} 
-                        hover
-                        onContextMenu={(e) => handleContextMenu(e, voucher)}
-                        sx={{ cursor: 'context-menu' }}
-                      >
-                        <TableCell>{index + 1}</TableCell>
-                        <TableCell>{voucher.voucher_number}</TableCell>
-                        <TableCell>{new Date(voucher.date).toLocaleDateString()}</TableCell>
-                        <TableCell>{voucher.vendor?.name || 'N/A'}</TableCell>
-                        <TableCell>{voucher.status || 'draft'}</TableCell>
-                        <TableCell>₹{voucher.total_amount?.toFixed(2) || '0.00'}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </Box>
+              latestVouchers.slice(0, 5).map((voucher: any) => (
+                <TableRow 
+                  key={voucher.id} 
+                  hover 
+                  onContextMenu={(e) => { e.preventDefault(); handleContextMenu(e, voucher); }}
+                  sx={{ cursor: 'pointer' }}
+                >
+                  <TableCell align="center" sx={{ fontSize: 12, p: 1 }} onClick={() => handleViewWithData(voucher)}>
+                    {voucher.voucher_number}
+                  </TableCell>
+                  <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>
+                    {voucher.date ? new Date(voucher.date).toLocaleDateString() : 'N/A'}
+                  </TableCell>
+                  <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>{vendorList?.find((v: any) => v.id === voucher.vendor_id)?.name || 'N/A'}</TableCell>
+                  <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>₹{voucher.total_amount?.toLocaleString() || '0'}</TableCell>
+                  <TableCell align="right" sx={{ fontSize: 12, p: 0 }}>
+                    <VoucherContextMenu
+                      voucher={voucher}
+                      voucherType="Purchase Order"
+                      onView={() => handleViewWithData(voucher)}
+                      onEdit={() => handleEditWithData(voucher)}
+                      onDelete={() => handleDelete(voucher)}
+                      onPrint={() => handleGeneratePDF(voucher)}
+                      showKebab={true}
+                      onClose={() => {}}
+                    />
+                  </TableCell>
+                </TableRow>
+              ))
             )}
-          </Paper>
-        </Grid>
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </>
+  );
 
-        {/* Right side - Voucher Form */}
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 3, height: 'calc(100vh - 120px)', overflow: 'auto' }}>
-            <Typography variant="h6" gutterBottom>
-              {mode === 'create' ? 'Create' : mode === 'edit' ? 'Edit' : 'View'} Purchase Order
-            </Typography>
-
-            <form onSubmit={handleSubmit(handleSubmitForm)} className="space-y-4">
-              <Grid container spacing={2}>
-                <Grid item xs={6}>
-                  <TextField
-                    {...control.register('voucher_number')}
-                    label="PO Number"
-                    fullWidth
-                    disabled={mode === 'view'}
-                    error={!!errors.voucher_number}
-                    helperText={errors.voucher_number?.message}
-                  />
-                </Grid>
-                <Grid item xs={6}>
-                  <TextField
-                    {...control.register('date')}
-                    label="Date"
-                    type="date"
-                    fullWidth
-                    disabled={mode === 'view'}
-                    InputLabelProps={{ shrink: true }}
-                    error={!!errors.date}
-                    helperText={errors.date?.message}
-                  />
-                </Grid>
-
-                <Grid item xs={12}>
-                  <Autocomplete
-                    options={vendorList || []}
-                    getOptionLabel={(option: any) => option?.name || ''}
-                    value={vendorList?.find((vendor: any) => vendor.id === watch('vendor_id')) || null}
-                    onChange={(_, value: any) => setValue('vendor_id', value?.id || null)}
-                    filterOptions={nameFilter}
-                    disabled={mode === 'view'}
-                    renderInput={(params) => (
-                      <TextField 
-                        {...params} 
-                        label="Vendor" 
-                        error={!!errors.vendor_id}
-                        helperText={errors.vendor_id?.message}
-                        InputProps={{
-                          ...params.InputProps,
-                          endAdornment: (
-                            <>
-                              {params.InputProps.endAdornment}
-                              <InputAdornment position="end">
-                                <Tooltip title="Add Vendor">
-                                  <Button
-                                    size="small"
-                                    onClick={handleAddVendor}
-                                    sx={{ minWidth: 'auto', p: 0.5 }}
-                                  >
-                                    <Add fontSize="small" />
-                                  </Button>
-                                </Tooltip>
-                              </InputAdornment>
-                            </>
-                          ),
-                        }}
-                      />
-                    )}
-                  />
-                </Grid>
-
-                <Grid item xs={6}>
-                  <TextField
-                    {...control.register('payment_terms')}
-                    label="Payment Terms"
-                    fullWidth
-                    disabled={mode === 'view'}
-                    error={!!errors.payment_terms}
-                    helperText={errors.payment_terms?.message}
-                  />
-                </Grid>
-                <Grid item xs={6}>
-                  <TextField
-                    {...control.register('reference')}
-                    label="Reference"
-                    fullWidth
-                    disabled={mode === 'view'}
-                    error={!!errors.reference}
-                    helperText={errors.reference?.message}
-                  />
-                </Grid>
-
-                {/* Shipping Address Toggle */}
-                <Grid item xs={12}>
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={useDifferentShipping}
-                        onChange={(e) => setUseDifferentShipping(e.target.checked)}
-                        disabled={mode === 'view'}
-                      />
-                    }
-                    label="Use different shipping address"
-                  />
-                </Grid>
-
-                {/* Items Section */}
-                <Grid item xs={12}>
-                  <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography variant="subtitle1">Items</Typography>
-                    {mode !== 'view' && (
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        onClick={() => append({ 
-                          product_id: null, 
-                          hsn_code: '', 
-                          quantity: 0, 
-                          unit: '', 
-                          unit_price: 0, 
-                          original_unit_price: 0, 
-                          discount_percentage: 0, 
-                          discount_amount: 0, 
-                          taxable_amount: 0, 
-                          gst_rate: 0, 
-                          cgst_amount: 0, 
-                          sgst_amount: 0, 
-                          igst_amount: 0, 
-                          total_amount: 0 
-                        })}
-                        startIcon={<Add />}
-                      >
-                        Add Item
-                      </Button>
-                    )}
-                  </Box>
-
-                  <TableContainer component={Paper} variant="outlined">
-                    <Table size="small">
-                      <TableHead>
-                        <TableRow>
-                          <TableCell>Product</TableCell>
-                          <TableCell>HSN</TableCell>
-                          <TableCell>Qty</TableCell>
-                          <TableCell>Unit</TableCell>
-                          <TableCell>Rate</TableCell>
-                          <TableCell>Disc%</TableCell>
-                          <TableCell>GST%</TableCell>
-                          <TableCell>Amount</TableCell>
-                          <TableCell>Actions</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {fields.map((field, index) => (
-                          <TableRow key={field.id}>
-                            <TableCell>
-                              <ProductAutocomplete
-                                value={productList?.find((p: any) => p.id === watch(`items.${index}.product_id`)) || null}
-                                onChange={(product: any) => {
-                                  setValue(`items.${index}.product_id`, product?.id || null);
-                                  if (product) {
-                                    setValue(`items.${index}.hsn_code`, product.hsn_code || '');
-                                    setValue(`items.${index}.unit`, product.unit || '');
-                                    setValue(`items.${index}.unit_price`, product.selling_price || 0);
-                                    setValue(`items.${index}.original_unit_price`, product.selling_price || 0);
-                                    setValue(`items.${index}.gst_rate`, product.gst_rate || 0);
-                                  }
-                                }}
-                                disabled={mode === 'view'}
-                                onAddNew={() => {
-                                  setAddingItemIndex(index);
-                                  handleAddProduct();
-                                }}
-                                error={!!errors.items?.[index]?.product_id}
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <TextField
-                                {...control.register(`items.${index}.hsn_code`)}
-                                size="small"
-                                disabled={mode === 'view'}
-                                sx={{ width: 80 }}
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <TextField
-                                {...control.register(`items.${index}.quantity`, { valueAsNumber: true })}
-                                size="small"
-                                type="number"
-                                disabled={mode === 'view'}
-                                sx={{ width: 70 }}
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <TextField
-                                {...control.register(`items.${index}.unit`)}
-                                size="small"
-                                disabled={mode === 'view'}
-                                sx={{ width: 60 }}
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <TextField
-                                {...control.register(`items.${index}.unit_price`, { valueAsNumber: true })}
-                                size="small"
-                                type="number"
-                                disabled={mode === 'view'}
-                                sx={{ width: 80 }}
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <TextField
-                                {...control.register(`items.${index}.discount_percentage`, { valueAsNumber: true })}
-                                size="small"
-                                type="number"
-                                disabled={mode === 'view'}
-                                sx={{ width: 60 }}
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Autocomplete
-                                options={GST_SLABS}
-                                value={watch(`items.${index}.gst_rate`) || 0}
-                                onChange={(_, value) => setValue(`items.${index}.gst_rate`, value || 0)}
-                                disabled={mode === 'view'}
-                                renderInput={(params) => (
-                                  <TextField
-                                    {...params}
-                                    size="small"
-                                    sx={{ width: 70 }}
-                                  />
-                                )}
-                              />
-                            </TableCell>
-                            <TableCell>
-                              ₹{(computedItems[index]?.total_amount || 0).toFixed(2)}
-                            </TableCell>
-                            <TableCell>
-                              {mode !== 'view' && (
-                                <IconButton
-                                  size="small"
-                                  onClick={() => remove(index)}
-                                  disabled={fields.length === 1}
-                                >
-                                  <Remove fontSize="small" />
-                                </IconButton>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                </Grid>
-
-                <Grid item xs={12}>
-                  <TextField
-                    {...control.register('notes')}
-                    label="Notes"
-                    fullWidth
-                    multiline
-                    rows={2}
-                    disabled={mode === 'view'}
-                  />
-                </Grid>
-
-                <Grid item xs={12}>
-                  <Box sx={{ mt: 2, p: 2, bgcolor: 'background.default', borderRadius: 1 }}>
-                    <Grid container spacing={2}>
-                      <Grid item xs={6}>
-                        <Typography variant="body2">Subtotal: ₹{totalSubtotal.toFixed(2)}</Typography>
-                        <Typography variant="body2">GST: ₹{totalGst.toFixed(2)}</Typography>
-                        <Typography variant="h6">Total: ₹{totalAmount.toFixed(2)}</Typography>
-                      </Grid>
-                      <Grid item xs={6}>
-                        {totalAmount > 0 && (
-                          <Typography variant="body2" color="textSecondary">
-                            Amount in words: {numberToWords(totalAmount)}
-                          </Typography>
-                        )}
-                      </Grid>
-                    </Grid>
-                  </Box>
-                </Grid>
-
-                {mode !== 'view' && (
-                  <Grid item xs={12}>
-                    <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
-                      <Button 
-                        variant="outlined" 
-                        onClick={handleCreate}
-                        disabled={createMutation.isPending || updateMutation.isPending}
-                      >
-                        Clear
-                      </Button>
-                      <Button 
-                        type="submit" 
-                        variant="contained"
-                        disabled={createMutation.isPending || updateMutation.isPending}
-                      >
-                        {createMutation.isPending || updateMutation.isPending ? 
-                          <CircularProgress size={20} /> : 
-                          (mode === 'create' ? 'Create' : 'Update')
-                        }
-                      </Button>
-                      <Button 
-                        variant="outlined" 
-                        onClick={() => handleGeneratePDF()}
-                        disabled={!watch('voucher_number')}
-                      >
-                        Save as PDF
-                      </Button>
-                    </Box>
-                  </Grid>
-                )}
-              </Grid>
-            </form>
-          </Paper>
-        </Grid>
-      </Grid>
-
-      {/* Add Vendor Modal */}
-      <AddVendorModal
-        open={showAddVendorModal}
-        onClose={() => setShowAddVendorModal(false)}
-        onAdd={handleAddVendor}
-        loading={addVendorLoading}
-      />
-
-      {/* Add Product Modal */}
-      <AddProductModal
-        open={showAddProductModal}
-        onClose={() => setShowAddProductModal(false)}
-        onAdd={handleAddProduct}
-        loading={addProductLoading}
-      />
-
-      {/* Add Shipping Address Modal */}
-      <AddShippingAddressModal
-        open={showShippingModal}
-        onClose={() => setShowShippingModal(false)}
-        onAdd={handleAddShipping}
-        loading={addShippingLoading}
-      />
-
-      {/* Context Menu */}
-      {contextMenu !== null && (
-        <VoucherContextMenu
-          voucher={contextMenu.voucher}
-          voucherType="Purchase Order"
-          onEdit={handleEdit}
-          onView={handleView}
-          onDelete={handleDelete}
-          onPrint={() => handleGeneratePDF(contextMenu.voucher)}
-          onDuplicate={(voucher) => {
-            handleCreate();
-            setValue('reference', voucher.voucher_number);
-          }}
-          showKebab={false}
-          open={true}
-          onClose={handleContextMenuClose}
-          anchorReference="anchorPosition"
-          anchorPosition={{ top: contextMenu.mouseY, left: contextMenu.mouseX }}
+  const formContent = (
+    <Box>
+      {/* Header Actions */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Typography variant="h5" sx={{ fontSize: 20, fontWeight: 'bold' }}>
+          {config.voucherTitle} - {mode === 'create' ? 'Create' : mode === 'edit' ? 'Edit' : 'View'}
+        </Typography>
+        <VoucherHeaderActions
+          mode={mode}
+          voucherType={config.voucherTitle}
+          voucherRoute="/vouchers/Purchase-Vouchers/purchase-order"
+          currentId={selectedVendorId}
         />
-      )}
+      </Box>
 
-      {/* Search/Filter Modal */}
-      <Modal open={showFullModal} onClose={handleModalClose}>
-        <Box
-          sx={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            width: '90%',
-            maxWidth: 1000,
-            bgcolor: 'background.paper',
-            boxShadow: 24,
-            p: 4,
-            borderRadius: 2,
-          }}
-        >
-          <Typography variant="h6" gutterBottom>
-            Search Purchase Orders
-          </Typography>
-          
-          <Grid container spacing={2} sx={{ mb: 3 }}>
-            <Grid item xs={12} md={4}>
-              <TextField
-                label="Search"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                fullWidth
-                placeholder="PO number, vendor, notes..."
-              />
-            </Grid>
-            <Grid item xs={6} md={3}>
-              <TextField
-                label="From Date"
-                type="date"
-                value={fromDate}
-                onChange={(e) => setFromDate(e.target.value)}
-                InputLabelProps={{ shrink: true }}
-                fullWidth
-              />
-            </Grid>
-            <Grid item xs={6} md={3}>
-              <TextField
-                label="To Date"
-                type="date"
-                value={toDate}
-                onChange={(e) => setToDate(e.target.value)}
-                InputLabelProps={{ shrink: true }}
-                fullWidth
-              />
-            </Grid>
-            <Grid item xs={12} md={2}>
-              <Button
-                variant="contained"
-                onClick={handleSearch}
-                fullWidth
-                sx={{ height: '56px' }}
-              >
-                Search
-              </Button>
-            </Grid>
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <Grid container spacing={1}>
+          {/* Voucher Number */}
+          <Grid size={6}>
+            <TextField
+              fullWidth
+              label="Voucher Number"
+              {...control.register('voucher_number')}
+              disabled
+              InputLabelProps={{ shrink: true, style: { fontSize: 12 } }}
+              inputProps={{ style: { fontSize: 14, textAlign: 'center', fontWeight: 'bold' } }}
+              size="small"
+              sx={{ '& .MuiInputBase-root': { height: 27 } }}
+            />
           </Grid>
 
-          <TableContainer component={Paper} sx={{ maxHeight: 400 }}>
-            <Table stickyHeader>
-              <TableHead>
-                <TableRow>
-                  <TableCell>PO #</TableCell>
-                  <TableCell>Date</TableCell>
-                  <TableCell>Vendor</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell>Total</TableCell>
-                  <TableCell>Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {filteredVouchers.map((voucher: any) => (
-                  <TableRow key={voucher.id}>
-                    <TableCell>{voucher.voucher_number}</TableCell>
-                    <TableCell>{new Date(voucher.date).toLocaleDateString()}</TableCell>
-                    <TableCell>{voucher.vendor?.name || 'N/A'}</TableCell>
-                    <TableCell>{voucher.status || 'draft'}</TableCell>
-                    <TableCell>₹{voucher.total_amount?.toFixed(2) || '0.00'}</TableCell>
-                    <TableCell>
-                      <Button
-                        size="small"
-                        onClick={() => {
-                          handleEdit(voucher);
-                          handleModalClose();
-                        }}
-                        startIcon={<Edit />}
-                      >
-                        Edit
-                      </Button>
-                      <Button
-                        size="small"
-                        onClick={() => {
-                          handleView(voucher);
-                          handleModalClose();
-                        }}
-                        startIcon={<Visibility />}
-                      >
-                        View
-                      </Button>
-                    </TableCell>
+          {/* Date */}
+          <Grid size={6}>
+            <TextField
+              fullWidth
+              label="Date"
+              type="date"
+              {...control.register('date')}
+              disabled={mode === 'view'}
+              InputLabelProps={{ shrink: true, style: { fontSize: 12 } }}
+              inputProps={{ style: { fontSize: 14, textAlign: 'center' } }}
+              size="small"
+              sx={{ '& .MuiInputBase-root': { height: 27 } }}
+            />
+          </Grid>
+
+          {/* Vendor, Reference, Payment Terms in one row */}
+          <Grid size={4}>
+            <Autocomplete
+              size="small"
+              options={enhancedVendorOptions}
+              getOptionLabel={(option: any) => option?.name || ''}
+              value={selectedVendor || null}
+              onChange={(_, newValue) => {
+                if (newValue?.id === null) {
+                  setShowAddVendorModal(true);
+                } else {
+                  setValue('vendor_id', newValue?.id || null);
+                }
+              }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Vendor"
+                  error={!!errors.vendor_id}
+                  helperText={errors.vendor_id ? 'Required' : ''}
+                  InputLabelProps={{ shrink: true, style: { fontSize: 12 } }}
+                  inputProps={{ ...params.inputProps, style: { fontSize: 14 } }}
+                  size="small"
+                  sx={{ '& .MuiInputBase-root': { height: 27 } }}
+                />
+              )}
+              disabled={mode === 'view'}
+            />
+          </Grid>
+
+          <Grid size={4}>
+            <TextField
+              fullWidth
+              label="Reference"
+              {...control.register('reference')}
+              disabled={mode === 'view'}
+              InputLabelProps={{ shrink: true, style: { fontSize: 12 } }}
+              inputProps={{ style: { fontSize: 14 } }}
+              size="small"
+              sx={{ '& .MuiInputBase-root': { height: 27 } }}
+            />
+          </Grid>
+
+          <Grid size={4}>
+            <TextField
+              fullWidth
+              label="Payment Terms"
+              {...control.register('payment_terms')}
+              disabled={mode === 'view'}
+              InputLabelProps={{ shrink: true, style: { fontSize: 12 } }}
+              inputProps={{ style: { fontSize: 14 } }}
+              size="small"
+              sx={{ '& .MuiInputBase-root': { height: 27 } }}
+            />
+          </Grid>
+
+          <Grid size={12}>
+            <TextField
+              fullWidth
+              label="Notes"
+              {...control.register('notes')}
+              multiline
+              rows={2}
+              disabled={mode === 'view'}
+              InputLabelProps={{ shrink: true, style: { fontSize: 12 } }}
+              inputProps={{ style: { fontSize: 14 } }}
+              size="small"
+            />
+          </Grid>
+
+          {/* Items section */}
+          <Grid size={12} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 27 }}>
+            <Typography variant="h6" sx={{ fontSize: 16, fontWeight: 'bold' }}>Items</Typography>
+          </Grid>
+
+          {/* Items Table */}
+          <Grid size={12}>
+            <TableContainer component={Paper} sx={{ maxHeight: 300 }}>
+              <Table stickyHeader size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1, width: '30%' }}>Product</TableCell>
+                    <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1, textAlign: 'right' }}>Qty</TableCell>
+                    <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1, textAlign: 'right' }}>Rate</TableCell>
+                    <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1 }}>Disc%</TableCell>
+                    <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1 }}>GST%</TableCell>
+                    <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1 }}>Amount</TableCell>
+                    {mode !== 'view' && (
+                      <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1 }}>Action</TableCell>
+                    )}
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                </TableHead>
+                <TableBody>
+                  {fields.map((field: any, index: number) => (
+                    <React.Fragment key={field.id}>
+                      <TableRow>
+                        <TableCell sx={{ p: 1 }}>
+                          <ProductAutocomplete
+                            value={selectedProducts[index]}
+                            onChange={(product) => {
+                              setValue(`items.${index}.product_id`, product?.id || null);
+                              setValue(`items.${index}.product_name`, product?.product_name || '');
+                              setValue(`items.${index}.unit_price`, product?.unit_price || 0);
+                              setValue(`items.${index}.gst_rate`, product?.gst_rate || 18);
+                              setValue(`items.${index}.unit`, product?.unit || '');
+                              setValue(`items.${index}.reorder_level`, product?.reorder_level || 0);
+                              // Stock fetch handled in useEffect
+                            }}
+                            disabled={mode === 'view'}
+                            size="small"
+                          />
+                        </TableCell>
+                        <TableCell sx={{ p: 1, textAlign: 'right' }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+                            <TextField
+                              type="number"
+                              {...control.register(`items.${index}.quantity`, { valueAsNumber: true })}
+                              disabled={mode === 'view'}
+                              size="small"
+                              sx={{ width: 60 }}
+                            />
+                            <Typography sx={{ ml: 1, fontSize: 12 }}>{watch(`items.${index}.unit`)}</Typography>
+                          </Box>
+                        </TableCell>
+                        <TableCell sx={{ p: 1, textAlign: 'right' }}>
+                          <TextField
+                            type="number"
+                            {...control.register(`items.${index}.unit_price`, { valueAsNumber: true })}
+                            disabled={mode === 'view'}
+                            size="small"
+                            sx={{ width: 80 }}
+                          />
+                        </TableCell>
+                        <TableCell sx={{ p: 1 }}>
+                          <TextField
+                            type="number"
+                            {...control.register(`items.${index}.discount_percentage`, { valueAsNumber: true })}
+                            disabled={mode === 'view'}
+                            size="small"
+                            sx={{ width: 60 }}
+                          />
+                        </TableCell>
+                        <TableCell sx={{ p: 1 }}>
+                          <Autocomplete
+                            size="small"
+                            options={GST_SLABS}
+                            value={watch(`items.${index}.gst_rate`) || 18}
+                            onChange={(_, value) => setValue(`items.${index}.gst_rate`, value || 18)}
+                            renderInput={(params) => (
+                              <TextField {...params} size="small" sx={{ width: 60 }} />
+                            )}
+                            disabled={mode === 'view'}
+                          />
+                        </TableCell>
+                        <TableCell sx={{ p: 1, fontSize: 14 }}>
+                          ₹{computedItems[index]?.amount?.toLocaleString() || '0'}
+                        </TableCell>
+                        {mode !== 'view' && (
+                          <TableCell sx={{ p: 1 }}>
+                            <IconButton
+                              size="small"
+                              onClick={() => remove(index)}
+                              color="error"
+                            >
+                              <Remove />
+                            </IconButton>
+                          </TableCell>
+                        )}
+                      </TableRow>
+                      {/* Stock display below the row - only qty and unit */}
+                      <TableRow>
+                        <TableCell colSpan={mode !== 'view' ? 7 : 6} sx={{ py: 0.5, pl: 2, bgcolor: 'action.hover' }}>
+                          {stockLoading[index] ? (
+                            <CircularProgress size={12} />
+                          ) : watch(`items.${index}.product_id`) ? (
+                            <Typography variant="caption" color={getStockColor(watch(`items.${index}.current_stock`), watch(`items.${index}.reorder_level`))}>
+                              {watch(`items.${index}.current_stock`)} {watch(`items.${index}.unit`)}
+                            </Typography>
+                          ) : null}
+                        </TableCell>
+                      </TableRow>
+                    </React.Fragment>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            {mode !== 'view' && (
+              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 1 }}>
+                <Fab color="primary" size="small" onClick={handleAddItem}>
+                  <Add />
+                </Fab>
+              </Box>
+            )}
+          </Grid>
+
+          {/* Totals */}
+          <Grid size={12}>
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+              <Box sx={{ minWidth: 300 }}>
+                <Grid container spacing={1}>
+                  <Grid size={6}>
+                    <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14 }}>
+                      Subtotal:
+                    </Typography>
+                  </Grid>
+                  <Grid size={6}>
+                    <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14, fontWeight: 'bold' }}>
+                      ₹{totalSubtotal.toLocaleString()}
+                    </Typography>
+                  </Grid>
+                  <Grid size={6}>
+                    <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14 }}>
+                      GST:
+                    </Typography>
+                  </Grid>
+                  <Grid size={6}>
+                    <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14, fontWeight: 'bold' }}>
+                      ₹{totalGst.toLocaleString()}
+                    </Typography>
+                  </Grid>
+                  <Grid size={6}>
+                    <Typography variant="h6" sx={{ textAlign: 'right', fontSize: 16, fontWeight: 'bold' }}>
+                      Total:
+                    </Typography>
+                  </Grid>
+                  <Grid size={6}>
+                    <Typography variant="h6" sx={{ textAlign: 'right', fontSize: 16, fontWeight: 'bold' }}>
+                      ₹{totalAmount.toLocaleString()}
+                    </Typography>
+                  </Grid>
+                </Grid>
+              </Box>
+            </Box>
+          </Grid>
+
+          {/* Amount in Words */}
+          <Grid size={12}>
+            <TextField
+              fullWidth
+              label="Amount in Words"
+              value={getAmountInWords(totalAmount)}
+              disabled
+              InputLabelProps={{ shrink: true, style: { fontSize: 12 } }}
+              inputProps={{ style: { fontSize: 14 } }}
+              size="small"
+            />
+          </Grid>
+
+          {/* Action buttons - removed Generate PDF */}
+          <Grid size={12}>
+            <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
+              {mode !== 'view' && (
+                <Button 
+                  type="submit" 
+                  variant="contained" 
+                  color="success" 
+                  disabled={createMutation.isPending || updateMutation.isPending}
+                  sx={{ fontSize: 12 }}
+                >
+                  Save
+                </Button>
+              )}
+            </Box>
+          </Grid>
+        </Grid>
+      </form>
+    </Box>
+  );
+
+  if (isLoading) {
+    return (
+      <Container>
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+          <CircularProgress />
         </Box>
-      </Modal>
-    </Container>
+      </Container>
+    );
+  }
+
+  return (
+    <>
+      <VoucherLayout
+        voucherType={config.voucherTitle}
+        indexContent={indexContent}
+        formContent={formContent}
+        onShowAll={() => setShowVoucherListModal(true)}
+        modalContent={
+          <VoucherListModal
+            open={showVoucherListModal}
+            onClose={() => setShowVoucherListModal(false)}
+            voucherType="Purchase Orders"
+            vouchers={sortedVouchers || []}
+            onVoucherClick={handleVoucherClick}
+            onEdit={handleEditWithData}
+            onView={handleViewWithData}
+            onDelete={handleDelete}
+            onGeneratePDF={handleGeneratePDF}
+            vendorList={vendorList}
+          />
+        }
+      />
+
+      {/* Modals */}
+      <AddVendorModal 
+        open={showAddVendorModal}
+        onClose={() => setShowAddVendorModal(false)}
+        onVendorAdded={refreshMasterData}
+        loading={addVendorLoading}
+        setLoading={setAddVendorLoading}
+      />
+
+      <AddProductModal 
+        open={showAddProductModal}
+        onClose={() => setShowAddProductModal(false)}
+        onProductAdded={refreshMasterData}
+        loading={addProductLoading}
+        setLoading={setAddProductLoading}
+      />
+
+      <AddShippingAddressModal 
+        open={showShippingModal}
+        onClose={() => setShowShippingModal(false)}
+        loading={addShippingLoading}
+        setLoading={setAddShippingLoading}
+      />
+
+      <VoucherContextMenu
+        contextMenu={contextMenu}
+        onClose={handleCloseContextMenu}
+        onEdit={handleEditWithData}
+        onView={handleViewWithData}
+        onDelete={handleDelete}
+        onPrint={handleGeneratePDF}
+      />
+    </>
   );
 };
 
