@@ -146,12 +146,27 @@ const ProformaInvoicePage: React.FC = () => {
         if (confirm('Voucher created successfully. Generate PDF?')) {
           handleGeneratePDF(response.data);
         }
+        // Reset form and prepare for next entry
+        reset();
+        setMode('create');
+        // Fetch next voucher number
+        try {
+          const nextNumber = await voucherService.getNextVoucherNumber(config.nextNumberEndpoint);
+          setValue('voucher_number', nextNumber);
+          setValue('date', new Date().toISOString().split('T')[0]);
+        } catch (err) {
+          console.error('Failed to fetch next voucher number:', err);
+        }
       } else if (mode === 'edit') {
         response = await api.put('/proforma-invoices/' + data.id, data);
         if (confirm('Voucher updated successfully. Generate PDF?')) {
           handleGeneratePDF(response.data);
         }
       }
+      
+      // Refresh voucher list to show latest at top
+      await refreshMasterData();
+      
     } catch (error) {
       console.error('Error saving proforma invoice:', error);
       alert('Failed to save proforma invoice. Please try again.');
@@ -204,10 +219,47 @@ const ProformaInvoicePage: React.FC = () => {
     }
   }, [mode, nextVoucherNumber, isLoading, setValue, config.nextNumberEndpoint]);
 
-  const handleVoucherClick = (voucher: any) => {
-    // Load the selected voucher into the form
-    setMode('view');
-    reset(voucher);
+  const handleVoucherClick = async (voucher: any) => {
+    try {
+      // Fetch complete voucher data including items
+      const response = await api.get(`/proforma-invoices/${voucher.id}`);
+      const fullVoucherData = response.data;
+      
+      // Load the complete voucher data into the form
+      setMode('view');
+      reset(fullVoucherData);
+    } catch (error) {
+      console.error('Error fetching voucher details:', error);
+      // Fallback to available data
+      setMode('view');
+      reset(voucher);
+    }
+  };
+  
+  // Enhanced handleEdit to fetch complete data
+  const handleEditWithData = async (voucher: any) => {
+    try {
+      const response = await api.get(`/proforma-invoices/${voucher.id}`);
+      const fullVoucherData = response.data;
+      setMode('edit');
+      reset(fullVoucherData);
+    } catch (error) {
+      console.error('Error fetching voucher details:', error);
+      handleEdit(voucher);
+    }
+  };
+  
+  // Enhanced handleView to fetch complete data
+  const handleViewWithData = async (voucher: any) => {
+    try {
+      const response = await api.get(`/proforma-invoices/${voucher.id}`);
+      const fullVoucherData = response.data;
+      setMode('view');
+      reset(fullVoucherData);
+    } catch (error) {
+      console.error('Error fetching voucher details:', error);
+      handleView(voucher);
+    }
   };
 
   const indexContent = (
@@ -221,12 +273,13 @@ const ProformaInvoicePage: React.FC = () => {
               <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1 }}>Date</TableCell>
               <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1 }}>Customer</TableCell>
               <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1 }}>Amount</TableCell>
+              <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1, width: 40 }}>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {latestVouchers.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} align="center">No proforma invoices available</TableCell>
+                <TableCell colSpan={5} align="center">No proforma invoices available</TableCell>
               </TableRow>
             ) : (
               latestVouchers.map((voucher: any) => (
@@ -236,7 +289,7 @@ const ProformaInvoicePage: React.FC = () => {
                   onContextMenu={(e) => handleContextMenu(e, voucher)}
                   sx={{ cursor: 'pointer' }}
                 >
-                  <TableCell sx={{ fontSize: 12, p: 1 }} onClick={() => handleView(voucher)}>
+                  <TableCell sx={{ fontSize: 12, p: 1 }} onClick={() => handleViewWithData(voucher)}>
                     {voucher.voucher_number}
                   </TableCell>
                   <TableCell sx={{ fontSize: 12, p: 1 }}>
@@ -244,6 +297,18 @@ const ProformaInvoicePage: React.FC = () => {
                   </TableCell>
                   <TableCell sx={{ fontSize: 12, p: 1 }}>{voucher.customer?.name || 'N/A'}</TableCell>
                   <TableCell sx={{ fontSize: 12, p: 1 }}>₹{voucher.total_amount?.toLocaleString() || '0'}</TableCell>
+                  <TableCell sx={{ fontSize: 12, p: 1 }}>
+                    <VoucherContextMenu
+                      voucher={voucher}
+                      voucherType="Proforma Invoice"
+                      onView={() => handleViewWithData(voucher)}
+                      onEdit={() => handleEditWithData(voucher)}
+                      onDelete={() => handleDelete(voucher)}
+                      onPrint={() => handleGeneratePDF(voucher)}
+                      showKebab={true}
+                      onClose={() => {}}
+                    />
+                  </TableCell>
                 </TableRow>
               ))
             )}
@@ -584,6 +649,7 @@ const ProformaInvoicePage: React.FC = () => {
         voucherType={config.voucherTitle}
         indexContent={indexContent}
         formContent={formContent}
+        onShowAll={() => setShowVoucherListModal(true)}
         modalContent={
           <VoucherListModal
             open={showVoucherListModal}
@@ -591,8 +657,8 @@ const ProformaInvoicePage: React.FC = () => {
             voucherType="Proforma Invoices"
             vouchers={sortedVouchers || []}
             onVoucherClick={handleVoucherClick}
-            onEdit={handleEdit}
-            onView={handleView}
+            onEdit={handleEditWithData}
+            onView={handleViewWithData}
             onDelete={handleDelete}
             onGeneratePDF={handleGeneratePDF}
             customerList={customerList}
@@ -627,9 +693,10 @@ const ProformaInvoicePage: React.FC = () => {
       <VoucherContextMenu
         contextMenu={contextMenu}
         onClose={handleCloseContextMenu}
-        onEdit={handleEdit}
-        onView={handleView}
+        onEdit={handleEditWithData}
+        onView={handleViewWithData}
         onDelete={handleDelete}
+        onPrint={handleGeneratePDF}
       />
     </>
   );
