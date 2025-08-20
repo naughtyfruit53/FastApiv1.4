@@ -60,25 +60,40 @@ const VoucherHeaderActions: React.FC<VoucherHeaderActionsProps> = ({
       {mode === 'view' && (
         <>
           <Typography 
-            sx={actionStyle}
+            sx={{
+              ...actionStyle,
+              color: '#FFD700', // Yellow for EDIT
+              textTransform: 'uppercase',
+              fontWeight: 'bold',
+            }}
             onClick={handleEdit}
           >
-            edit {voucherType.toLowerCase()}
+            EDIT {voucherType.toLowerCase()}
           </Typography>
           <Typography 
-            sx={actionStyle}
+            sx={{
+              ...actionStyle,
+              color: '#28a745', // Green for CREATE
+              textTransform: 'uppercase',
+              fontWeight: 'bold',
+            }}
             onClick={handleCreate}
           >
-            create {voucherType.toLowerCase()}
+            CREATE {voucherType.toLowerCase()}
           </Typography>
         </>
       )}
       {mode === 'edit' && (
         <Typography 
-          sx={actionStyle}
+          sx={{
+            ...actionStyle,
+            color: '#28a745', // Green for CREATE
+            textTransform: 'uppercase',
+            fontWeight: 'bold',
+          }}
           onClick={handleCreate}
         >
-          create {voucherType.toLowerCase()}
+          CREATE {voucherType.toLowerCase()}
         </Typography>
       )}
     </Box>

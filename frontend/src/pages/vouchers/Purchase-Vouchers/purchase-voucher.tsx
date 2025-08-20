@@ -9,6 +9,7 @@ import AddProductModal from '../../../components/AddProductModal';
 import AddShippingAddressModal from '../../../components/AddShippingAddressModal';
 import VoucherContextMenu from '../../../components/VoucherContextMenu';
 import VoucherHeaderActions from '../../../components/VoucherHeaderActions';
+import VoucherListModal from '../../../components/VoucherListModal';
 import BalanceDisplay from '../../../components/BalanceDisplay';
 import StockDisplay from '../../../components/StockDisplay';
 import { useVoucherPage } from '../../../hooks/useVoucherPage';
@@ -21,6 +22,7 @@ const PurchaseVoucherPage: React.FC = () => {
   const {
     // State
     mode,
+    setMode,
     isLoading,
     showAddVendorModal,
     setShowAddVendorModal,
@@ -53,6 +55,7 @@ const PurchaseVoucherPage: React.FC = () => {
     handleSubmit,
     watch,
     setValue,
+    reset,
     errors,
     fields,
     append,
@@ -90,6 +93,18 @@ const PurchaseVoucherPage: React.FC = () => {
     // Utilities
     isViewMode,
   } = useVoucherPage(config);
+  
+  // Handle voucher click to load details
+  const handleVoucherClick = (voucher: any) => {
+    // Load the selected voucher into the form
+    setMode('view');
+    reset(voucher);
+    // Set the form with the voucher data
+    Object.keys(voucher).forEach(key => {
+      setValue(key, voucher[key]);
+    });
+  };
+
   const [selectedReferenceType, setSelectedReferenceType] = useState<string | null>(null);
   const [selectedReferenceId, setSelectedReferenceId] = useState<number | null>(null);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
@@ -1024,104 +1039,31 @@ const PurchaseVoucherPage: React.FC = () => {
         onAdd={handleAddShipping}
         loading={addShippingLoading}
       />
-      {/* Full Voucher Modal */}
-      <Modal open={showFullModal} onClose={handleModalClose}>
-        <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 800, bgcolor: 'background.paper', border: '2px solid #000', boxShadow: 24, p: 4, maxHeight: '80vh', overflow: 'auto' }}>
-          <Typography variant="h6" sx={{ fontSize: 18, fontWeight: 'bold', mb: 2, textAlign: 'center' }}>Purchase Vouchers</Typography>
-          <Grid container spacing={2} mb={2}>
-            <Grid size={3}>
-              <Tooltip title="Search Voucher # or Vendor" arrow>
-                <TextField
-                  fullWidth
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  size="small"
-                  InputLabelProps={{ shrink: true }}
-                />
-              </Tooltip>
-            </Grid>
-            <Grid size={3}>
-              <TextField
-                fullWidth
-                label="From Date"
-                type="date"
-                value={fromDate}
-                onChange={(e) => setFromDate(e.target.value)}
-                InputLabelProps={{ shrink: true }}
-                size="small"
-              />
-            </Grid>
-            <Grid size={3}>
-              <TextField
-                fullWidth
-                label="To Date"
-                type="date"
-                value={toDate}
-                onChange={(e) => setToDate(e.target.value)}
-                InputLabelProps={{ shrink: true }}
-                size="small"
-              />
-            </Grid>
-            <Grid size={3}>
-              <Button variant="contained" onClick={handleSearch} fullWidth sx={{ height: '100%' }}>Search</Button>
-            </Grid>
-          </Grid>
-          <Box sx={{ maxHeight: '50vh', overflow: 'auto' }}>
-            <TableContainer>
-              <Table size="small" stickyHeader>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Date</TableCell>
-                    <TableCell>Voucher No.</TableCell>
-                    <TableCell>Vendor</TableCell>
-                    <TableCell></TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {filteredVouchers.map((voucher: any) => (
-                    <TableRow 
-                      key={voucher.id}
-                      onClick={() => handleEdit(voucher.id)}
-                      onContextMenu={(e) => handleContextMenu(e, voucher)}
-                      style={{ cursor: 'pointer' }}
-                    >
-                      <TableCell>{new Date(voucher.date).toLocaleDateString()}</TableCell>
-                      <TableCell>{voucher.voucher_number}</TableCell>
-                      <TableCell>{vendorList?.find((c: any) => c.id === voucher.vendor_id)?.name || ''}</TableCell>
-                      <TableCell align="right" sx={{ pr: 0 }}>
-                        <VoucherContextMenu
-                          voucher={voucher}
-                          voucherType="Purchase Voucher"
-                          onView={handleView}
-                          onEdit={handleEdit}
-                          onDelete={handleDeleteVoucher}
-                          onPrint={() => handlePrintVoucher(voucher.id, voucher.voucher_number)}
-                          onEmail={handleEmailVoucher}
-                          showKebab={true}
-                          open={false}
-                          onClose={() => {}}
-                        />
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Box>
-        </Box>
-      </Modal>
+      {/* Voucher List Modal */}
+      <VoucherListModal
+        open={showFullModal}
+        onClose={handleModalClose}
+        voucherType="Purchase Vouchers"
+        vouchers={sortedVouchers || []}
+        onVoucherClick={handleVoucherClick}
+        onEdit={handleView}
+        onView={handleView}
+        onDelete={handleDelete}
+        onGeneratePDF={handleGeneratePDF}
+        vendorList={vendorList}
+      />
+      
       {contextMenu !== null && (
         <VoucherContextMenu
           voucher={contextMenu.voucher}
           voucherType="Purchase Voucher"
           onView={handleView}
           onEdit={handleEdit}
-          onDelete={handleDeleteVoucher}
-          onPrint={() => handlePrintVoucher(contextMenu.voucher.id, contextMenu.voucher.voucher_number)}
-          onEmail={handleEmailVoucher}
+          onDelete={handleDelete}
+          onPrint={() => handleGeneratePDF(contextMenu.voucher)}
           showKebab={false}
           open={true}
-          onClose={handleCloseContextMenu}
+          onClose={handleContextMenuClose}
           anchorReference="anchorPosition"
           anchorPosition={{ top: contextMenu.mouseY, left: contextMenu.mouseX }}
         />

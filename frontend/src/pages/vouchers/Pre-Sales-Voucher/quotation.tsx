@@ -10,6 +10,7 @@ import AddShippingAddressModal from '../../../components/AddShippingAddressModal
 import VoucherContextMenu from '../../../components/VoucherContextMenu';
 import VoucherLayout from '../../../components/VoucherLayout';
 import VoucherHeaderActions from '../../../components/VoucherHeaderActions';
+import VoucherListModal from '../../../components/VoucherListModal';
 import BalanceDisplay from '../../../components/BalanceDisplay';
 import StockDisplay from '../../../components/StockDisplay';
 import ProductAutocomplete from '../../../components/ProductAutocomplete';
@@ -59,6 +60,7 @@ const QuotationPage: React.FC = () => {
     handleSubmit,
     watch,
     setValue,
+    reset,
     errors,
     fields,
     append,
@@ -100,6 +102,20 @@ const QuotationPage: React.FC = () => {
     // Utilities
     isViewMode,
   } = useVoucherPage(config);
+
+  // Additional state for voucher list modal
+  const [showVoucherListModal, setShowVoucherListModal] = useState(false);
+
+  // Handle voucher click to load details
+  const handleVoucherClick = (voucher: any) => {
+    // Load the selected voucher into the form
+    setMode('view');
+    reset(voucher);
+    // Set the form with the voucher data
+    Object.keys(voucher).forEach(key => {
+      setValue(key, voucher[key]);
+    });
+  };
 
   // Quotation specific state
   const selectedCustomerId = watch('customer_id');
@@ -575,6 +591,20 @@ const QuotationPage: React.FC = () => {
         indexContent={indexContent}
         formContent={formContent}
         onShowAll={handleModalOpen}
+        modalContent={
+          <VoucherListModal
+            open={showFullModal}
+            onClose={handleModalClose}
+            voucherType="Quotations"
+            vouchers={sortedVouchers || []}
+            onVoucherClick={handleVoucherClick}
+            onEdit={handleEdit}
+            onView={handleView}
+            onDelete={handleDelete}
+            onGeneratePDF={handleGeneratePDF}
+            customerList={customerList}
+          />
+        }
       />
 
       {/* Modals */}

@@ -9,6 +9,7 @@ import AddShippingAddressModal from '../../../components/AddShippingAddressModal
 import VoucherContextMenu from '../../../components/VoucherContextMenu';
 import VoucherLayout from '../../../components/VoucherLayout';
 import VoucherHeaderActions from '../../../components/VoucherHeaderActions';
+import VoucherListModal from '../../../components/VoucherListModal';
 import BalanceDisplay from '../../../components/BalanceDisplay';
 import StockDisplay from '../../../components/StockDisplay';
 import ProductAutocomplete from '../../../components/ProductAutocomplete';
@@ -56,6 +57,7 @@ const SalesOrderPage: React.FC = () => {
     handleSubmit,
     watch,
     setValue,
+    reset,
     errors,
     fields,
     append,
@@ -97,6 +99,20 @@ const SalesOrderPage: React.FC = () => {
     // Utilities
     isViewMode,
   } = useVoucherPage(config);
+
+  // Additional state for voucher list modal
+  const [showVoucherListModal, setShowVoucherListModal] = useState(false);
+
+  // Handle voucher click to load details
+  const handleVoucherClick = (voucher: any) => {
+    // Load the selected voucher into the form
+    setMode('view');
+    reset(voucher);
+    // Set the form with the voucher data
+    Object.keys(voucher).forEach(key => {
+      setValue(key, voucher[key]);
+    });
+  };
 
   // Sales Order specific state
   const selectedCustomerId = watch('customer_id');
@@ -619,6 +635,20 @@ const SalesOrderPage: React.FC = () => {
         indexContent={indexContent}
         formContent={formContent}
         onShowAll={handleModalOpen}
+        modalContent={
+          <VoucherListModal
+            open={showFullModal}
+            onClose={handleModalClose}
+            voucherType="Sales Orders"
+            vouchers={sortedVouchers || []}
+            onVoucherClick={handleVoucherClick}
+            onEdit={handleEdit}
+            onView={handleView}
+            onDelete={handleDelete}
+            onGeneratePDF={handleGeneratePDF}
+            customerList={customerList}
+          />
+        }
       />
 
       {/* Modals */}

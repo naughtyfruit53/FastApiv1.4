@@ -7,6 +7,7 @@ import AddVendorModal from '../../../components/AddVendorModal';
 import AddCustomerModal from '../../../components/AddCustomerModal';
 import VoucherContextMenu from '../../../components/VoucherContextMenu';
 import VoucherHeaderActions from '../../../components/VoucherHeaderActions';
+import VoucherListModal from '../../../components/VoucherListModal';
 import { useVoucherPage } from '../../../hooks/useVoucherPage';
 import { getVoucherConfig, numberToWords } from '../../../utils/voucherUtils';
 
@@ -39,6 +40,7 @@ const ReceiptVoucher: React.FC = () => {
     handleSubmit,
     watch,
     setValue,
+    reset,
     errors,
 
     // Data
@@ -79,6 +81,16 @@ const ReceiptVoucher: React.FC = () => {
 
   const nameFilter = createFilterOptions();
 
+  // Handle voucher click to load details
+  const handleVoucherClick = (voucher: any) => {
+    // Load the selected voucher into the form
+    reset(voucher);
+    // Set the form with the voucher data
+    Object.keys(voucher).forEach(key => {
+      setValue(key, voucher[key]);
+    });
+  };
+
   return (
     <Container maxWidth="xl" sx={{ py: 2 }}>
       <Grid container spacing={3}>
@@ -87,11 +99,9 @@ const ReceiptVoucher: React.FC = () => {
           <Paper sx={{ p: 2, height: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column' }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
               <Typography variant="h6">Receipt Vouchers</Typography>
-              <VoucherHeaderActions
-                onCreate={handleCreate}
-                onSearch={handleModalOpen}
-                voucherType="Receipt Voucher"
-              />
+              <Button variant="outlined" size="small" onClick={handleModalOpen}>
+                Show All
+              </Button>
             </Box>
 
             {isLoading ? (
@@ -135,9 +145,17 @@ const ReceiptVoucher: React.FC = () => {
         {/* Right side - Voucher Form */}
         <Grid item xs={12} md={6}>
           <Paper sx={{ p: 3, height: 'calc(100vh - 120px)', overflow: 'auto' }}>
-            <Typography variant="h6" gutterBottom>
-              {mode === 'create' ? 'Create' : mode === 'edit' ? 'Edit' : 'View'} Receipt Voucher
-            </Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h6">
+                {mode === 'create' ? 'Create' : mode === 'edit' ? 'Edit' : 'View'} Receipt Voucher
+              </Typography>
+              <VoucherHeaderActions
+                mode={mode}
+                voucherType="Receipt Voucher"
+                voucherRoute="/vouchers/Financial-Vouchers/receipt-voucher"
+                currentId={watchedValues?.id}
+              />
+            </Box>
 
             <form onSubmit={handleSubmit(handleSubmitForm)} className="space-y-4">
               <Grid container spacing={2}>
@@ -359,115 +377,20 @@ const ReceiptVoucher: React.FC = () => {
         />
       )}
 
-      {/* Search/Filter Modal */}
-      <Modal open={showFullModal} onClose={handleModalClose}>
-        <Box
-          sx={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            width: '90%',
-            maxWidth: 800,
-            bgcolor: 'background.paper',
-            boxShadow: 24,
-            p: 4,
-            borderRadius: 2,
-          }}
-        >
-          <Typography variant="h6" gutterBottom>
-            Search Receipt Vouchers
-          </Typography>
-          
-          <Grid container spacing={2} sx={{ mb: 3 }}>
-            <Grid item xs={12} md={4}>
-              <TextField
-                label="Search"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                fullWidth
-                placeholder="Voucher number, reference, notes..."
-              />
-            </Grid>
-            <Grid item xs={6} md={3}>
-              <TextField
-                label="From Date"
-                type="date"
-                value={fromDate}
-                onChange={(e) => setFromDate(e.target.value)}
-                InputLabelProps={{ shrink: true }}
-                fullWidth
-              />
-            </Grid>
-            <Grid item xs={6} md={3}>
-              <TextField
-                label="To Date"
-                type="date"
-                value={toDate}
-                onChange={(e) => setToDate(e.target.value)}
-                InputLabelProps={{ shrink: true }}
-                fullWidth
-              />
-            </Grid>
-            <Grid item xs={12} md={2}>
-              <Button
-                variant="contained"
-                onClick={handleSearch}
-                fullWidth
-                sx={{ height: '56px' }}
-              >
-                Search
-              </Button>
-            </Grid>
-          </Grid>
-
-          <TableContainer component={Paper} sx={{ maxHeight: 400 }}>
-            <Table stickyHeader>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Voucher #</TableCell>
-                  <TableCell>Date</TableCell>
-                  <TableCell>Party</TableCell>
-                  <TableCell>Amount</TableCell>
-                  <TableCell>Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {filteredVouchers.map((voucher: any) => (
-                  <TableRow key={voucher.id}>
-                    <TableCell>{voucher.voucher_number}</TableCell>
-                    <TableCell>{new Date(voucher.date).toLocaleDateString()}</TableCell>
-                    <TableCell>{voucher.vendor?.name || voucher.customer?.name || 'N/A'}</TableCell>
-                    <TableCell>₹{voucher.total_amount?.toFixed(2) || '0.00'}</TableCell>
-                    <TableCell>
-                      <Button
-                        size="small"
-                        onClick={() => {
-                          handleEdit(voucher);
-                          handleModalClose();
-                        }}
-                        startIcon={<Edit />}
-                      >
-                        Edit
-                      </Button>
-                      <Button
-                        size="small"
-                        onClick={() => {
-                          handleView(voucher);
-                          handleModalClose();
-                        }}
-                        startIcon={<Visibility />}
-                      >
-                        View
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Box>
-      </Modal>
+      {/* Voucher List Modal */}
+      <VoucherListModal
+        open={showFullModal}
+        onClose={handleModalClose}
+        voucherType="Receipt Vouchers"
+        vouchers={sortedVouchers || []}
+        onVoucherClick={handleVoucherClick}
+        onEdit={handleEdit}
+        onView={handleView}
+        onDelete={handleDelete}
+        onGeneratePDF={handleGeneratePDF}
+        customerList={customerList}
+        vendorList={vendorList}
+      />
     </Container>
   );
 };
