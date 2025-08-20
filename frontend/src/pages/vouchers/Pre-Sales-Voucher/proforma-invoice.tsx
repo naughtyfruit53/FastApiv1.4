@@ -9,6 +9,7 @@ import AddShippingAddressModal from '../../../components/AddShippingAddressModal
 import VoucherContextMenu from '../../../components/VoucherContextMenu';
 import VoucherLayout from '../../../components/VoucherLayout';
 import VoucherHeaderActions from '../../../components/VoucherHeaderActions';
+import VoucherListModal from '../../../components/VoucherListModal';
 import BalanceDisplay from '../../../components/BalanceDisplay';
 import StockDisplay from '../../../components/StockDisplay';
 import ProductAutocomplete from '../../../components/ProductAutocomplete';
@@ -97,6 +98,9 @@ const ProformaInvoicePage: React.FC = () => {
     // Utilities
     isViewMode,
   } = useVoucherPage(config);
+
+  // Additional state for voucher list modal
+  const [showVoucherListModal, setShowVoucherListModal] = useState(false);
 
   // Proforma Invoice specific state
   const selectedCustomerId = watch('customer_id');
@@ -200,46 +204,17 @@ const ProformaInvoicePage: React.FC = () => {
   }, [mode, nextVoucherNumber, isLoading, setValue, config.nextNumberEndpoint]);
 
   const handleShowAll = () => {
-    // Open a new window with all vouchers
-    const allVouchersWindow = window.open('', '_blank');
-    if (allVouchersWindow) {
-      allVouchersWindow.document.write(`
-        <html>
-          <head>
-            <title>All Proforma Invoices</title>
-            <style>
-              table { width: 100%; border-collapse: collapse; }
-              th, td { border: 1px solid black; padding: 8px; text-align: left; }
-              th { background-color: #f2f2f2; }
-            </style>
-          </head>
-          <body>
-            <h2>All Proforma Invoices</h2>
-            <table>
-              <thead>
-                <tr>
-                  <th>Voucher No.</th>
-                  <th>Date</th>
-                  <th>Customer</th>
-                  <th>Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${sortedVouchers.map((voucher: any) => `
-                  <tr>
-                    <td>${voucher.voucher_number}</td>
-                    <td>${voucher.date}</td>
-                    <td>${voucher.customer?.name || 'N/A'}</td>
-                    <td>₹${voucher.total_amount?.toLocaleString() || '0'}</td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </body>
-        </html>
-      `);
-      allVouchersWindow.document.close();
-    }
+    setShowVoucherListModal(true);
+  };
+
+  const handleVoucherClick = (voucher: any) => {
+    // Load the selected voucher into the form
+    setMode('view');
+    reset(voucher);
+    // Set the form with the voucher data
+    Object.keys(voucher).forEach(key => {
+      setValue(key, voucher[key]);
+    });
   };
 
   const indexContent = (
@@ -271,7 +246,9 @@ const ProformaInvoicePage: React.FC = () => {
                   <TableCell sx={{ fontSize: 12, p: 1 }} onClick={() => handleView(voucher)}>
                     {voucher.voucher_number}
                   </TableCell>
-                  <TableCell sx={{ fontSize: 12, p: 1 }}>{voucher.date}</TableCell>
+                  <TableCell sx={{ fontSize: 12, p: 1 }}>
+                    {voucher.date ? new Date(voucher.date).toLocaleDateString() : 'N/A'}
+                  </TableCell>
                   <TableCell sx={{ fontSize: 12, p: 1 }}>{voucher.customer?.name || 'N/A'}</TableCell>
                   <TableCell sx={{ fontSize: 12, p: 1 }}>₹{voucher.total_amount?.toLocaleString() || '0'}</TableCell>
                 </TableRow>
@@ -629,6 +606,20 @@ const ProformaInvoicePage: React.FC = () => {
         indexContent={indexContent}
         formContent={formContent}
         onShowAll={handleShowAll}
+        modalContent={
+          <VoucherListModal
+            open={showVoucherListModal}
+            onClose={() => setShowVoucherListModal(false)}
+            voucherType="Proforma Invoices"
+            vouchers={sortedVouchers || []}
+            onVoucherClick={handleVoucherClick}
+            onEdit={handleEdit}
+            onView={handleView}
+            onDelete={handleDelete}
+            onGeneratePDF={handleGeneratePDF}
+            customerList={customerList}
+          />
+        }
       />
 
       {/* Modals */}
