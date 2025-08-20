@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auth Loading State - Before and After Fix</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .demo-container {
+            display: flex;
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .demo-panel {
+            flex: 1;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .demo-header {
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .demo-title {
+            margin: 0;
+            color: #333;
+        }
+        
+        .demo-description {
+            margin: 10px 0 0 0;
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .demo-viewport {
+            height: 400px;
+            position: relative;
+            border: 1px solid #ddd;
+            margin: 20px;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        /* Before: Blank page */
+        .blank-page {
+            background: white;
+            height: 100%;
+            /* Completely empty - representing the race condition bug */
+        }
+        
+        /* After: Proper loading state */
+        .loading-state {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            flex-direction: column;
+            background-color: #f5f5f5;
+        }
+        
+        .loading-text {
+            fontSize: 18px;
+            marginBottom: 20px;
+            color: #333;
+        }
+        
+        .auth-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            animation: authSpinner 2s linear infinite;
+            margin-bottom: 15px;
+        }
+        
+        @keyframes authSpinner {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .loading-subtext {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .status-indicator {
+            padding: 10px 20px;
+            margin: 20px;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+        
+        .status-error {
+            background: #fee;
+            border: 1px solid #fcc;
+            color: #c33;
+        }
+        
+        .status-success {
+            background: #efe;
+            border: 1px solid #cfc;
+            color: #3c3;
+        }
+        
+        .console-logs {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            margin: 20px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 12px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        
+        .log-entry {
+            margin: 2px 0;
+        }
+        
+        .log-auth { color: #4fc3f7; }
+        .log-token { color: #81c784; }
+        .log-error { color: #f48fb1; }
+        .log-success { color: #a5d6a7; }
+    </style>
+</head>
+<body>
+    <h1 style="text-align: center; color: #333; margin-bottom: 30px;">
+        🔧 AuthProvider Race Condition Fix - UI Comparison
+    </h1>
+    
+    <div class="demo-container">
+        <!-- Before Fix -->
+        <div class="demo-panel">
+            <div class="demo-header">
+                <h2 class="demo-title">❌ Before Fix</h2>
+                <p class="demo-description">
+                    Race condition causes blank page after login. AuthProvider's loading state 
+                    resolves before user data is fetched, leaving users with an empty screen.
+                </p>
+            </div>
+            <div class="demo-viewport">
+                <div class="blank-page">
+                    <!-- Intentionally empty to show the blank page issue -->
+                </div>
+            </div>
+            <div class="status-indicator status-error">
+                ⚠️ Bad UX: User sees blank screen, unclear if app is working
+            </div>
+            <div class="console-logs">
+                <div class="log-entry log-auth">[AuthProvider] Component mounted</div>
+                <div class="log-entry log-token">[AuthProvider] Token found</div>
+                <div class="log-entry log-error">[AuthProvider] fetchUser() in background, loading=false immediately</div>
+                <div class="log-entry log-error">[Dashboard] No user yet, blank render</div>
+                <div class="log-entry">😵 User confused by blank screen</div>
+            </div>
+        </div>
+        
+        <!-- After Fix -->
+        <div class="demo-panel">
+            <div class="demo-header">
+                <h2 class="demo-title">✅ After Fix</h2>
+                <p class="demo-description">
+                    Proper loading state management with beautiful spinner. Users see clear 
+                    feedback while authentication is in progress.
+                </p>
+            </div>
+            <div class="demo-viewport">
+                <div class="loading-state">
+                    <div class="loading-text">Loading authentication...</div>
+                    <div class="auth-spinner"></div>
+                    <div class="loading-subtext">Establishing secure session...</div>
+                </div>
+            </div>
+            <div class="status-indicator status-success">
+                ✅ Great UX: Clear loading feedback, professional appearance
+            </div>
+            <div class="console-logs">
+                <div class="log-entry log-auth">[AuthProvider] Component mounted, initializing auth state</div>
+                <div class="log-entry log-token">[AuthProvider] Token found - starting user fetch</div>
+                <div class="log-entry log-auth">[AuthProvider] User data received from API</div>
+                <div class="log-entry log-success">[AuthProvider] User fetch completed - setting loading to false</div>
+                <div class="log-entry log-success">[Dashboard] Auth context ready - rendering dashboard</div>
+                <div class="log-entry">😊 User sees smooth transition to dashboard</div>
+            </div>
+        </div>
+    </div>
+    
+    <div style="margin-top: 40px; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+        <h3 style="color: #333; margin-top: 0;">🎯 Key Improvements</h3>
+        <ul style="color: #666; line-height: 1.6;">
+            <li><strong>Fixed Race Condition:</strong> Loading state properly waits for auth resolution</li>
+            <li><strong>Enhanced Logging:</strong> Comprehensive console logs for debugging auth lifecycle</li>
+            <li><strong>Better UX:</strong> Professional loading spinner instead of blank screen</li>
+            <li><strong>Timeout Protection:</strong> API client won't wait indefinitely for auth context</li>
+            <li><strong>Error Handling:</strong> Graceful handling of auth failures with user feedback</li>
+            <li><strong>Hard Reload Preserved:</strong> Maintains the working login redirect approach</li>
+        </ul>
+    </div>
+    
+    <div style="margin-top: 20px; padding: 15px; background: #e3f2fd; border-radius: 8px; border-left: 4px solid #2196f3;">
+        <strong>Technical Fix:</strong> The AuthProvider now properly manages the loading state by ensuring 
+        <code>setLoading(false)</code> only happens in the <code>finally()</code> block after 
+        <code>fetchUser()</code> completes, preventing the race condition where children render 
+        before auth state is determined.
+    </div>
+
+    <script>
+        // Simulate the transition after 3 seconds to show the complete flow
+        setTimeout(() => {
+            const afterPanel = document.querySelectorAll('.demo-panel')[1];
+            const viewport = afterPanel.querySelector('.demo-viewport');
+            
+            // Transition to dashboard view
+            viewport.innerHTML = `
+                <div style="padding: 20px; height: calc(100% - 40px); background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; display: flex; align-items: center; justify-content: center; flex-direction: column;">
+                    <h2 style="margin: 0 0 10px 0;">🎉 Dashboard Loaded!</h2>
+                    <p style="margin: 0; opacity: 0.9;">Welcome back, test@example.com</p>
+                </div>
+            `;
+            
+            // Update status
+            const status = afterPanel.querySelector('.status-indicator');
+            status.innerHTML = '🎉 Perfect: Smooth transition to authenticated dashboard';
+            status.className = 'status-indicator status-success';
+        }, 3000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,196 @@
+# app/api/v1/vouchers/debit_note.py
+
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+from sqlalchemy.orm import Session
+from typing import List
+from app.core.database import get_db
+from app.api.v1.auth import get_current_active_user
+from app.models.base import User
+from app.models.vouchers import DebitNote
+from app.schemas.vouchers import DebitNoteCreate, DebitNoteInDB, DebitNoteUpdate
+from app.services.voucher_service import VoucherNumberService
+import logging
+
+logger = logging.getLogger(__name__)
+router = APIRouter(prefix="/debit-notes", tags=["debit-notes"])
+
+@router.get("/", response_model=List[DebitNoteInDB])
+async def get_debit_notes(
+    skip: int = 0,
+    limit: int = 100,
+    status: str = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    query = db.query(DebitNote).filter(
+        DebitNote.organization_id == current_user.organization_id
+    )
+    
+    if status:
+        query = query.filter(DebitNote.status == status)
+    
+    notes = query.offset(skip).limit(limit).all()
+    return notes
+
+@router.get("/next-number", response_model=str)
+async def get_next_debit_note_number(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    return VoucherNumberService.generate_voucher_number(
+        db, "DN", current_user.organization_id, DebitNote
+    )
+
+@router.post("/", response_model=DebitNoteInDB)
+async def create_debit_note(
+    note: DebitNoteCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    try:
+        note_data = note.dict(exclude={'items'})
+        note_data['created_by'] = current_user.id
+        note_data['organization_id'] = current_user.organization_id
+        
+        # Generate unique voucher number if not provided or blank
+        if not note_data.get('voucher_number') or note_data['voucher_number'] == '':
+            note_data['voucher_number'] = VoucherNumberService.generate_voucher_number(
+                db, "DN", current_user.organization_id, DebitNote
+            )
+        else:
+            existing = db.query(DebitNote).filter(
+                DebitNote.organization_id == current_user.organization_id,
+                DebitNote.voucher_number == note_data['voucher_number']
+            ).first()
+            if existing:
+                note_data['voucher_number'] = VoucherNumberService.generate_voucher_number(
+                    db, "DN", current_user.organization_id, DebitNote
+                )
+        
+        db_note = DebitNote(**note_data)
+        db.add(db_note)
+        db.flush()
+        
+        for item_data in note.items:
+            from app.models.vouchers import DebitNoteItem
+            item = DebitNoteItem(
+                debit_note_id=db_note.id,
+                **item_data.dict()
+            )
+            db.add(item)
+        
+        db.commit()
+        db.refresh(db_note)
+        
+        logger.info(f"Debit note {db_note.voucher_number} created by {current_user.email}")
+        return db_note
+        
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error creating debit note: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create debit note"
+        )
+
+@router.get("/{note_id}", response_model=DebitNoteInDB)
+async def get_debit_note(
+    note_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    note = db.query(DebitNote).filter(
+        DebitNote.id == note_id,
+        DebitNote.organization_id == current_user.organization_id
+    ).first()
+    if not note:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Debit note not found"
+        )
+    return note
+
+@router.put("/{note_id}", response_model=DebitNoteInDB)
+async def update_debit_note(
+    note_id: int,
+    note_update: DebitNoteUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    try:
+        note = db.query(DebitNote).filter(
+            DebitNote.id == note_id,
+            DebitNote.organization_id == current_user.organization_id
+        ).first()
+        if not note:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Debit note not found"
+            )
+        
+        update_data = note_update.dict(exclude_unset=True, exclude={'items'})
+        for field, value in update_data.items():
+            setattr(note, field, value)
+        
+        if note_update.items is not None:
+            from app.models.vouchers import DebitNoteItem
+            db.query(DebitNoteItem).filter(
+                DebitNoteItem.debit_note_id == note_id
+            ).delete()
+            
+            for item_data in note_update.items:
+                item = DebitNoteItem(
+                    debit_note_id=note_id,
+                    **item_data.dict()
+                )
+                db.add(item)
+        
+        db.commit()
+        db.refresh(note)
+        
+        logger.info(f"Debit note {note.voucher_number} updated by {current_user.email}")
+        return note
+        
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error updating debit note: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update debit note"
+        )
+
+@router.delete("/{note_id}")
+async def delete_debit_note(
+    note_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    try:
+        note = db.query(DebitNote).filter(
+            DebitNote.id == note_id,
+            DebitNote.organization_id == current_user.organization_id
+        ).first()
+        if not note:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Debit note not found"
+            )
+        
+        from app.models.vouchers import DebitNoteItem
+        db.query(DebitNoteItem).filter(
+            DebitNoteItem.debit_note_id == note_id
+        ).delete()
+        
+        db.delete(note)
+        db.commit()
+        
+        logger.info(f"Debit note {note.voucher_number} deleted by {current_user.email}")
+        return {"message": "Debit note deleted successfully"}
+        
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error deleting debit note: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete debit note"
+        )

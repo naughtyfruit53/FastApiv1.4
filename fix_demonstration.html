@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Organization Context Fix - Before/After</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            padding: 20px;
+        }
+        .section {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            border-left: 4px solid #dc3545;
+        }
+        .section.fixed {
+            border-left-color: #28a745;
+        }
+        .section h3 {
+            margin-top: 0;
+            color: #dc3545;
+        }
+        .section.fixed h3 {
+            color: #28a745;
+        }
+        .code {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 12px;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+        .error {
+            background: #fed7d7;
+            color: #c53030;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .success {
+            background: #c6f6d5;
+            color: #2f855a;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .changes {
+            grid-column: 1 / -1;
+            background: #e6fffa;
+            border-left: 4px solid #38b2ac;
+            margin-top: 20px;
+        }
+        .changes h3 {
+            color: #38b2ac;
+        }
+        ul {
+            padding-left: 20px;
+        }
+        li {
+            margin: 8px 0;
+        }
+        .icon {
+            margin-right: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Organization Context Fix</h1>
+            <p>Solving the 'No current organization specified' error during inventory Excel import</p>
+        </div>
+        
+        <div class="content">
+            <div class="section">
+                <h3>❌ BEFORE (Broken)</h3>
+                
+                <h4>Backend Issue:</h4>
+                <div class="code">// app/api/v1/stock.py
+async def bulk_import_stock(...):
+    # ❌ Wrong function call - no user context
+    org_id = require_current_organization_id()
+    # This fails with "No current organization specified"</div>
+                
+                <div class="error">
+                    <strong>Error:</strong> No current organization specified
+                </div>
+                
+                <h4>Frontend Issues:</h4>
+                <ul>
+                    <li>No company setup validation before import</li>
+                    <li>Generic error messages</li>
+                    <li>No authentication check in service</li>
+                    <li>Poor user feedback</li>
+                </ul>
+            </div>
+            
+            <div class="section fixed">
+                <h3>✅ AFTER (Fixed)</h3>
+                
+                <h4>Backend Fix:</h4>
+                <div class="code">// app/api/v1/stock.py
+from app.core.org_restrictions import require_current_organization_id
+
+async def bulk_import_stock(current_user: User = ...):
+    # ✅ Proper function call with user context
+    logger.info(f"Starting import for user {current_user.email}")
+    org_id = require_current_organization_id(current_user)
+    # Returns 412 if company setup needed</div>
+                
+                <div class="success">
+                    <strong>Success:</strong> Proper organization context handling with clear error messages
+                </div>
+                
+                <h4>Frontend Improvements:</h4>
+                <ul>
+                    <li>✅ Company setup validation before import</li>
+                    <li>✅ User-friendly error messages</li>
+                    <li>✅ Authentication check in service</li>
+                    <li>✅ Disabled UI when setup needed</li>
+                </ul>
+            </div>
+            
+            <div class="section changes">
+                <h3>📋 Summary of Changes</h3>
+                
+                <h4>Backend Changes:</h4>
+                <ul>
+                    <li><span class="icon">🔧</span>Fixed <code>require_current_organization_id()</code> calls to pass <code>current_user</code> parameter</li>
+                    <li><span class="icon">🚨</span>Changed error code from HTTP_400_BAD_REQUEST to HTTP_412_PRECONDITION_FAILED</li>
+                    <li><span class="icon">📝</span>Added comprehensive logging for user/org context debugging</li>
+                    <li><span class="icon">💬</span>Improved error message: "Company setup required before importing inventory"</li>
+                </ul>
+                
+                <h4>Frontend Changes:</h4>
+                <ul>
+                    <li><span class="icon">🛡️</span>Enhanced StockBulkImport component with company setup validation</li>
+                    <li><span class="icon">🔐</span>Added authentication check in bulkImportStock service</li>
+                    <li><span class="icon">🎨</span>Improved error handling for 412/400/404 status codes</li>
+                    <li><span class="icon">🚫</span>Disabled import UI when company setup is needed</li>
+                    <li><span class="icon">💭</span>Added warning alerts and call-to-action messages</li>
+                </ul>
+                
+                <h4>Files Modified:</h4>
+                <ul>
+                    <li><code>app/api/v1/stock.py</code> - Fixed organization context handling</li>
+                    <li><code>app/core/org_restrictions.py</code> - Improved error codes and messages</li>
+                    <li><code>frontend/src/components/StockBulkImport.tsx</code> - Enhanced validation and UI</li>
+                    <li><code>frontend/src/services/authService.ts</code> - Added authentication checks</li>
+                    <li><code>frontend/src/utils/errorHandling.ts</code> - Improved error messages</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,129 @@
+// frontend/src/components/VoucherContextMenu.tsx
+
+import React, { useState } from 'react';
+import { Menu, MenuItem, IconButton } from '@mui/material';
+import { MoreVert as MoreVertIcon, Visibility, Edit, Delete, Print, Email } from '@mui/icons-material';
+
+interface VoucherContextMenuProps {
+  voucher?: any;
+  voucherType: string;
+  onView: (id: number) => void;
+  onEdit: (id: number) => void;
+  onDelete: (id: number) => void;
+  onPrint?: (id: number) => void;
+  onEmail?: (id: number) => void;
+  showKebab?: boolean;
+  contextMenu?: { mouseX: number; mouseY: number; voucher: any } | null;
+  onClose: () => void;
+  open?: boolean;
+  anchorPosition?: { left: number; top: number };
+}
+
+const VoucherContextMenu: React.FC<VoucherContextMenuProps> = ({
+  voucher,
+  voucherType,
+  onView,
+  onEdit,
+  onDelete,
+  onPrint,
+  onEmail,
+  showKebab = false,
+  contextMenu = null,
+  onClose,
+  open = false,
+  anchorPosition = null,
+}) => {
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+
+  const effectiveVoucher = voucher || (contextMenu ? contextMenu.voucher : null);
+
+  const handleClick = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+    onClose();
+  };
+
+  const handleAction = (action: (id: number) => void) => () => {
+    if (effectiveVoucher) {
+      action(effectiveVoucher.id);
+    }
+    handleMenuClose();
+  };
+
+  // Determine email recipient based on voucher type
+  const getEmailRecipient = () => {
+    if (!effectiveVoucher) return '';
+    if (!voucherType) return '';
+
+    const lowerType = voucherType.toLowerCase();
+    if (lowerType.includes('sales')) {
+      return effectiveVoucher.customer?.email || '';
+    } else if (lowerType.includes('purchase') || lowerType.includes('financial') || lowerType.includes('payment')) {
+      return effectiveVoucher.vendor?.email || '';
+    } else if (lowerType.includes('receipt')) {
+      return effectiveVoucher.customer?.email || '';
+    }
+    return '';
+  };
+
+  const handleEmailClick = () => {
+    if (onEmail && effectiveVoucher) {
+      const recipient = getEmailRecipient();
+      if (recipient) {
+        onEmail(effectiveVoucher.id);
+      } else {
+        alert('No email recipient found for this voucher type.');
+      }
+    }
+    handleMenuClose();
+  };
+
+  const menuProps = anchorPosition ? {
+    open: open || Boolean(anchorEl),
+    onClose: handleMenuClose,
+    anchorReference: 'anchorPosition' as const,
+    anchorPosition,
+  } : {
+    open: Boolean(anchorEl),
+    anchorEl,
+    onClose: handleMenuClose,
+  };
+
+  const hasEmail = !!onEmail && !!getEmailRecipient();
+
+  return (
+    <>
+      {showKebab && (
+        <IconButton onClick={handleClick}>
+          <MoreVertIcon />
+        </IconButton>
+      )}
+      <Menu {...menuProps}>
+        <MenuItem onClick={handleAction(onView)}>
+          <Visibility sx={{ mr: 1 }} /> View
+        </MenuItem>
+        <MenuItem onClick={handleAction(onEdit)}>
+          <Edit sx={{ mr: 1 }} /> Edit
+        </MenuItem>
+        <MenuItem onClick={handleAction(onDelete)}>
+          <Delete sx={{ mr: 1 }} /> Delete
+        </MenuItem>
+        {onPrint && (
+          <MenuItem onClick={handleAction(onPrint)}>
+            <Print sx={{ mr: 1 }} /> Print
+          </MenuItem>
+        )}
+        {hasEmail && (
+          <MenuItem onClick={handleEmailClick}>
+            <Email sx={{ mr: 1 }} /> Email
+          </MenuItem>
+        )}
+      </Menu>
+    </>
+  );
+};
+
+export default VoucherContextMenu;
