@@ -1,4 +1,5 @@
-// Shared VoucherLayout component - 33.34% : 66.66% split ratio
+// frontend/src/components/VoucherLayout.tsx
+// Shared VoucherLayout component - 40:60 split ratio (approximated as 5:7 in Grid)
 import React from 'react';
 import { Container, Grid, Paper, Box, Typography, Button } from '@mui/material';
 
@@ -28,8 +29,8 @@ const VoucherLayout: React.FC<VoucherLayoutProps> = ({
     <>
       <Container maxWidth="xl">
         <Grid container spacing={2}>
-          {/* Index Panel - 33.34% */}
-          <Grid size={{ xs: 12, md: 5, lg: 4 }}>
+          {/* Index Panel - approximately 40% */}
+          <Grid size={{ xs: 12, md: 5, lg: 5 }}>
             <Paper sx={{ p: 2 }}>
               <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
                 <Typography variant="h6" sx={{ fontSize: 18, fontWeight: 'bold' }}>
@@ -45,8 +46,8 @@ const VoucherLayout: React.FC<VoucherLayoutProps> = ({
             </Paper>
           </Grid>
 
-          {/* Form Panel - 66.66% */}
-          <Grid size={{ xs: 12, md: 7, lg: 8 }}>
+          {/* Form Panel - approximately 60% */}
+          <Grid size={{ xs: 12, md: 7, lg: 7 }}>
             <Paper sx={{ p: 2 }}>
               {formContent}
             </Paper>

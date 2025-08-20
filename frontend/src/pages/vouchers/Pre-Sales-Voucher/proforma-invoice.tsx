@@ -1,4 +1,4 @@
-// src/pages/vouchers/Pre-Sales-Vouchers/proforma-invoice.tsx
+// frontend/src/pages/vouchers/Pre-Sales-Voucher/proforma-invoice.tsx
 // Proforma Invoice Page - Refactored using shared DRY logic
 import React, { useMemo, useState, useEffect } from 'react';
 import { Box, Button, TextField, Typography, Grid, IconButton, CircularProgress, Container, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Autocomplete, InputAdornment, Tooltip, Modal, Alert, Chip, Fab } from '@mui/material';
@@ -269,11 +269,11 @@ const ProformaInvoicePage: React.FC = () => {
         <Table stickyHeader size="small">
           <TableHead>
             <TableRow>
-              <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1 }}>Voucher No.</TableCell>
-              <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1 }}>Date</TableCell>
-              <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1 }}>Customer</TableCell>
-              <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1 }}>Amount</TableCell>
-              <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1, width: 40 }}>Actions</TableCell>
+              <TableCell align="center" sx={{ fontSize: 15, fontWeight: 'bold', p: 1 }}>Voucher No.</TableCell>
+              <TableCell align="center" sx={{ fontSize: 15, fontWeight: 'bold', p: 1 }}>Date</TableCell>
+              <TableCell align="center" sx={{ fontSize: 15, fontWeight: 'bold', p: 1 }}>Customer</TableCell>
+              <TableCell align="center" sx={{ fontSize: 15, fontWeight: 'bold', p: 1 }}>Amount</TableCell>
+              <TableCell align="right" sx={{ fontSize: 15, fontWeight: 'bold', p: 0, width: 40 }}></TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -282,22 +282,22 @@ const ProformaInvoicePage: React.FC = () => {
                 <TableCell colSpan={5} align="center">No proforma invoices available</TableCell>
               </TableRow>
             ) : (
-              latestVouchers.map((voucher: any) => (
+              latestVouchers.slice(0, 5).map((voucher: any) => (
                 <TableRow 
                   key={voucher.id} 
                   hover 
-                  onContextMenu={(e) => handleContextMenu(e, voucher)}
+                  onContextMenu={(e) => { e.preventDefault(); handleContextMenu(e, voucher); }}
                   sx={{ cursor: 'pointer' }}
                 >
-                  <TableCell sx={{ fontSize: 12, p: 1 }} onClick={() => handleViewWithData(voucher)}>
+                  <TableCell align="center" sx={{ fontSize: 12, p: 1 }} onClick={() => handleViewWithData(voucher)}>
                     {voucher.voucher_number}
                   </TableCell>
-                  <TableCell sx={{ fontSize: 12, p: 1 }}>
+                  <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>
                     {voucher.date ? new Date(voucher.date).toLocaleDateString() : 'N/A'}
                   </TableCell>
-                  <TableCell sx={{ fontSize: 12, p: 1 }}>{voucher.customer?.name || 'N/A'}</TableCell>
-                  <TableCell sx={{ fontSize: 12, p: 1 }}>₹{voucher.total_amount?.toLocaleString() || '0'}</TableCell>
-                  <TableCell sx={{ fontSize: 12, p: 1 }}>
+                  <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>{customerList?.find((c: any) => c.id === voucher.customer_id)?.name || 'N/A'}</TableCell>
+                  <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>₹{voucher.total_amount?.toLocaleString() || '0'}</TableCell>
+                  <TableCell align="right" sx={{ fontSize: 12, p: 0 }}>
                     <VoucherContextMenu
                       voucher={voucher}
                       voucherType="Proforma Invoice"

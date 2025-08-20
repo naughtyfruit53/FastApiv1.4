@@ -1,4 +1,4 @@
-// VoucherListModal.tsx
+// frontend/src/components/VoucherListModal.tsx
 // Reusable modal component for displaying voucher lists with clickable functionality
 
 import React, { useState } from 'react';
@@ -196,11 +196,10 @@ const VoucherListModal: React.FC<VoucherListModalProps> = ({
             <Table stickyHeader size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell>Voucher No.</TableCell>
-                  <TableCell>Date</TableCell>
-                  <TableCell>Entity</TableCell>
-                  <TableCell align="right">Amount</TableCell>
-                  <TableCell>Status</TableCell>
+                  <TableCell align="center" sx={{ fontSize: 15, fontWeight: 'bold' }}>Voucher No.</TableCell>
+                  <TableCell align="center" sx={{ fontSize: 15, fontWeight: 'bold' }}>Date</TableCell>
+                  <TableCell align="center" sx={{ fontSize: 15, fontWeight: 'bold' }}>Customer</TableCell>
+                  <TableCell align="center" sx={{ fontSize: 15, fontWeight: 'bold' }}>Amount</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -217,28 +216,21 @@ const VoucherListModal: React.FC<VoucherListModalProps> = ({
                       },
                     }}
                   >
-                    <TableCell>
+                    <TableCell align="center">
                       <Typography variant="body2" fontWeight="medium">
                         {voucher.voucher_number}
                       </Typography>
                     </TableCell>
-                    <TableCell>{formatDate(voucher.date)}</TableCell>
-                    <TableCell>{getEntityName(voucher)}</TableCell>
-                    <TableCell align="right">
+                    <TableCell align="center">{formatDate(voucher.date)}</TableCell>
+                    <TableCell align="center">{getEntityName(voucher)}</TableCell>
+                    <TableCell align="center">
                       ₹{voucher.total_amount?.toLocaleString() || '0'}
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={voucher.status || 'Active'}
-                        size="small"
-                        color={voucher.status === 'approved' ? 'success' : 'default'}
-                      />
                     </TableCell>
                   </TableRow>
                 ))}
                 {filteredVouchers.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={5} align="center">
+                    <TableCell colSpan={4} align="center">
                       <Typography color="text.secondary">
                         No vouchers found matching your criteria
                       </Typography>
