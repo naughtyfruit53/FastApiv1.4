@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Query
 from sqlalchemy.orm import Session, joinedload
-from typing import List, Optional  # Add Optional import
+from typing import List, Optional
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
 from app.models.base import User
@@ -15,11 +15,12 @@ import logging
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["proforma-invoices"])
 
+@router.get("", response_model=List[ProformaInvoiceInDB])  # Added to handle without trailing /
 @router.get("/", response_model=List[ProformaInvoiceInDB])
 async def get_proforma_invoices(
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1),
-    status: Optional[str] = Query(None),
+    skip: int = Query(0, ge=0, description="Number of records to skip (for pagination)"),
+    limit: int = Query(100, ge=1, le=500, description="Maximum number of records to return"),
+    status: Optional[str] = Query(None, description="Optional filter by voucher status (e.g., 'draft', 'approved')"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):

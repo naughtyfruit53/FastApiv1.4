@@ -199,6 +199,49 @@ const ProformaInvoicePage: React.FC = () => {
     }
   }, [mode, nextVoucherNumber, isLoading, setValue, config.nextNumberEndpoint]);
 
+  const handleShowAll = () => {
+    // Open a new window with all vouchers
+    const allVouchersWindow = window.open('', '_blank');
+    if (allVouchersWindow) {
+      allVouchersWindow.document.write(`
+        <html>
+          <head>
+            <title>All Proforma Invoices</title>
+            <style>
+              table { width: 100%; border-collapse: collapse; }
+              th, td { border: 1px solid black; padding: 8px; text-align: left; }
+              th { background-color: #f2f2f2; }
+            </style>
+          </head>
+          <body>
+            <h2>All Proforma Invoices</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Voucher No.</th>
+                  <th>Date</th>
+                  <th>Customer</th>
+                  <th>Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${sortedVouchers.map((voucher: any) => `
+                  <tr>
+                    <td>${voucher.voucher_number}</td>
+                    <td>${voucher.date}</td>
+                    <td>${voucher.customer?.name || 'N/A'}</td>
+                    <td>₹${voucher.total_amount?.toLocaleString() || '0'}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </body>
+        </html>
+      `);
+      allVouchersWindow.document.close();
+    }
+  };
+
   const indexContent = (
     <>
       {/* Voucher list table */}
@@ -223,9 +266,11 @@ const ProformaInvoicePage: React.FC = () => {
                   key={voucher.id} 
                   hover 
                   onContextMenu={(e) => handleContextMenu(e, voucher)}
-                  sx={{ cursor: 'context-menu' }}
+                  sx={{ cursor: 'pointer' }}
                 >
-                  <TableCell sx={{ fontSize: 12, p: 1 }}>{voucher.voucher_number}</TableCell>
+                  <TableCell sx={{ fontSize: 12, p: 1 }} onClick={() => handleView(voucher)}>
+                    {voucher.voucher_number}
+                  </TableCell>
                   <TableCell sx={{ fontSize: 12, p: 1 }}>{voucher.date}</TableCell>
                   <TableCell sx={{ fontSize: 12, p: 1 }}>{voucher.customer?.name || 'N/A'}</TableCell>
                   <TableCell sx={{ fontSize: 12, p: 1 }}>₹{voucher.total_amount?.toLocaleString() || '0'}</TableCell>
@@ -235,6 +280,9 @@ const ProformaInvoicePage: React.FC = () => {
           </TableBody>
         </Table>
       </TableContainer>
+      <Box sx={{ mt: 2, textAlign: 'center' }}>
+        <Button variant="outlined" onClick={handleShowAll}>Show All</Button>
+      </Box>
     </>
   );
 
@@ -245,6 +293,17 @@ const ProformaInvoicePage: React.FC = () => {
         <Typography variant="h5" sx={{ fontSize: 20, fontWeight: 'bold' }}>
           {config.voucherTitle} - {mode === 'create' ? 'Create' : mode === 'edit' ? 'Edit' : 'View'}
         </Typography>
+        {mode === 'view' && (
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<Edit />}
+            onClick={() => setMode('edit')}
+            sx={{ ml: 2 }}
+          >
+            Edit {config.voucherTitle}
+          </Button>
+        )}
         <VoucherHeaderActions
           mode={mode}
           voucherType={config.voucherTitle}
@@ -569,7 +628,7 @@ const ProformaInvoicePage: React.FC = () => {
         voucherType={config.voucherTitle}
         indexContent={indexContent}
         formContent={formContent}
-        onShowAll={handleModalOpen}
+        onShowAll={handleShowAll}
       />
 
       {/* Modals */}

@@ -1,9 +1,18 @@
-# Revised: v1/app/schemas/base.py
+# app/schemas/base.py
 
 from pydantic import BaseModel, EmailStr, validator
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 from enum import Enum
+
+class BaseSchema(BaseModel):
+    id: Optional[int] = None
+    organization_id: Optional[int] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    
+    class Config:
+        from_attributes = True
 
 class UserRole(str, Enum):
     SUPER_ADMIN = "super_admin"
@@ -125,7 +134,7 @@ class OrganizationLicenseCreate(BaseModel):
     city: Optional[str] = None
     state: Optional[str] = None
     state_code: Optional[str] = None  # Auto-filled from pincode lookup
-    gst_number: Optional[str] = None  # Optional as as per requirements
+    gst_number: Optional[str] = None  # Optional as per requirements
     max_users: Optional[int] = 5  # Maximum users allowed for this organization
     admin_password: Optional[str] = None  # Optional - if not provided, system generates one
     
@@ -171,7 +180,7 @@ class OrganizationLicenseResponse(BaseModel):
     org_code: Optional[str] = None
     email_sent: bool = False
     email_error: Optional[str] = None
-    password_display_warning: str = "⚠️ WARNING: This password is shown only once for manual sharing. Please save it securely and share it with the user immediately. It will not be displayed again."
+    password_display_warning: str = "⚠️ WARNING: This password is shown only once for manual sharing. Please save it securely and share it with the user immediately. It will not be displayed again. It will not be displayed again."
 
 # Password change and reset schemas
 class PasswordChangeRequest(BaseModel):

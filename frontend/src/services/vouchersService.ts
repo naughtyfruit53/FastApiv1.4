@@ -6,26 +6,26 @@ import api from '../lib/api';
 export const voucherService = {
   // Generic Voucher Methods
   getVouchers: async (type: string, params?: any) => {
-    const endpoint = `/${type}s`;  // Ensure plural
+    const endpoint = `/${type}`;  // Remove extra 's' - use type as is (already plural)
     console.log(`[voucherService] Fetching vouchers from endpoint: ${endpoint}`);
     const response = await api.get(endpoint, { params });
     console.log(`[voucherService] Received data for ${type}:`, response.data);
     return response.data;
   },
   getVoucherById: async (type: string, id: number) => {
-    const endpoint = `/${type}s/${id}`;
+    const endpoint = `/${type}/${id}`;
     console.log(`[voucherService] Fetching voucher by ID from: ${endpoint}`);
     const response = await api.get(endpoint);
     return response.data;
   },
   createVoucher: async (type: string, data: any, sendEmail: boolean = false) => {
-    const endpoint = `/${type}s`;
+    const endpoint = `/${type}`;
     console.log(`[voucherService] Creating voucher at: ${endpoint}`);
     const response = await api.post(endpoint, data, { params: { send_email: sendEmail } });
     return response.data;
   },
   updateVoucher: async (type: string, id: number, data: any) => {
-    const endpoint = `/${type}s/${id}`;
+    const endpoint = `/${type}/${id}`;
     console.log(`[voucherService] Updating voucher at: ${endpoint}`);
     const response = await api.put(endpoint, data);
     return response.data;
