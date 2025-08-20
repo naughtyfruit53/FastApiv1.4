@@ -17,6 +17,7 @@ interface VoucherContextMenuProps {
   onClose: () => void;
   open?: boolean;
   anchorPosition?: { left: number; top: number };
+  anchorReference?: 'anchorPosition' | 'anchorEl' | 'none';
 }
 
 const VoucherContextMenu: React.FC<VoucherContextMenuProps> = ({
@@ -32,6 +33,7 @@ const VoucherContextMenu: React.FC<VoucherContextMenuProps> = ({
   onClose,
   open = false,
   anchorPosition = null,
+  anchorReference,
 }) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
@@ -81,10 +83,10 @@ const VoucherContextMenu: React.FC<VoucherContextMenuProps> = ({
     handleMenuClose();
   };
 
-  const menuProps = anchorPosition ? {
+  const menuProps = anchorPosition && anchorReference ? {
     open: open || Boolean(anchorEl),
     onClose: handleMenuClose,
-    anchorReference: 'anchorPosition' as const,
+    anchorReference: anchorReference,
     anchorPosition,
   } : {
     open: Boolean(anchorEl),

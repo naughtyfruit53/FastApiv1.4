@@ -9,6 +9,7 @@ import AddShippingAddressModal from '../../../components/AddShippingAddressModal
 import VoucherContextMenu from '../../../components/VoucherContextMenu';
 import VoucherLayout from '../../../components/VoucherLayout';
 import VoucherHeaderActions from '../../../components/VoucherHeaderActions';
+import VoucherListModal from '../../../components/VoucherListModal';
 import BalanceDisplay from '../../../components/BalanceDisplay';
 import StockDisplay from '../../../components/StockDisplay';
 import ProductAutocomplete from '../../../components/ProductAutocomplete';
@@ -98,9 +99,23 @@ const SalesVoucherPage: React.FC = () => {
     isViewMode,
   } = useVoucherPage(config);
 
+  // Additional state for voucher list modal
+  const [showVoucherListModal, setShowVoucherListModal] = useState(false);
+
   // Sales Voucher specific state
   const selectedCustomerId = watch('customer_id');
   const selectedCustomer = customerList?.find((c: any) => c.id === selectedCustomerId);
+
+  // Handle voucher click to load details
+  const handleVoucherClick = (voucher: any) => {
+    // Load the selected voucher into the form
+    setMode('view');
+    reset(voucher);
+    // Set the form with the voucher data
+    Object.keys(voucher).forEach(key => {
+      setValue(key, voucher[key]);
+    });
+  };
 
   // Enhanced customer options with "Add New"
   const enhancedCustomerOptions = [
@@ -637,115 +652,19 @@ const SalesVoucherPage: React.FC = () => {
         onDelete={handleDelete}
       />
 
-      {/* Search/Filter Modal */}
-      <Modal open={showFullModal} onClose={handleModalClose}>
-        <Box
-          sx={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            width: '90%',
-            maxWidth: 1000,
-            bgcolor: 'background.paper',
-            boxShadow: 24,
-            p: 4,
-            borderRadius: 2,
-          }}
-        >
-          <Typography variant="h6" gutterBottom>
-            Search Sales Vouchers
-          </Typography>
-          
-          <Grid container spacing={2} sx={{ mb: 3 }}>
-            <Grid item xs={12} md={4}>
-              <TextField
-                label="Search"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                fullWidth
-                placeholder="Invoice number, customer, notes..."
-              />
-            </Grid>
-            <Grid item xs={6} md={3}>
-              <TextField
-                label="From Date"
-                type="date"
-                value={fromDate}
-                onChange={(e) => setFromDate(e.target.value)}
-                InputLabelProps={{ shrink: true }}
-                fullWidth
-              />
-            </Grid>
-            <Grid item xs={6} md={3}>
-              <TextField
-                label="To Date"
-                type="date"
-                value={toDate}
-                onChange={(e) => setToDate(e.target.value)}
-                InputLabelProps={{ shrink: true }}
-                fullWidth
-              />
-            </Grid>
-            <Grid item xs={12} md={2}>
-              <Button
-                variant="contained"
-                onClick={handleSearch}
-                fullWidth
-                sx={{ height: '56px' }}
-              >
-                Search
-              </Button>
-            </Grid>
-          </Grid>
-
-          <TableContainer component={Paper} sx={{ maxHeight: 400 }}>
-            <Table stickyHeader>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Invoice #</TableCell>
-                  <TableCell>Date</TableCell>
-                  <TableCell>Customer</TableCell>
-                  <TableCell>Total</TableCell>
-                  <TableCell>Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {filteredVouchers.map((voucher: any) => (
-                  <TableRow key={voucher.id}>
-                    <TableCell>{voucher.voucher_number}</TableCell>
-                    <TableCell>{voucher.date}</TableCell>
-                    <TableCell>{voucher.customer?.name || 'N/A'}</TableCell>
-                    <TableCell>₹{voucher.total_amount?.toLocaleString() || '0'}</TableCell>
-                    <TableCell>
-                      <Button
-                        size="small"
-                        onClick={() => {
-                          handleEdit(voucher);
-                          handleModalClose();
-                        }}
-                        startIcon={<Edit />}
-                      >
-                        Edit
-                      </Button>
-                      <Button
-                        size="small"
-                        onClick={() => {
-                          handleView(voucher);
-                          handleModalClose();
-                        }}
-                        startIcon={<Visibility />}
-                      >
-                        View
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Box>
-      </Modal>
+      {/* Voucher List Modal */}
+      <VoucherListModal
+        open={showFullModal}
+        onClose={handleModalClose}
+        voucherType="Sales Vouchers"
+        vouchers={sortedVouchers || []}
+        onVoucherClick={handleVoucherClick}
+        onEdit={handleEdit}
+        onView={handleView}
+        onDelete={handleDelete}
+        onGeneratePDF={handleGeneratePDF}
+        customerList={customerList}
+      />
     </>
   );
 };
