@@ -61,6 +61,7 @@ const ProformaInvoicePage: React.FC = () => {
     fields,
     append,
     remove,
+    reset,
 
     // Data
     voucherList,
@@ -203,18 +204,10 @@ const ProformaInvoicePage: React.FC = () => {
     }
   }, [mode, nextVoucherNumber, isLoading, setValue, config.nextNumberEndpoint]);
 
-  const handleShowAll = () => {
-    setShowVoucherListModal(true);
-  };
-
   const handleVoucherClick = (voucher: any) => {
     // Load the selected voucher into the form
     setMode('view');
     reset(voucher);
-    // Set the form with the voucher data
-    Object.keys(voucher).forEach(key => {
-      setValue(key, voucher[key]);
-    });
   };
 
   const indexContent = (
@@ -257,9 +250,6 @@ const ProformaInvoicePage: React.FC = () => {
           </TableBody>
         </Table>
       </TableContainer>
-      <Box sx={{ mt: 2, textAlign: 'center' }}>
-        <Button variant="outlined" onClick={handleShowAll}>Show All</Button>
-      </Box>
     </>
   );
 
@@ -270,17 +260,6 @@ const ProformaInvoicePage: React.FC = () => {
         <Typography variant="h5" sx={{ fontSize: 20, fontWeight: 'bold' }}>
           {config.voucherTitle} - {mode === 'create' ? 'Create' : mode === 'edit' ? 'Edit' : 'View'}
         </Typography>
-        {mode === 'view' && (
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<Edit />}
-            onClick={() => setMode('edit')}
-            sx={{ ml: 2 }}
-          >
-            Edit {config.voucherTitle}
-          </Button>
-        )}
         <VoucherHeaderActions
           mode={mode}
           voucherType={config.voucherTitle}
@@ -469,7 +448,7 @@ const ProformaInvoicePage: React.FC = () => {
                             value={watch(`items.${index}.gst_rate`) || 18}
                             onChange={(_, value) => setValue(`items.${index}.gst_rate`, value || 18)}
                             renderInput={(params) => (
-                              <TextField {...params} size="small" sx={{ width: 60 } } />
+                              <TextField {...params} size="small" sx={{ width: 60 }} />
                             )}
                             disabled={mode === 'view'}
                           />
@@ -605,7 +584,6 @@ const ProformaInvoicePage: React.FC = () => {
         voucherType={config.voucherTitle}
         indexContent={indexContent}
         formContent={formContent}
-        onShowAll={handleShowAll}
         modalContent={
           <VoucherListModal
             open={showVoucherListModal}
