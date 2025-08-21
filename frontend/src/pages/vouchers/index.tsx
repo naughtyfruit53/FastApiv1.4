@@ -26,6 +26,7 @@ import { voucherService as voucherApi } from '../../services/vouchersService';
 import { generateVoucherPDF, getVoucherPdfConfig } from '../../utils/pdfUtils';
 import MegaMenu from '../../components/MegaMenu';
 import VoucherContextMenu from '../../components/VoucherContextMenu';
+import VoucherListModal from '../../components/VoucherListModal';
 import Grid from '@mui/material/Grid';
 
 interface TabPanelProps {
@@ -58,6 +59,9 @@ const VoucherManagement: React.FC = () => {
   const router = useRouter();
   const [user] = useState({ email: 'demo@example.com', role: 'admin' });
   const [contextMenu, setContextMenu] = useState<{ mouseX: number; mouseY: number; voucher: any; type: string } | null>(null);
+  const [showAllModal, setShowAllModal] = useState(false);
+  const [modalVoucherType, setModalVoucherType] = useState('');
+  const [modalVouchers, setModalVouchers] = useState<any[]>([]);
 
   // Get tab from URL parameter
   const getInitialTab = () => {
@@ -84,6 +88,18 @@ const VoucherManagement: React.FC = () => {
     // Update URL without full navigation
     const tabNames = ['purchase', 'sales', 'financial', 'internal'];
     router.replace(`/vouchers?tab=${tabNames[newValue]}`, undefined, { shallow: true });
+  };
+
+  const handleShowAll = (type: string, vouchers: any[]) => {
+    setModalVoucherType(type);
+    setModalVouchers(vouchers);
+    setShowAllModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowAllModal(false);
+    setModalVoucherType('');
+    setModalVouchers([]);
   };
 
   const handleLogout = () => {
@@ -262,72 +278,89 @@ const VoucherManagement: React.FC = () => {
       return <Typography>No {type} vouchers found.</Typography>;
     }
 
+    // Show only latest 5 vouchers in the table
+    const latestVouchers = vouchers.slice(0, 5);
+
     return (
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Index</TableCell>
-              <TableCell>Voucher #</TableCell>
-              <TableCell>Date</TableCell>
-              <TableCell>{type === 'Purchase' ? 'Vendor' : type === 'Sales' ? 'Customer' : 'Type'}</TableCell>
-              <TableCell>Amount</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {vouchers.map((voucher, index) => (
-              <TableRow 
-                key={voucher.id}
-                onContextMenu={(e) => handleContextMenu(e, voucher, type)}
-                sx={{ 
-                  '&:hover': {
-                    backgroundColor: 'rgba(0, 0, 0, 0.04)',
-                  }
-                }}
-              >
-                <TableCell>{index + 1}</TableCell>
-                <TableCell>{voucher.voucher_number}</TableCell>
-                <TableCell>{new Date(voucher.date).toLocaleDateString()}</TableCell>
-                <TableCell>
-                  {voucher.vendor?.name || voucher.customer?.name || voucher.type || 'N/A'}
-                </TableCell>
-                <TableCell>
-                  {voucher.total_amount > 0 ? `₹${voucher.total_amount.toLocaleString()}` : '-'}
-                </TableCell>
-                <TableCell>
-                  <Chip
-                    label={voucher.status}
-                    color={
-                      voucher.status === 'approved' || voucher.status === 'confirmed' || voucher.status === 'processed'
-                        ? 'success'
-                        : voucher.status === 'pending'
-                        ? 'warning'
-                        : 'default'
-                    }
-                    size="small"
-                  />
-                </TableCell>
-                <TableCell>
-                  <VoucherContextMenu
-                    voucher={voucher}
-                    voucherType={type}
-                    onView={(id) => handleViewVoucher(type, id)}
-                    onEdit={(id) => handleEditVoucher(type, id)}
-                    onDelete={(id) => handleDeleteVoucher(type, id)}
-                    onPrint={(id) => handlePrintVoucher(type, id)}
-                    onEmail={(id) => handleEmailVoucher(type, id)}
-                    showKebab={true}
-                    open={false}
-                    onClose={() => {}}
-                  />
-                </TableCell>
+      <Box>
+        <TableContainer component={Paper}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Index</TableCell>
+                <TableCell>Voucher #</TableCell>
+                <TableCell>Date</TableCell>
+                <TableCell>{type === 'Purchase' ? 'Vendor' : type === 'Sales' ? 'Customer' : 'Type'}</TableCell>
+                <TableCell>Amount</TableCell>
+                <TableCell>Status</TableCell>
+                <TableCell>Actions</TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+            </TableHead>
+            <TableBody>
+              {latestVouchers.map((voucher, index) => (
+                <TableRow 
+                  key={voucher.id}
+                  onContextMenu={(e) => handleContextMenu(e, voucher, type)}
+                  sx={{ 
+                    '&:hover': {
+                      backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                    }
+                  }}
+                >
+                  <TableCell>{index + 1}</TableCell>
+                  <TableCell>{voucher.voucher_number}</TableCell>
+                  <TableCell>{new Date(voucher.date).toLocaleDateString()}</TableCell>
+                  <TableCell>
+                    {voucher.vendor?.name || voucher.customer?.name || voucher.type || 'N/A'}
+                  </TableCell>
+                  <TableCell>
+                    {voucher.total_amount > 0 ? `₹${voucher.total_amount.toLocaleString()}` : '-'}
+                  </TableCell>
+                  <TableCell>
+                    <Chip
+                      label={voucher.status}
+                      color={
+                        voucher.status === 'approved' || voucher.status === 'confirmed' || voucher.status === 'processed'
+                          ? 'success'
+                          : voucher.status === 'pending'
+                          ? 'warning'
+                          : 'default'
+                      }
+                      size="small"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <VoucherContextMenu
+                      voucher={voucher}
+                      voucherType={type}
+                      onView={(id) => handleViewVoucher(type, id)}
+                      onEdit={(id) => handleEditVoucher(type, id)}
+                      onDelete={(id) => handleDeleteVoucher(type, id)}
+                      onPrint={(id) => handlePrintVoucher(type, id)}
+                      onEmail={(id) => handleEmailVoucher(type, id)}
+                      showKebab={true}
+                      open={false}
+                      onClose={() => {}}
+                    />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        
+        {vouchers.length > 5 && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+            <Button
+              variant="outlined"
+              onClick={() => handleShowAll(type, vouchers)}
+              sx={{ textTransform: 'none' }}
+            >
+              Show All ({vouchers.length} total)
+            </Button>
+          </Box>
+        )}
+      </Box>
     );
   };
 
@@ -454,6 +487,21 @@ const VoucherManagement: React.FC = () => {
           anchorPosition={{ left: contextMenu.mouseX, top: contextMenu.mouseY }}
           open={!!contextMenu}
           onClose={handleCloseContextMenu}
+        />
+      )}
+
+      {/* Show All Modal */}
+      {showAllModal && (
+        <VoucherListModal
+          open={showAllModal}
+          onClose={handleCloseModal}
+          vouchers={modalVouchers}
+          voucherType={modalVoucherType}
+          onVoucherClick={(voucher) => handleViewVoucher(modalVoucherType, voucher.id)}
+          onView={(id) => handleViewVoucher(modalVoucherType, id)}
+          onEdit={(id) => handleEditVoucher(modalVoucherType, id)}
+          onDelete={(id) => handleDeleteVoucher(modalVoucherType, id)}
+          onGeneratePDF={(voucher) => handlePrintVoucher(modalVoucherType, voucher.id)}
         />
       )}
     </Box>

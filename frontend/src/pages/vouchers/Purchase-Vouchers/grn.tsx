@@ -424,7 +424,7 @@ const GoodsReceiptNotePage: React.FC = () => {
       </Box>
 
       <form onSubmit={handleSubmit(handleFormSubmit)} style={voucherStyles.formContainer}>
-        <Grid container spacing={1}>
+        <Grid container spacing={0.5}>
           {/* Voucher Number */}
           <Grid size={6}>
             <TextField
@@ -455,7 +455,7 @@ const GoodsReceiptNotePage: React.FC = () => {
           </Grid>
 
           {/* Voucher Type */}
-          <Grid size={4}>
+          <Grid size={3}>
             <Autocomplete
               size="small"
               options={[{value: 'purchase-order', label: 'Purchase Order'}, {value: 'purchase-voucher', label: 'Purchase Voucher'}]}
@@ -480,7 +480,7 @@ const GoodsReceiptNotePage: React.FC = () => {
           </Grid>
 
           {/* Voucher Number */}
-          <Grid size={4}>
+          <Grid size={3}>
             <Autocomplete
               size="small"
               options={voucherOptions}
@@ -503,8 +503,8 @@ const GoodsReceiptNotePage: React.FC = () => {
             />
           </Grid>
 
-          {/* Vendor */}
-          <Grid size={4}>
+          {/* Vendor - Increased width for better readability */}
+          <Grid size={6}>
             <Autocomplete
               size="small"
               options={enhancedVendorOptions}
