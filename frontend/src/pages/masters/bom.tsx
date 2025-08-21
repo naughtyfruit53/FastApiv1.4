@@ -381,7 +381,7 @@ const BOMManagement: React.FC = () => {
               <Autocomplete
                 options={productOptions}
                 getOptionLabel={(option) => option.product_name || ''}
-                value={productOptions.find(p => p.id === watch('output_item_id')) || null}
+                value={productOptions.find((p: any) => p.id === watch('output_item_id')) || null}
                 onChange={(_, newValue) => setValue('output_item_id', newValue?.id || 0)}
                 disabled={mode === 'view'}
                 renderInput={(params) => (
@@ -476,7 +476,7 @@ const BOMManagement: React.FC = () => {
                       <Autocomplete
                         options={productOptions}
                         getOptionLabel={(option) => option.product_name || ''}
-                        value={productOptions.find(p => p.id === watch(`components.${index}.component_item_id`)) || null}
+                        value={productOptions.find((p: any) => p.id === watch(`components.${index}.component_item_id`)) || null}
                         onChange={(_, newValue) => setValue(`components.${index}.component_item_id`, newValue?.id || 0)}
                         disabled={mode === 'view'}
                         renderInput={(params) => (

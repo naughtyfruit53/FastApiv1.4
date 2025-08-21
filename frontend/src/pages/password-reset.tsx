@@ -42,7 +42,7 @@ const PasswordResetPage: React.FC = () => {
 
     try {
       await passwordService.changePassword(
-        isMandatory ? null : data.current_password,
+        isMandatory ? null : (data.current_password || null),
         data.new_password,
         data.confirm_password
       );

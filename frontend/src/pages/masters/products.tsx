@@ -161,9 +161,9 @@ const ProductsPage: React.FC = () => {
     const data = { ...formData };
     
     // Convert string numbers to actual numbers
-    if (data.unit_price) data.unit_price = parseFloat(data.unit_price);
-    if (data.gst_rate) data.gst_rate = parseFloat(data.gst_rate);
-    if (data.reorder_level) data.reorder_level = parseInt(data.reorder_level);
+    if (data.unit_price) (data as any).unit_price = parseFloat(data.unit_price as string);
+    if (data.gst_rate) (data as any).gst_rate = parseFloat(data.gst_rate as string);
+    if (data.reorder_level) (data as any).reorder_level = parseInt(data.reorder_level as string);
     
     if (selectedItem) {
       updateItemMutation.mutate({ ...selectedItem, ...data });
@@ -206,24 +206,11 @@ const ProductsPage: React.FC = () => {
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Typography variant="h6">All Products</Typography>
             <Box sx={{ display: 'flex', gap: 2 }}>
-              <ProductFileUpload 
-                onImportSuccess={() => queryClient.invalidateQueries({ queryKey: ['products'] })}
-              />
+              <ProductFileUpload />
               <ExcelImportExport
+                data={products || []}
+                entity="Products"
                 onImport={bulkImportProducts}
-                onImportSuccess={() => queryClient.invalidateQueries({ queryKey: ['products'] })}
-                importLabel="Import Products"
-                templateData={[
-                  {
-                    name: 'Example Product',
-                    hsn_code: '12345678',
-                    part_number: 'PART-001',
-                    unit: 'PCS',
-                    unit_price: 100.00,
-                    gst_rate: 18,
-                    description: 'Sample product description'
-                  }
-                ]}
               />
             </Box>
           </Box>

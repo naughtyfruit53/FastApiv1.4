@@ -234,22 +234,22 @@ const MasterDataManagement: React.FC = () => {
   });
   const { data: vendors, isLoading: vendorsLoading } = useQuery({
     queryKey: ['vendors'],
-    queryFn: masterDataService.getVendors,
+    queryFn: () => masterDataService.getVendors(),
     enabled: tabValue === 0
   });
   const { data: customers, isLoading: customersLoading } = useQuery({
     queryKey: ['customers'],
-    queryFn: masterDataService.getCustomers,
+    queryFn: () => masterDataService.getCustomers(),
     enabled: tabValue === 1
   });
   const { data: products, isLoading: productsLoading } = useQuery({
     queryKey: ['products'],
-    queryFn: masterDataService.getProducts,
+    queryFn: () => masterDataService.getProducts(),
     enabled: tabValue === 2
   });
   const { data: company } = useQuery({
     queryKey: ['company'],
-    queryFn: companyService.getCurrentCompany,
+    queryFn: () => companyService.getCurrentCompany(),
     enabled: tabValue === 4
   });
 
