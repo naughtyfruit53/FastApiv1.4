@@ -458,6 +458,7 @@ const ProformaInvoicePage: React.FC = () => {
                 <TableHead>
                   <TableRow>
                     <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1, width: '30%' }}>Product</TableCell>
+                    <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1, width: 80, textAlign: 'center' }}>Stock</TableCell>
                     <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1, textAlign: 'right' }}>Qty</TableCell>
                     <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1, textAlign: 'right' }}>Rate</TableCell>
                     <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1 }}>Disc%</TableCell>
@@ -487,6 +488,19 @@ const ProformaInvoicePage: React.FC = () => {
                             disabled={mode === 'view'}
                             size="small"
                           />
+                        </TableCell>
+                        <TableCell sx={{ p: 1, textAlign: 'center' }}>
+                          {watch(`items.${index}.product_id`) ? (
+                            <StockDisplay 
+                              productId={watch(`items.${index}.product_id`)}
+                              disabled={false}
+                              showLabel={false}
+                            />
+                          ) : (
+                            <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: '0.7rem' }}>
+                              -
+                            </Typography>
+                          )}
                         </TableCell>
                         <TableCell sx={{ p: 1, textAlign: 'right' }}>
                           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>

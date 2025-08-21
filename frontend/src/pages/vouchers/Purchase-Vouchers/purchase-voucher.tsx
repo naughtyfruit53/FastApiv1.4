@@ -380,7 +380,7 @@ const PurchaseVoucherPage: React.FC = () => {
           </Grid>
 
           {/* Vendor, Reference, Payment Terms in one row */}
-          <Grid size={4}>
+          <Grid size={6}>
             <Autocomplete
               size="small"
               options={enhancedVendorOptions}
@@ -409,7 +409,7 @@ const PurchaseVoucherPage: React.FC = () => {
             />
           </Grid>
 
-          <Grid size={4}>
+          <Grid size={3}>
             <VoucherReferenceDropdown
               voucherType="purchase-voucher"
               value={{
@@ -427,7 +427,7 @@ const PurchaseVoucherPage: React.FC = () => {
             />
           </Grid>
 
-          <Grid size={4}>
+          <Grid size={3}>
             <TextField
               fullWidth
               label="Payment Terms"

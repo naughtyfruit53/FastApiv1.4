@@ -384,7 +384,7 @@ const SalesVoucherPage: React.FC = () => {
           </Grid>
 
           {/* Customer, Reference, Payment Terms in one row */}
-          <Grid size={4}>
+          <Grid size={6}>
             <Autocomplete
               size="small"
               options={enhancedCustomerOptions}
@@ -413,7 +413,7 @@ const SalesVoucherPage: React.FC = () => {
             />
           </Grid>
 
-          <Grid size={4}>
+          <Grid size={3}>
             <TextField
               fullWidth
               label="Reference"
@@ -426,7 +426,7 @@ const SalesVoucherPage: React.FC = () => {
             />
           </Grid>
 
-          <Grid size={4}>
+          <Grid size={3}>
             <TextField
               fullWidth
               label="Payment Terms"
