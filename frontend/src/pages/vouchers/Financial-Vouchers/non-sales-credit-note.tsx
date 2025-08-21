@@ -1,15 +1,20 @@
-// Non-Sales Credit Note Page - Refactored using shared DRY logic
+// Non-Sales Credit Note Page - Refactored using VoucherLayout
 import React from 'react';
-import { Box, Button, TextField, Typography, Grid, Alert, CircularProgress, Container, Autocomplete, InputAdornment, Tooltip, Modal, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
+import { Box, Button, TextField, Typography, Grid, Alert, CircularProgress, Container, Autocomplete, InputAdornment, Tooltip, Modal, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 import { Visibility, Edit, Add } from '@mui/icons-material';
 import AddCustomerModal from '../../../components/AddCustomerModal';
 import VoucherContextMenu from '../../../components/VoucherContextMenu';
 import VoucherHeaderActions from '../../../components/VoucherHeaderActions';
+import VoucherListModal from '../../../components/VoucherListModal';
+import VoucherLayout from '../../../components/VoucherLayout';
+import SearchableDropdown from '../../../components/SearchableDropdown';
 import { useVoucherPage } from '../../../hooks/useVoucherPage';
-import { getVoucherConfig, numberToWords } from '../../../utils/voucherUtils';
+import { getVoucherConfig, numberToWords, getVoucherStyles, parseRateField, formatRateField } from '../../../utils/voucherUtils';
 
 const NonSalesCreditNote: React.FC = () => {
   const config = getVoucherConfig('non-sales-credit-note');
+  const voucherStyles = getVoucherStyles();
+  
   const {
     // State
     mode,
@@ -33,10 +38,12 @@ const NonSalesCreditNote: React.FC = () => {
     handleSubmit,
     watch,
     setValue,
+    reset,
     errors,
 
     // Data
     voucherList,
+    vendorList,
     customerList,
     sortedVouchers,
 
@@ -57,220 +64,365 @@ const NonSalesCreditNote: React.FC = () => {
     handleGeneratePDF,
     handleDelete,
     handleAddCustomer,
+    refreshMasterData,
+    getAmountInWords,
+
+    // Utilities
+    isViewMode,
   } = useVoucherPage(config);
 
   // Watch form values
   const watchedValues = watch();
   const totalAmount = watchedValues?.total_amount || 0;
 
-  return (
-    <Container maxWidth="xl" sx={{ py: 2 }}>
-      <Grid container spacing={3}>
-        {/* Left side - Voucher List (40%) */}
-        <Grid size={{ xs: 12, md: 5 }}>
-          <Paper sx={{ p: 2, height: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6">Non-Sales Credit Notes</Typography>
-              <VoucherHeaderActions
-                onCreate={handleCreate}
-                onSearch={handleModalOpen}
-                voucherType="Non-Sales Credit Note"
+  // Handle voucher click to load details
+  const handleVoucherClick = (voucher: any) => {
+    // Load the selected voucher into the form
+    reset(voucher);
+    // Set the form with the voucher data
+    Object.keys(voucher).forEach(key => {
+      setValue(key, voucher[key]);
+    });
+  };
+
+  // Combined list of all parties (customers + vendors) for unified dropdown
+  const allParties = [
+    ...(customerList || []).map((customer: any) => ({
+      id: customer.id,
+      name: customer.name,
+      email: customer.email,
+      type: 'Customer',
+      value: customer.id,
+      label: `${customer.name} (Customer)`
+    })),
+    ...(vendorList || []).map((vendor: any) => ({
+      id: vendor.id,
+      name: vendor.name,
+      email: vendor.email,
+      type: 'Vendor',
+      value: vendor.id,
+      label: `${vendor.name} (Vendor)`
+    }))
+  ];
+
+  // Credit note reasons
+  const creditNoteReasons = [
+    'Product Return',
+    'Defective Product',
+    'Wrong Product Shipped',
+    'Pricing Error',
+    'Customer Dissatisfaction',
+    'Promotional Adjustment',
+    'Volume Discount',
+    'Settlement Discount',
+    'Other'
+  ];
+
+  // Get selected entity from form
+  const selectedEntity = watch('entity');
+
+  // Index Content - Left Panel (40%)
+  const indexContent = (
+    <TableContainer sx={{ maxHeight: 400 }}>
+      <Table stickyHeader size="small">
+        <TableHead>
+          <TableRow>
+            <TableCell align="center" sx={{ fontSize: 12, fontWeight: 'bold', p: 1 }}>Credit Note No.</TableCell>
+            <TableCell align="center" sx={{ fontSize: 12, fontWeight: 'bold', p: 1 }}>Date</TableCell>
+            <TableCell align="center" sx={{ fontSize: 12, fontWeight: 'bold', p: 1 }}>Party</TableCell>
+            <TableCell align="center" sx={{ fontSize: 12, fontWeight: 'bold', p: 1 }}>Amount</TableCell>
+            <TableCell align="right" sx={{ fontSize: 12, fontWeight: 'bold', p: 0, width: 40 }}></TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {(sortedVouchers?.length === 0) ? (
+            <TableRow>
+              <TableCell colSpan={5} align="center">No credit notes available</TableCell>
+            </TableRow>
+          ) : (
+            sortedVouchers?.slice(0, 5).map((voucher: any) => (
+              <TableRow 
+                key={voucher.id} 
+                hover
+                onContextMenu={(e) => { e.preventDefault(); handleContextMenu(e, voucher); }}
+                sx={{ cursor: 'pointer' }}
+              >
+                <TableCell align="center" sx={{ fontSize: 11, p: 1 }} onClick={() => handleVoucherClick(voucher)}>
+                  {voucher.credit_note_number || voucher.voucher_number}
+                </TableCell>
+                <TableCell align="center" sx={{ fontSize: 11, p: 1 }}>
+                  {new Date(voucher.date).toLocaleDateString()}
+                </TableCell>
+                <TableCell align="center" sx={{ fontSize: 11, p: 1 }}>
+                  {voucher.entity?.name || voucher.customer?.name || 'N/A'}
+                </TableCell>
+                <TableCell align="center" sx={{ fontSize: 11, p: 1 }}>
+                  ₹{voucher.total_amount?.toFixed(2) || '0.00'}
+                </TableCell>
+                <TableCell align="right" sx={{ fontSize: 11, p: 0 }}>
+                  <VoucherContextMenu
+                    voucher={voucher}
+                    voucherType="Non Sales Credit Note"
+                    onView={() => handleView(voucher.id)}
+                    onEdit={() => handleEdit(voucher.id)}
+                    onDelete={() => handleDelete(voucher)}
+                    onPrint={() => handleGeneratePDF(voucher)}
+                    showKebab={true}
+                    onClose={() => {}}
+                  />
+                </TableCell>
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
+    </TableContainer>
+  );
+
+  // Form Content - Right Panel (60%)
+  const formContent = (
+    <Box>
+      {/* Header Actions */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Typography variant="h6" sx={{ fontSize: 18, fontWeight: 'bold', textAlign: 'center', flex: 1 }}>
+          Non Sales Credit Note - {mode === 'create' ? 'Create' : mode === 'edit' ? 'Edit' : 'View'}
+        </Typography>
+        <VoucherHeaderActions
+          mode={mode}
+          voucherType="Non Sales Credit Note"
+          voucherRoute="/vouchers/Financial-Vouchers/non-sales-credit-note"
+          currentId={selectedEntity?.id}
+        />
+      </Box>
+
+      {(createMutation.isPending || updateMutation.isPending) && (
+        <Box display="flex" justifyContent="center" my={2}>
+          <CircularProgress />
+        </Box>
+      )}
+
+      <Box 
+        component="form" 
+        onSubmit={handleSubmit(handleSubmitForm)} 
+        sx={{ 
+          mt: 2,
+          ...voucherStyles.formContainer
+        }}
+      >
+        <Grid container spacing={2}>
+          <Grid size={6}>
+            <TextField
+              {...control.register('credit_note_number')}
+              label="Credit Note Number"
+              fullWidth
+              disabled={true}
+              sx={voucherStyles.centerField}
+              InputProps={{
+                readOnly: true,
+                style: { textAlign: 'center', fontWeight: 'bold' }
+              }}
+            />
+          </Grid>
+          <Grid size={6}>
+            <TextField
+              {...control.register('date')}
+              label="Date"
+              type="date"
+              fullWidth
+              disabled={isViewMode}
+              sx={voucherStyles.centerField}
+              InputLabelProps={{
+                shrink: true,
+              }}
+              inputProps={{ style: { textAlign: 'center' } }}
+              error={!!errors.date}
+              helperText={errors.date?.message}
+            />
+          </Grid>
+
+          <Grid size={6}>
+            <SearchableDropdown
+              label="Party Name"
+              options={allParties}
+              value={selectedEntity?.id || null}
+              onChange={(value) => {
+                const party = allParties.find(p => p.id === value);
+                if (party) {
+                  setValue('entity', {
+                    id: party.id,
+                    name: party.name,
+                    type: party.type,
+                    value: party.id,
+                    label: party.name
+                  });
+                }
+              }}
+              getOptionLabel={(option) => option.label}
+              getOptionValue={(option) => option.id}
+              placeholder="Select or search party..."
+              noOptionsText="No parties found"
+              disabled={isViewMode}
+              fullWidth
+              required
+              error={!!errors.entity}
+              helperText={errors.entity?.message}
+            />
+          </Grid>
+
+          <Grid size={6}>
+            <FormControl fullWidth disabled={isViewMode}>
+              <InputLabel>Reason</InputLabel>
+              <Select
+                {...control.register('reason')}
+                value={watch('reason') || ''}
+                onChange={(e) => setValue('reason', e.target.value)}
+                error={!!errors.reason}
+                sx={{ height: 56 }} // Match height with Party Name field
+              >
+                {creditNoteReasons.map((reason) => (
+                  <MenuItem key={reason} value={reason}>
+                    {reason}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+
+          <Grid size={6}>
+            <TextField
+              {...control.register('reference_number')}
+              label="Reference Number"
+              fullWidth
+              disabled={isViewMode}
+              error={!!errors.reference_number}
+              helperText={errors.reference_number?.message}
+              placeholder="Enter reference invoice/bill number..."
+            />
+          </Grid>
+
+          <Grid size={6}>
+            <TextField
+              {...control.register('total_amount', {
+                required: 'Amount is required',
+                min: { value: 0.01, message: 'Amount must be greater than 0' },
+                setValueAs: (value) => parseRateField(value)
+              })}
+              label="Credit Amount"
+              type="number"
+              fullWidth
+              disabled={isViewMode}
+              error={!!errors.total_amount}
+              helperText={errors.total_amount?.message}
+              sx={{
+                ...voucherStyles.rateField,
+                ...voucherStyles.centerField
+              }}
+              InputProps={{
+                inputProps: { 
+                  step: "0.01",
+                  style: { textAlign: 'center' }
+                }
+              }}
+              onChange={(e) => {
+                const value = parseRateField(e.target.value);
+                setValue('total_amount', value);
+              }}
+            />
+          </Grid>
+
+          <Grid size={12}>
+            <TextField
+              {...control.register('description')}
+              label="Description"
+              multiline
+              rows={4}
+              fullWidth
+              disabled={isViewMode}
+              error={!!errors.description}
+              helperText={errors.description?.message}
+              placeholder="Enter detailed description of the credit note..."
+            />
+          </Grid>
+
+          {totalAmount > 0 && (
+            <Grid size={12}>
+              <TextField
+                fullWidth
+                label="Amount in Words"
+                value={getAmountInWords(totalAmount)}
+                disabled
+                InputLabelProps={{ shrink: true, style: { fontSize: 12 } }}
+                inputProps={{ style: { fontSize: 14, textAlign: 'center' } }}
+                size="small"
               />
+            </Grid>
+          )}
+
+          {/* Action buttons - removed Generate PDF */}
+          <Grid size={12}>
+            <Box display="flex" gap={2}>
+              {mode !== 'view' && (
+                <Button
+                  type="submit"
+                  variant="contained"
+                  color="success"
+                  disabled={createMutation.isPending || updateMutation.isPending}
+                  sx={{ fontSize: 12 }}
+                >
+                  Save
+                </Button>
+              )}
+              <Button
+                variant="outlined"
+                onClick={handleCreate}
+                sx={{ fontSize: 12 }}
+              >
+                Clear
+              </Button>
             </Box>
-
-            {isLoading ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                <CircularProgress />
-              </Box>
-            ) : (
-              <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Sr.</TableCell>
-                      <TableCell>Credit Note #</TableCell>
-                      <TableCell>Date</TableCell>
-                      <TableCell>Customer</TableCell>
-                      <TableCell>Amount</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {sortedVouchers?.map((voucher: any, index: number) => (
-                      <TableRow 
-                        key={voucher.id} 
-                        hover
-                        onContextMenu={(e) => handleContextMenu(e, voucher)}
-                        sx={{ cursor: 'context-menu' }}
-                      >
-                        <TableCell>{index + 1}</TableCell>
-                        <TableCell>{voucher.voucher_number}</TableCell>
-                        <TableCell>{new Date(voucher.date).toLocaleDateString()}</TableCell>
-                        <TableCell>{voucher.customer?.name || 'N/A'}</TableCell>
-                        <TableCell>₹{voucher.total_amount?.toFixed(2) || '0.00'}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </Box>
-            )}
-          </Paper>
+          </Grid>
         </Grid>
+      </Box>
+    </Box>
+  );
 
-        {/* Right side - Voucher Form (60%) */}
-        <Grid size={{ xs: 12, md: 7 }}>
-          <Paper sx={{ p: 3, height: 'calc(100vh - 120px)', overflow: 'auto' }}>
-            <Typography variant="h6" gutterBottom>
-              {mode === 'create' ? 'Create' : mode === 'edit' ? 'Edit' : 'View'} Non-Sales Credit Note
-            </Typography>
+  if (isLoading) {
+    return (
+      <Container>
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+          <CircularProgress />
+        </Box>
+      </Container>
+    );
+  }
 
-            <form onSubmit={handleSubmit(handleSubmitForm)} className="space-y-4">
-              <Grid container spacing={2}>
-                <Grid size={6}>
-                  <TextField
-                    {...control.register('voucher_number')}
-                    label="Credit Note Number"
-                    fullWidth
-                    disabled={mode === 'view'}
-                    error={!!errors.voucher_number}
-                    helperText={errors.voucher_number?.message}
-                  />
-                </Grid>
-                <Grid size={6}>
-                  <TextField
-                    {...control.register('date')}
-                    label="Date"
-                    type="date"
-                    fullWidth
-                    disabled={mode === 'view'}
-                    InputLabelProps={{ shrink: true }}
-                    error={!!errors.date}
-                    helperText={errors.date?.message}
-                  />
-                </Grid>
-
-                <Grid size={12}>
-                  <Autocomplete
-                    options={customerList || []}
-                    getOptionLabel={(option: any) => option?.name || ''}
-                    value={customerList?.find((customer: any) => customer.id === watchedValues.customer_id) || null}
-                    onChange={(_, value: any) => {
-                      setValue('customer_id', value?.id || null);
-                    }}
-                    disabled={mode === 'view'}
-                    renderInput={(params) => (
-                      <TextField 
-                        {...params} 
-                        label="Customer" 
-                        error={!!errors.customer_id}
-                        helperText={errors.customer_id?.message}
-                        InputProps={{
-                          ...params.InputProps,
-                          endAdornment: (
-                            <>
-                              {params.InputProps.endAdornment}
-                              <InputAdornment position="end">
-                                <Tooltip title="Add Customer">
-                                  <Button
-                                    size="small"
-                                    onClick={handleAddCustomer}
-                                    sx={{ minWidth: 'auto', p: 0.5 }}
-                                  >
-                                    <Add fontSize="small" />
-                                  </Button>
-                                </Tooltip>
-                              </InputAdornment>
-                            </>
-                          ),
-                        }}
-                      />
-                    )}
-                  />
-                </Grid>
-
-                <Grid size={12}>
-                  <TextField
-                    {...control.register('total_amount', { valueAsNumber: true })}
-                    label="Credit Amount"
-                    type="number"
-                    fullWidth
-                    disabled={mode === 'view'}
-                    error={!!errors.total_amount}
-                    helperText={errors.total_amount?.message}
-                    InputProps={{
-                      startAdornment: <InputAdornment position="start">₹</InputAdornment>,
-                      inputProps: { step: "0.01" }
-                    }}
-                  />
-                </Grid>
-
-                <Grid size={12}>
-                  <TextField
-                    {...control.register('reference')}
-                    label="Reference"
-                    fullWidth
-                    disabled={mode === 'view'}
-                    error={!!errors.reference}
-                    helperText={errors.reference?.message}
-                  />
-                </Grid>
-
-                {totalAmount > 0 && (
-                  <Grid size={12}>
-                    <Alert severity="info" sx={{ mb: 2 }}>
-                      <strong>Amount in words:</strong> {numberToWords(totalAmount)}
-                    </Alert>
-                  </Grid>
-                )}
-
-                <Grid size={12}>
-                  <TextField
-                    {...control.register('notes')}
-                    label="Notes"
-                    fullWidth
-                    multiline
-                    rows={3}
-                    disabled={mode === 'view'}
-                    error={!!errors.notes}
-                    helperText={errors.notes?.message}
-                  />
-                </Grid>
-
-                {mode !== 'view' && (
-                  <Grid size={12}>
-                    <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
-                      <Button 
-                        variant="outlined" 
-                        onClick={handleCreate}
-                        disabled={createMutation.isPending || updateMutation.isPending}
-                      >
-                        Clear
-                      </Button>
-                      <Button 
-                        type="submit" 
-                        variant="contained"
-                        disabled={createMutation.isPending || updateMutation.isPending}
-                      >
-                        {createMutation.isPending || updateMutation.isPending ? 
-                          <CircularProgress size={20} /> : 
-                          (mode === 'create' ? 'Create' : 'Update')
-                        }
-                      </Button>
-                      <Button 
-                        variant="outlined" 
-                        onClick={() => handleGeneratePDF()}
-                        disabled={!watchedValues.voucher_number}
-                      >
-                        Save as PDF
-                      </Button>
-                    </Box>
-                  </Grid>
-                )}
-              </Grid>
-            </form>
-          </Paper>
-        </Grid>
-      </Grid>
-
+  return (
+    <>
+      <VoucherLayout
+        voucherType="Non Sales Credit Notes"
+        voucherTitle="Non Sales Credit Note"
+        indexContent={indexContent}
+        formContent={formContent}
+        onShowAll={handleModalOpen}
+        showAllButton={true}
+        centerAligned={true}
+        modalContent={
+          <VoucherListModal
+            open={showFullModal}
+            onClose={handleModalClose}
+            voucherType="Non Sales Credit Notes"
+            vouchers={sortedVouchers || []}
+            onVoucherClick={handleVoucherClick}
+            onEdit={handleEdit}
+            onView={handleView}
+            onDelete={handleDelete}
+            onGeneratePDF={handleGeneratePDF}
+            customerList={customerList}
+            vendorList={vendorList}
+          />
+        }
+      />
+      
       {/* Add Customer Modal */}
       <AddCustomerModal
         open={showAddCustomerModal}
@@ -278,138 +430,26 @@ const NonSalesCreditNote: React.FC = () => {
         onAdd={handleAddCustomer}
         loading={addCustomerLoading}
       />
-
-      {/* Context Menu */}
-      {contextMenu !== null && (
-        <VoucherContextMenu
-          voucher={contextMenu.voucher}
-          voucherType="Non-Sales Credit Note"
-          onEdit={handleEdit}
-          onView={handleView}
-          onDelete={handleDelete}
-          onPrint={() => handleGeneratePDF(contextMenu.voucher)}
-          onDuplicate={(voucher) => {
-            handleCreate();
-            setValue('reference', voucher.voucher_number);
-          }}
-          showKebab={false}
-          open={true}
-          onClose={handleContextMenuClose}
-          anchorReference="anchorPosition"
-          anchorPosition={{ top: contextMenu.mouseY, left: contextMenu.mouseX }}
-        />
-      )}
-
-      {/* Search/Filter Modal */}
-      <Modal open={showFullModal} onClose={handleModalClose}>
-        <Box
-          sx={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            width: '90%',
-            maxWidth: 800,
-            bgcolor: 'background.paper',
-            boxShadow: 24,
-            p: 4,
-            borderRadius: 2,
-          }}
-        >
-          <Typography variant="h6" gutterBottom>
-            Search Non-Sales Credit Notes
-          </Typography>
-          
-          <Grid container spacing={2} sx={{ mb: 3 }}>
-            <Grid size={{ xs: 12, md: 4 }}>
-              <TextField
-                label="Search"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                fullWidth
-                placeholder="Credit note number, reference, notes..."
-              />
-            </Grid>
-            <Grid size={6} md={3}>
-              <TextField
-                label="From Date"
-                type="date"
-                value={fromDate}
-                onChange={(e) => setFromDate(e.target.value)}
-                InputLabelProps={{ shrink: true }}
-                fullWidth
-              />
-            </Grid>
-            <Grid size={6} md={3}>
-              <TextField
-                label="To Date"
-                type="date"
-                value={toDate}
-                onChange={(e) => setToDate(e.target.value)}
-                InputLabelProps={{ shrink: true }}
-                fullWidth
-              />
-            </Grid>
-            <Grid size={12} md={2}>
-              <Button
-                variant="contained"
-                onClick={handleSearch}
-                fullWidth
-                sx={{ height: '56px' }}
-              >
-                Search
-              </Button>
-            </Grid>
-          </Grid>
-
-          <TableContainer component={Paper} sx={{ maxHeight: 400 }}>
-            <Table stickyHeader>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Credit Note #</TableCell>
-                  <TableCell>Date</TableCell>
-                  <TableCell>Customer</TableCell>
-                  <TableCell>Amount</TableCell>
-                  <TableCell>Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {filteredVouchers.map((voucher: any) => (
-                  <TableRow key={voucher.id}>
-                    <TableCell>{voucher.voucher_number}</TableCell>
-                    <TableCell>{new Date(voucher.date).toLocaleDateString()}</TableCell>
-                    <TableCell>{voucher.customer?.name || 'N/A'}</TableCell>
-                    <TableCell>₹{voucher.total_amount?.toFixed(2) || '0.00'}</TableCell>
-                    <TableCell>
-                      <Button
-                        size="small"
-                        onClick={() => {
-                          handleEdit(voucher);
-                          handleModalClose();
-                        }}
-                        startIcon={<Edit />}
-                      >
-                        Edit
-                      </Button>
-                      <Button
-                        size="small"
-                        onClick={() => {
-                          handleView(voucher);
-                          handleModalClose();
-                        }}
-                        startIcon={<Visibility />}
-                      >
-                        View
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Box>
-      </Modal>
-    </Container>
+      
+      {/* Keep context menu for right-click functionality */}
+      <VoucherContextMenu
+        voucherType="Non Sales Credit Note"
+        contextMenu={contextMenu}
+        onClose={handleContextMenuClose}
+        onEdit={(id) => {
+          handleEdit(id);
+          handleContextMenuClose();
+        }}
+        onView={(id) => {
+          handleView(id);
+          handleContextMenuClose();
+        }}
+        onDelete={(id) => {
+          handleDelete(id);
+          handleContextMenuClose();
+        }}
+      />
+    </>
   );
 };
 

@@ -1,6 +1,6 @@
-// Receipt Voucher Page - Refactored using shared DRY logic
+// Receipt Voucher Page - Refactored using VoucherLayout
 import React from 'react';
-import { Box, Button, TextField, Typography, Grid, Alert, CircularProgress, Container, Autocomplete, createFilterOptions, InputAdornment, Tooltip, Modal, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
+import { Box, Button, TextField, Typography, Grid, Alert, CircularProgress, Container, Autocomplete, createFilterOptions, InputAdornment, Tooltip, Modal, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 import { Add, Visibility, Edit } from '@mui/icons-material';
 import { Controller } from 'react-hook-form';
 import AddVendorModal from '../../../components/AddVendorModal';
@@ -8,6 +8,8 @@ import AddCustomerModal from '../../../components/AddCustomerModal';
 import VoucherContextMenu from '../../../components/VoucherContextMenu';
 import VoucherHeaderActions from '../../../components/VoucherHeaderActions';
 import VoucherListModal from '../../../components/VoucherListModal';
+import VoucherLayout from '../../../components/VoucherLayout';
+import SearchableDropdown from '../../../components/SearchableDropdown';
 import { useVoucherPage } from '../../../hooks/useVoucherPage';
 import { getVoucherConfig, numberToWords, getVoucherStyles, parseRateField, formatRateField } from '../../../utils/voucherUtils';
 
@@ -93,277 +95,342 @@ const ReceiptVoucher: React.FC = () => {
     });
   };
 
-  return (
-    <Container maxWidth="xl" sx={{ py: 2 }}>
-      <Grid container spacing={3}>
-        {/* Left side - Voucher List (40%) */}
-        <Grid size={{ xs: 12, md: 5 }}>
-          <Paper sx={{ p: 2, height: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6">Receipt Vouchers</Typography>
-              <Button variant="outlined" size="small" onClick={handleModalOpen}>
-                Show All
+  // Combined list of all parties (customers + vendors) for unified dropdown
+  const allParties = [
+    ...(customerList || []).map((customer: any) => ({
+      id: customer.id,
+      name: customer.name,
+      email: customer.email,
+      type: 'Customer',
+      value: customer.id,
+      label: `${customer.name} (Customer)`
+    })),
+    ...(vendorList || []).map((vendor: any) => ({
+      id: vendor.id,
+      name: vendor.name,
+      email: vendor.email,
+      type: 'Vendor',
+      value: vendor.id,
+      label: `${vendor.name} (Vendor)`
+    }))
+  ];
+
+  // Payment methods for receipt vouchers
+  const paymentMethods = [
+    'Cash',
+    'Bank Transfer',
+    'Cheque',
+    'Credit Card',
+    'Debit Card',
+    'Online Payment',
+    'UPI',
+    'Net Banking'
+  ];
+
+  // Get selected entity from form
+  const selectedEntity = watch('entity');
+  const isViewMode = mode === 'view';
+
+  // Index Content - Left Panel (40%)
+  const indexContent = (
+    <TableContainer sx={{ maxHeight: 400 }}>
+      <Table stickyHeader size="small">
+        <TableHead>
+          <TableRow>
+            <TableCell align="center" sx={{ fontSize: 12, fontWeight: 'bold', p: 1 }}>Voucher No.</TableCell>
+            <TableCell align="center" sx={{ fontSize: 12, fontWeight: 'bold', p: 1 }}>Date</TableCell>
+            <TableCell align="center" sx={{ fontSize: 12, fontWeight: 'bold', p: 1 }}>Party</TableCell>
+            <TableCell align="center" sx={{ fontSize: 12, fontWeight: 'bold', p: 1 }}>Amount</TableCell>
+            <TableCell align="right" sx={{ fontSize: 12, fontWeight: 'bold', p: 0, width: 40 }}></TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {(sortedVouchers?.length === 0) ? (
+            <TableRow>
+              <TableCell colSpan={5} align="center">No receipt vouchers available</TableCell>
+            </TableRow>
+          ) : (
+            sortedVouchers?.slice(0, 5).map((voucher: any) => (
+              <TableRow 
+                key={voucher.id} 
+                hover
+                onContextMenu={(e) => { e.preventDefault(); handleContextMenu(e, voucher); }}
+                sx={{ cursor: 'pointer' }}
+              >
+                <TableCell align="center" sx={{ fontSize: 11, p: 1 }} onClick={() => handleVoucherClick(voucher)}>
+                  {voucher.voucher_number}
+                </TableCell>
+                <TableCell align="center" sx={{ fontSize: 11, p: 1 }}>
+                  {new Date(voucher.date).toLocaleDateString()}
+                </TableCell>
+                <TableCell align="center" sx={{ fontSize: 11, p: 1 }}>
+                  {voucher.vendor?.name || voucher.customer?.name || 'N/A'}
+                </TableCell>
+                <TableCell align="center" sx={{ fontSize: 11, p: 1 }}>
+                  ₹{voucher.total_amount?.toFixed(2) || '0.00'}
+                </TableCell>
+                <TableCell align="right" sx={{ fontSize: 11, p: 0 }}>
+                  <VoucherContextMenu
+                    voucher={voucher}
+                    voucherType="Receipt Voucher"
+                    onView={() => handleView(voucher.id)}
+                    onEdit={() => handleEdit(voucher.id)}
+                    onDelete={() => handleDelete(voucher)}
+                    onPrint={() => handleGeneratePDF(voucher)}
+                    showKebab={true}
+                    onClose={() => {}}
+                  />
+                </TableCell>
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
+    </TableContainer>
+  );
+
+  // Form Content - Right Panel (60%)
+  const formContent = (
+    <Box>
+      {/* Header Actions */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Typography variant="h6" sx={{ fontSize: 18, fontWeight: 'bold', textAlign: 'center', flex: 1 }}>
+          Receipt Voucher - {mode === 'create' ? 'Create' : mode === 'edit' ? 'Edit' : 'View'}
+        </Typography>
+        <VoucherHeaderActions
+          mode={mode}
+          voucherType="Receipt Voucher"
+          voucherRoute="/vouchers/Financial-Vouchers/receipt-voucher"
+          currentId={selectedEntity?.id}
+        />
+      </Box>
+
+      {(createMutation.isPending || updateMutation.isPending) && (
+        <Box display="flex" justifyContent="center" my={2}>
+          <CircularProgress />
+        </Box>
+      )}
+
+      <Box 
+        component="form" 
+        onSubmit={handleSubmit(handleSubmitForm)} 
+        sx={{ 
+          mt: 2,
+          ...voucherStyles.formContainer
+        }}
+      >
+        <Grid container spacing={2}>
+          <Grid size={6}>
+            <TextField
+              {...control.register('voucher_number')}
+              label="Voucher Number"
+              fullWidth
+              disabled={true}
+              sx={voucherStyles.centerField}
+              InputProps={{
+                readOnly: true,
+                style: { textAlign: 'center', fontWeight: 'bold' }
+              }}
+            />
+          </Grid>
+          <Grid size={6}>
+            <TextField
+              {...control.register('date')}
+              label="Date"
+              type="date"
+              fullWidth
+              disabled={isViewMode}
+              sx={voucherStyles.centerField}
+              InputLabelProps={{
+                shrink: true,
+              }}
+              inputProps={{ style: { textAlign: 'center' } }}
+              error={!!errors.date}
+              helperText={errors.date?.message}
+            />
+          </Grid>
+
+          <Grid size={6}>
+            <SearchableDropdown
+              label="Party Name"
+              options={allParties}
+              value={selectedEntity?.id || null}
+              onChange={(value) => {
+                const party = allParties.find(p => p.id === value);
+                if (party) {
+                  setValue('entity', {
+                    id: party.id,
+                    name: party.name,
+                    type: party.type,
+                    value: party.id,
+                    label: party.name
+                  });
+                }
+              }}
+              getOptionLabel={(option) => option.label}
+              getOptionValue={(option) => option.id}
+              placeholder="Select or search party..."
+              noOptionsText="No parties found"
+              disabled={isViewMode}
+              fullWidth
+              required
+              error={!!errors.entity}
+              helperText={errors.entity?.message}
+            />
+          </Grid>
+
+          <Grid size={6}>
+            <FormControl fullWidth disabled={isViewMode}>
+              <InputLabel>Payment Method</InputLabel>
+              <Select
+                {...control.register('payment_method')}
+                value={watch('payment_method') || ''}
+                onChange={(e) => setValue('payment_method', e.target.value)}
+                error={!!errors.payment_method}
+                sx={{ height: 56 }} // Match height with Party Name field
+              >
+                {paymentMethods.map((method) => (
+                  <MenuItem key={method} value={method}>
+                    {method}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+
+          <Grid size={6}>
+            <TextField
+              {...control.register('reference')}
+              label="Reference"
+              fullWidth
+              disabled={isViewMode}
+              error={!!errors.reference}
+              helperText={errors.reference?.message}
+            />
+          </Grid>
+
+          <Grid size={6}>
+            <TextField
+              {...control.register('total_amount', {
+                required: 'Amount is required',
+                min: { value: 0.01, message: 'Amount must be greater than 0' },
+                setValueAs: (value) => parseRateField(value)
+              })}
+              label="Amount"
+              type="number"
+              fullWidth
+              disabled={isViewMode}
+              error={!!errors.total_amount}
+              helperText={errors.total_amount?.message}
+              sx={{
+                ...voucherStyles.rateField,
+                ...voucherStyles.centerField
+              }}
+              InputProps={{
+                inputProps: { 
+                  step: "0.01",
+                  style: { textAlign: 'center' }
+                }
+              }}
+              onChange={(e) => {
+                const value = parseRateField(e.target.value);
+                setValue('total_amount', value);
+              }}
+            />
+          </Grid>
+
+          <Grid size={12}>
+            <TextField
+              {...control.register('notes')}
+              label="Notes"
+              multiline
+              rows={3}
+              fullWidth
+              disabled={isViewMode}
+              error={!!errors.notes}
+              helperText={errors.notes?.message}
+            />
+          </Grid>
+
+          {totalAmount > 0 && (
+            <Grid size={12}>
+              <TextField
+                fullWidth
+                label="Amount in Words"
+                value={numberToWords(totalAmount)}
+                disabled
+                InputLabelProps={{ shrink: true, style: { fontSize: 12 } }}
+                inputProps={{ style: { fontSize: 14, textAlign: 'center' } }}
+                size="small"
+              />
+            </Grid>
+          )}
+
+          {/* Action buttons - removed Generate PDF */}
+          <Grid size={12}>
+            <Box display="flex" gap={2}>
+              {mode !== 'view' && (
+                <Button
+                  type="submit"
+                  variant="contained"
+                  color="success"
+                  disabled={createMutation.isPending || updateMutation.isPending}
+                  sx={{ fontSize: 12 }}
+                >
+                  Save
+                </Button>
+              )}
+              <Button
+                variant="outlined"
+                onClick={handleCreate}
+                sx={{ fontSize: 12 }}
+              >
+                Clear
               </Button>
             </Box>
-
-            {isLoading ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                <CircularProgress />
-              </Box>
-            ) : (
-              <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Sr.</TableCell>
-                      <TableCell>Voucher #</TableCell>
-                      <TableCell>Date</TableCell>
-                      <TableCell>Party</TableCell>
-                      <TableCell>Amount</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {sortedVouchers?.map((voucher: any, index: number) => (
-                      <TableRow 
-                        key={voucher.id} 
-                        hover
-                        onContextMenu={(e) => handleContextMenu(e, voucher)}
-                        sx={{ cursor: 'context-menu' }}
-                      >
-                        <TableCell>{index + 1}</TableCell>
-                        <TableCell>{voucher.voucher_number}</TableCell>
-                        <TableCell>{new Date(voucher.date).toLocaleDateString()}</TableCell>
-                        <TableCell>{voucher.vendor?.name || voucher.customer?.name || 'N/A'}</TableCell>
-                        <TableCell>₹{voucher.total_amount?.toFixed(2) || '0.00'}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </Box>
-            )}
-          </Paper>
+          </Grid>
         </Grid>
+      </Box>
+    </Box>
+  );
 
-        {/* Right side - Voucher Form (60%) */}
-        <Grid size={{ xs: 12, md: 7 }}>
-          <Paper sx={{ p: 3, height: 'calc(100vh - 120px)', overflow: 'auto' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6">
-                {mode === 'create' ? 'Create' : mode === 'edit' ? 'Edit' : 'View'} Receipt Voucher
-              </Typography>
-              <VoucherHeaderActions
-                mode={mode}
-                voucherType="Receipt Voucher"
-                voucherRoute="/vouchers/Financial-Vouchers/receipt-voucher"
-                currentId={watchedValues?.id}
-              />
-            </Box>
+  if (isLoading) {
+    return (
+      <Container>
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+          <CircularProgress />
+        </Box>
+      </Container>
+    );
+  }
 
-            <form onSubmit={handleSubmit(handleSubmitForm)} className="space-y-4">
-              <Grid container spacing={2}>
-                <Grid size={6}>
-                  <TextField
-                    {...control.register('voucher_number')}
-                    label="Voucher Number"
-                    fullWidth
-                    disabled={mode === 'view'}
-                    error={!!errors.voucher_number}
-                    helperText={errors.voucher_number?.message}
-                  />
-                </Grid>
-                <Grid size={6}>
-                  <TextField
-                    {...control.register('date')}
-                    label="Date"
-                    type="date"
-                    fullWidth
-                    disabled={mode === 'view'}
-                    InputLabelProps={{ shrink: true }}
-                    error={!!errors.date}
-                    helperText={errors.date?.message}
-                  />
-                </Grid>
-
-                <Grid size={12}>
-                  <Autocomplete
-                    options={allNameOptions}
-                    getOptionLabel={(option: any) => option?.name || ''}
-                    groupBy={(option: any) => option.type}
-                    value={allNameOptions.find((option: any) => 
-                      (watchedValues.vendor_id && option.id === watchedValues.vendor_id && option.type === 'Vendor') ||
-                      (watchedValues.customer_id && option.id === watchedValues.customer_id && option.type === 'Customer')
-                    ) || null}
-                    onChange={(_, value: any) => {
-                      if (value) {
-                        if (value.type === 'Vendor') {
-                          setValue('vendor_id', value.id);
-                          setValue('customer_id', null);
-                        } else {
-                          setValue('customer_id', value.id);
-                          setValue('vendor_id', null);
-                        }
-                      } else {
-                        setValue('vendor_id', null);
-                        setValue('customer_id', null);
-                      }
-                    }}
-                    filterOptions={nameFilter}
-                    disabled={mode === 'view'}
-                    renderInput={(params) => (
-                      <TextField 
-                        {...params} 
-                        label="Party Name" 
-                        error={!!errors.vendor_id || !!errors.customer_id}
-                        helperText={errors.vendor_id?.message || errors.customer_id?.message}
-                        InputProps={{
-                          ...params.InputProps,
-                          endAdornment: (
-                            <>
-                              {params.InputProps.endAdornment}
-                              <InputAdornment position="end">
-                                <Tooltip title="Add Vendor">
-                                  <Button
-                                    size="small"
-                                    onClick={handleAddVendor}
-                                    sx={{ minWidth: 'auto', p: 0.5, mr: 0.5 }}
-                                  >
-                                    <Add fontSize="small" />
-                                  </Button>
-                                </Tooltip>
-                                <Tooltip title="Add Customer">
-                                  <Button
-                                    size="small"
-                                    onClick={handleAddCustomer}
-                                    sx={{ minWidth: 'auto', p: 0.5 }}
-                                  >
-                                    <Add fontSize="small" />
-                                  </Button>
-                                </Tooltip>
-                              </InputAdornment>
-                            </>
-                          ),
-                        }}
-                      />
-                    )}
-                  />
-                </Grid>
-
-                <Grid size={6}>
-                  <TextField
-                    {...control.register('receipt_method')}
-                    label="Receipt Method"
-                    fullWidth
-                    disabled={mode === 'view'}
-                    error={!!errors.receipt_method}
-                    helperText={errors.receipt_method?.message}
-                  />
-                </Grid>
-                <Grid size={6}>
-                  <TextField
-                    {...control.register('reference')}
-                    label="Reference"
-                    fullWidth
-                    disabled={mode === 'view'}
-                    error={!!errors.reference}
-                    helperText={errors.reference?.message}
-                  />
-                </Grid>
-
-                <Grid size={12}>
-                  <TextField
-                    {...control.register('total_amount', { 
-                      valueAsNumber: true,
-                      setValueAs: (value) => parseRateField(value)
-                    })}
-                    label="Total Amount"
-                    type="number"
-                    fullWidth
-                    disabled={mode === 'view'}
-                    sx={{
-                      ...voucherStyles.rateField,
-                      ...voucherStyles.centerField
-                    }}
-                    error={!!errors.total_amount}
-                    helperText={errors.total_amount?.message}
-                    InputProps={{
-                      startAdornment: <InputAdornment position="start">₹</InputAdornment>,
-                      inputProps: { 
-                        step: "0.01",
-                        style: { textAlign: 'center' }
-                      }
-                    }}
-                    onChange={(e) => {
-                      const value = parseRateField(e.target.value);
-                      setValue('total_amount', value);
-                    }}
-                  />
-                </Grid>
-
-                {totalAmount > 0 && (
-                  <Grid size={12}>
-                    <Alert severity="info" sx={{ mb: 2 }}>
-                      <strong>Amount in words:</strong> {numberToWords(totalAmount)}
-                    </Alert>
-                  </Grid>
-                )}
-
-                <Grid size={12}>
-                  <TextField
-                    {...control.register('notes')}
-                    label="Notes"
-                    fullWidth
-                    multiline
-                    rows={3}
-                    disabled={mode === 'view'}
-                    error={!!errors.notes}
-                    helperText={errors.notes?.message}
-                  />
-                </Grid>
-
-                {mode !== 'view' && (
-                  <Grid size={12}>
-                    <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
-                      <Button 
-                        variant="outlined" 
-                        onClick={handleCreate}
-                        disabled={createMutation.isPending || updateMutation.isPending}
-                      >
-                        Clear
-                      </Button>
-                      <Button 
-                        type="submit" 
-                        variant="contained"
-                        disabled={createMutation.isPending || updateMutation.isPending}
-                      >
-                        {createMutation.isPending || updateMutation.isPending ? 
-                          <CircularProgress size={20} /> : 
-                          (mode === 'create' ? 'Create' : 'Update')
-                        }
-                      </Button>
-                      <Button 
-                        variant="outlined" 
-                        onClick={() => handleGeneratePDF()}
-                        disabled={!watchedValues.voucher_number}
-                      >
-                        Save as PDF
-                      </Button>
-                    </Box>
-                  </Grid>
-                )}
-              </Grid>
-            </form>
-          </Paper>
-        </Grid>
-      </Grid>
-
-      {/* Add Vendor Modal */}
-      <AddVendorModal
-        open={showAddVendorModal}
-        onClose={() => setShowAddVendorModal(false)}
-        onAdd={handleAddVendor}
-        loading={addVendorLoading}
+  return (
+    <>
+      <VoucherLayout
+        voucherType="Receipt Vouchers"
+        voucherTitle="Receipt Voucher"
+        indexContent={indexContent}
+        formContent={formContent}
+        onShowAll={handleModalOpen}
+        showAllButton={true}
+        centerAligned={true}
+        modalContent={
+          <VoucherListModal
+            open={showFullModal}
+            onClose={handleModalClose}
+            voucherType="Receipt Vouchers"
+            vouchers={sortedVouchers || []}
+            onVoucherClick={handleVoucherClick}
+            onEdit={handleEdit}
+            onView={handleView}
+            onDelete={handleDelete}
+            onGeneratePDF={handleGeneratePDF}
+            customerList={customerList}
+            vendorList={vendorList}
+          />
+        }
       />
-
+      
       {/* Add Customer Modal */}
       <AddCustomerModal
         open={showAddCustomerModal}
@@ -372,42 +439,39 @@ const ReceiptVoucher: React.FC = () => {
         loading={addCustomerLoading}
       />
 
-      {/* Context Menu */}
-      {contextMenu !== null && (
+      {/* Add Vendor Modal */}
+      <AddVendorModal
+        open={showAddVendorModal}
+        onClose={() => setShowAddVendorModal(false)}
+        onAdd={handleAddVendor}
+        loading={addVendorLoading}
+      />
+      
+      {/* Keep context menu for right-click functionality */}
+      {contextMenu && (
         <VoucherContextMenu
-          voucher={contextMenu.voucher}
           voucherType="Receipt Voucher"
-          onEdit={handleEdit}
-          onView={handleView}
-          onDelete={handleDelete}
-          onPrint={() => handleGeneratePDF(contextMenu.voucher)}
-          onDuplicate={(voucher) => {
-            handleCreate();
-            setValue('reference', voucher.voucher_number);
+          contextMenu={contextMenu}
+          onClose={handleContextMenuClose}
+          onEdit={(id) => {
+            handleEdit(id);
+            handleContextMenuClose();
+          }}
+          onView={(id) => {
+            handleView(id);
+            handleContextMenuClose();
+          }}
+          onDelete={(id) => {
+            handleDelete(id);
+            handleContextMenuClose();
           }}
           showKebab={false}
           open={true}
-          onClose={handleContextMenuClose}
           anchorReference="anchorPosition"
           anchorPosition={{ top: contextMenu.mouseY, left: contextMenu.mouseX }}
         />
       )}
-
-      {/* Voucher List Modal */}
-      <VoucherListModal
-        open={showFullModal}
-        onClose={handleModalClose}
-        voucherType="Receipt Vouchers"
-        vouchers={sortedVouchers || []}
-        onVoucherClick={handleVoucherClick}
-        onEdit={handleEdit}
-        onView={handleView}
-        onDelete={handleDelete}
-        onGeneratePDF={handleGeneratePDF}
-        customerList={customerList}
-        vendorList={vendorList}
-      />
-    </Container>
+    </>
   );
 };
 
