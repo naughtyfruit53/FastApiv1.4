@@ -84,6 +84,8 @@ async def create_purchase_order(
             from app.models.vouchers import PurchaseOrderItem
             item = PurchaseOrderItem(
                 purchase_order_id=db_invoice.id,
+                delivered_quantity=0.0,
+                pending_quantity=item_data.quantity,  # Set pending_quantity to quantity
                 **item_data.dict()
             )
             db.add(item)
@@ -156,6 +158,8 @@ async def update_purchase_order(
             for item_data in invoice_update.items:
                 item = PurchaseOrderItem(
                     purchase_order_id=invoice_id,
+                    delivered_quantity=0.0,
+                    pending_quantity=item_data.quantity,  # Set pending_quantity to quantity
                     **item_data.dict()
                 )
                 db.add(item)

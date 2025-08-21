@@ -22,8 +22,6 @@ export const voucherTypes = {
     { label: 'Receipt Voucher', slug: 'receipt-vouchers' },
     { label: 'Journal Voucher', slug: 'journal-vouchers' },
     { label: 'Contra Voucher', slug: 'contra-vouchers' },
-    { label: 'Credit Note', slug: 'credit-notes' },
-    { label: 'Debit Note', slug: 'debit-notes' },
   ]
 };
 

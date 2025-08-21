@@ -478,9 +478,10 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
   // Refetch list after create/update
   useEffect(() => {
     if (createMutation.isSuccess || updateMutation.isSuccess) {
+      queryClient.invalidateQueries({ queryKey: [config.voucherType] });
       refetchVoucherList();
     }
-  }, [createMutation.isSuccess, updateMutation.isSuccess, refetchVoucherList]);
+  }, [createMutation.isSuccess, updateMutation.isSuccess, queryClient, config.voucherType, refetchVoucherList]);
 
   return {
     // State

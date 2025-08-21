@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Menu, MenuItem, IconButton } from '@mui/material';
-import { MoreVert as MoreVertIcon, Visibility, Edit, Delete, Print, Email } from '@mui/icons-material';
+import { MoreVert as MoreVertIcon, Visibility, Edit, Delete, Print, SaveAlt, Email } from '@mui/icons-material';
 
 interface VoucherContextMenuProps {
   voucher?: any;
@@ -10,7 +10,7 @@ interface VoucherContextMenuProps {
   onView: (id: number) => void;
   onEdit: (id: number) => void;
   onDelete: (id: number) => void;
-  onPrint?: (id: number) => void;
+  onPrint?: (id: number, mode: 'print' | 'download') => void;
   onEmail?: (id: number) => void;
   showKebab?: boolean;
   contextMenu?: { mouseX: number; mouseY: number; voucher: any } | null;
@@ -51,6 +51,13 @@ const VoucherContextMenu: React.FC<VoucherContextMenuProps> = ({
   const handleAction = (action: (id: number) => void) => () => {
     if (effectiveVoucher) {
       action(effectiveVoucher.id);
+    }
+    handleMenuClose();
+  };
+
+  const handlePrintAction = (mode: 'print' | 'download') => () => {
+    if (onPrint && effectiveVoucher) {
+      onPrint(effectiveVoucher.id, mode);
     }
     handleMenuClose();
   };
@@ -105,22 +112,27 @@ const VoucherContextMenu: React.FC<VoucherContextMenuProps> = ({
       )}
       <Menu {...menuProps}>
         <MenuItem onClick={handleAction(onView)}>
-          <Visibility sx={{ mr: 1 }} /> View
+          <Visibility sx={{ mr: 1 }} /> View {voucherType}
         </MenuItem>
         <MenuItem onClick={handleAction(onEdit)}>
-          <Edit sx={{ mr: 1 }} /> Edit
+          <Edit sx={{ mr: 1 }} /> Edit {voucherType}
         </MenuItem>
         <MenuItem onClick={handleAction(onDelete)}>
-          <Delete sx={{ mr: 1 }} /> Delete
+          <Delete sx={{ mr: 1 }} /> Delete {voucherType}
         </MenuItem>
         {onPrint && (
-          <MenuItem onClick={handleAction(onPrint)}>
-            <Print sx={{ mr: 1 }} /> Print
+          <MenuItem onClick={handlePrintAction('print')}>
+            <Print sx={{ mr: 1 }} /> Print {voucherType}
+          </MenuItem>
+        )}
+        {onPrint && (
+          <MenuItem onClick={handlePrintAction('download')}>
+            <SaveAlt sx={{ mr: 1 }} /> Save {voucherType} as PDF
           </MenuItem>
         )}
         {hasEmail && (
           <MenuItem onClick={handleEmailClick}>
-            <Email sx={{ mr: 1 }} /> Email
+            <Email sx={{ mr: 1 }} /> Email {voucherType}
           </MenuItem>
         )}
       </Menu>

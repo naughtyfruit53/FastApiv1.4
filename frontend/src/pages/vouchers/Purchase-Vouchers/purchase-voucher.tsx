@@ -26,14 +26,14 @@ const PurchaseVoucherPage: React.FC = () => {
     mode,
     setMode,
     isLoading,
-    showAddCustomerModal,
-    setShowAddCustomerModal,
+    showAddVendorModal,
+    setShowAddVendorModal,
     showAddProductModal,
     setShowAddProductModal,
     showShippingModal,
     setShowShippingModal,
-    addCustomerLoading,
-    setAddCustomerLoading,
+    addVendorLoading,
+    setAddVendorLoading,
     addProductLoading,
     setAddProductLoading,
     addShippingLoading,
@@ -65,7 +65,7 @@ const PurchaseVoucherPage: React.FC = () => {
 
     // Data
     voucherList,
-    customerList: vendorList,
+    vendorList,
     productList,
     nextVoucherNumber,
     sortedVouchers,
@@ -373,7 +373,7 @@ const PurchaseVoucherPage: React.FC = () => {
               value={selectedVendor || null}
               onChange={(_, newValue) => {
                 if (newValue?.id === null) {
-                  setShowAddCustomerModal(true);
+                  setShowAddVendorModal(true);
                 } else {
                   setValue('vendor_id', newValue?.id || null);
                 }
@@ -661,18 +661,18 @@ const PurchaseVoucherPage: React.FC = () => {
             onView={handleViewWithData}
             onDelete={handleDelete}
             onGeneratePDF={handleGeneratePDF}
-            customerList={vendorList}
+            vendorList={vendorList}
           />
         }
       />
 
       {/* Modals */}
       <AddVendorModal 
-        open={showAddCustomerModal}
-        onClose={() => setShowAddCustomerModal(false)}
+        open={showAddVendorModal}
+        onClose={() => setShowAddVendorModal(false)}
         onVendorAdded={refreshMasterData}
-        loading={addCustomerLoading}
-        setLoading={setAddCustomerLoading}
+        loading={addVendorLoading}
+        setLoading={setAddVendorLoading}
       />
 
       <AddProductModal 
