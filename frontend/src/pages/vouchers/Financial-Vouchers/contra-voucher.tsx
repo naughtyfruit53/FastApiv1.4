@@ -1,13 +1,18 @@
+// Contra Voucher Page - Refactored using VoucherLayout
 import React from 'react';
-import { Box, Button, TextField, Typography, Grid, Alert, CircularProgress, Container, InputAdornment, Tooltip, Modal, Autocomplete, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
+import { Box, Button, TextField, Typography, Grid, Alert, CircularProgress, Container, InputAdornment, Tooltip, Modal, Autocomplete, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 import { Visibility, Edit } from '@mui/icons-material';
 import VoucherContextMenu from '../../../components/VoucherContextMenu';
 import VoucherHeaderActions from '../../../components/VoucherHeaderActions';
+import VoucherListModal from '../../../components/VoucherListModal';
+import VoucherLayout from '../../../components/VoucherLayout';
 import { useVoucherPage } from '../../../hooks/useVoucherPage';
-import { getVoucherConfig } from '../../../utils/voucherUtils';
+import { getVoucherConfig, getVoucherStyles, parseRateField, formatRateField } from '../../../utils/voucherUtils';
 
 const ContraVoucher: React.FC = () => {
   const config = getVoucherConfig('contra-voucher');
+  const voucherStyles = getVoucherStyles();
+  
   const {
     // State
     mode,
@@ -27,12 +32,15 @@ const ContraVoucher: React.FC = () => {
     control,
     handleSubmit,
     watch,
+    setValue,
+    reset,
     errors,
 
     // Data
     voucherList,
+    vendorList,
+    customerList,
     sortedVouchers,
-    latestVouchers,
 
     // Mutations
     createMutation,
@@ -50,110 +58,145 @@ const ContraVoucher: React.FC = () => {
     handleModalClose,
     handleGeneratePDF,
     handleDelete,
+    refreshMasterData,
     getAmountInWords,
 
     // Utilities
     isViewMode,
   } = useVoucherPage(config);
 
-  const totalAmountValue = watch('total_amount');
+  // Watch form values
+  const watchedValues = watch();
+  const totalAmount = watchedValues?.amount || 0;
 
-  // Account options - this could be moved to a shared utility if used across vouchers
-  const accountOptions = [
-    'Cash',
-    'Bank Account - SBI', 
-    'Bank Account - HDFC',
-    'Bank Account - ICICI',
-    'Bank Account - Axis',
-    'Petty Cash',
-    'Fixed Deposit',
-    'Savings Account',
-    'Current Account'
-  ];
-
-  // Custom submit handler for contra voucher validation
-  const onSubmit = (data: any) => {
-    if (data.from_account === data.to_account) {
-      alert('From Account and To Account cannot be the same');
-      return;
-    }
-    handleSubmitForm(data);
+  // Handle voucher click to load details
+  const handleVoucherClick = (voucher: any) => {
+    // Load the selected voucher into the form
+    reset(voucher);
+    // Set the form with the voucher data
+    Object.keys(voucher).forEach(key => {
+      setValue(key, voucher[key]);
+    });
   };
 
-  return (
-    <Container maxWidth="xl" sx={{ py: 2 }}>
-      <Grid container spacing={3}>
-        {/* Left side - Voucher List (40%) */}
-        <Grid size={{ xs: 12, md: 5 }}>
-          <Paper sx={{ p: 2, height: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6">Contra Vouchers</Typography>
-              <VoucherHeaderActions
-                onCreate={handleCreate}
-                onSearch={handleModalOpen}
-                voucherType="Contra Voucher"
-              />
-            </Box>
+  // Bank account options (these would typically come from a master data service)
+  const bankAccounts = [
+    'Bank Account 1',
+    'Bank Account 2', 
+    'Cash Account',
+    'Petty Cash',
+    'Current Account - SBI',
+    'Savings Account - HDFC',
+    'Fixed Deposit Account'
+  ];
 
-            {isLoading ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                <CircularProgress />
-              </Box>
-            ) : (
-              <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Sr.</TableCell>
-                      <TableCell>Voucher #</TableCell>
-                      <TableCell>Date</TableCell>
-                      <TableCell>Amount</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {sortedVouchers?.map((voucher: any, index: number) => (
-                      <TableRow 
-                        key={voucher.id} 
-                        hover
-                        onContextMenu={(e) => handleContextMenu(e, voucher)}
-                        sx={{ cursor: 'context-menu' }}
-                      >
-                        <TableCell>{index + 1}</TableCell>
-                        <TableCell>{voucher.voucher_number}</TableCell>
-                        <TableCell>{new Date(voucher.date).toLocaleDateString()}</TableCell>
-                        <TableCell>₹{voucher.total_amount?.toFixed(2) || '0.00'}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </Box>
-            )}
-          </Paper>
-        </Grid>
+  // Transfer types for contra vouchers
+  const transferTypes = [
+    'Bank to Bank',
+    'Bank to Cash',
+    'Cash to Bank',
+    'Cash to Cash'
+  ];
 
-        {/* Right side - Voucher Form */}
-        <Grid size={12} md={7}>
-          <Paper sx={{ p: 3, height: 'calc(100vh - 120px)', overflow: 'auto' }}>
-            <Typography variant="h6" gutterBottom>
-              {mode === 'create' ? 'Create' : mode === 'edit' ? 'Edit' : 'View'} Contra Voucher
-            </Typography>
+  // Index Content - Left Panel (40%)
+  const indexContent = (
+    <TableContainer sx={{ maxHeight: 400 }}>
+      <Table stickyHeader size="small">
+        <TableHead>
+          <TableRow>
+            <TableCell align="center" sx={{ fontSize: 12, fontWeight: 'bold', p: 1 }}>Voucher No.</TableCell>
+            <TableCell align="center" sx={{ fontSize: 12, fontWeight: 'bold', p: 1 }}>Date</TableCell>
+            <TableCell align="center" sx={{ fontSize: 12, fontWeight: 'bold', p: 1 }}>Type</TableCell>
+            <TableCell align="center" sx={{ fontSize: 12, fontWeight: 'bold', p: 1 }}>Amount</TableCell>
+            <TableCell align="right" sx={{ fontSize: 12, fontWeight: 'bold', p: 0, width: 40 }}></TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {(sortedVouchers?.length === 0) ? (
+            <TableRow>
+              <TableCell colSpan={5} align="center">No contra vouchers available</TableCell>
+            </TableRow>
+          ) : (
+            sortedVouchers?.slice(0, 5).map((voucher: any) => (
+              <TableRow 
+                key={voucher.id} 
+                hover
+                onContextMenu={(e) => { e.preventDefault(); handleContextMenu(e, voucher); }}
+                sx={{ cursor: 'pointer' }}
+              >
+                <TableCell align="center" sx={{ fontSize: 11, p: 1 }} onClick={() => handleVoucherClick(voucher)}>
+                  {voucher.voucher_number}
+                </TableCell>
+                <TableCell align="center" sx={{ fontSize: 11, p: 1 }}>
+                  {new Date(voucher.date).toLocaleDateString()}
+                </TableCell>
+                <TableCell align="center" sx={{ fontSize: 11, p: 1 }}>
+                  {voucher.transfer_type || 'N/A'}
+                </TableCell>
+                <TableCell align="center" sx={{ fontSize: 11, p: 1 }}>
+                  ₹{voucher.amount?.toFixed(2) || '0.00'}
+                </TableCell>
+                <TableCell align="right" sx={{ fontSize: 11, p: 0 }}>
+                  <VoucherContextMenu
+                    voucher={voucher}
+                    voucherType="Contra Voucher"
+                    onView={() => handleView(voucher.id)}
+                    onEdit={() => handleEdit(voucher.id)}
+                    onDelete={() => handleDelete(voucher)}
+                    onPrint={() => handleGeneratePDF(voucher)}
+                    showKebab={true}
+                    onClose={() => {}}
+                  />
+                </TableCell>
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
+    </TableContainer>
+  );
 
-            {(createMutation.isPending || updateMutation.isPending) && (
-              <Box display="flex" justifyContent="center" my={2}>
-                <CircularProgress />
-              </Box>
-            )}
+  // Form Content - Right Panel (60%)
+  const formContent = (
+    <Box>
+      {/* Header Actions */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Typography variant="h6" sx={{ fontSize: 18, fontWeight: 'bold', textAlign: 'center', flex: 1 }}>
+          Contra Voucher - {mode === 'create' ? 'Create' : mode === 'edit' ? 'Edit' : 'View'}
+        </Typography>
+        <VoucherHeaderActions
+          mode={mode}
+          voucherType="Contra Voucher"
+          voucherRoute="/vouchers/Financial-Vouchers/contra-voucher"
+          currentId={watch('id')}
+        />
+      </Box>
 
-            <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ mt: 3 }}>
-              <Grid container spacing={3}>
+      {(createMutation.isPending || updateMutation.isPending) && (
+        <Box display="flex" justifyContent="center" my={2}>
+          <CircularProgress />
+        </Box>
+      )}
+
+      <Box 
+        component="form" 
+        onSubmit={handleSubmit(handleSubmitForm)} 
+        sx={{ 
+          mt: 2,
+          ...voucherStyles.formContainer
+        }}
+      >
+        <Grid container spacing={2}>
           <Grid size={6}>
             <TextField
               {...control.register('voucher_number')}
               label="Voucher Number"
               fullWidth
               disabled={true}
+              sx={voucherStyles.centerField}
               InputProps={{
                 readOnly: true,
+                style: { textAlign: 'center', fontWeight: 'bold' }
               }}
             />
           </Grid>
@@ -164,122 +207,209 @@ const ContraVoucher: React.FC = () => {
               type="date"
               fullWidth
               disabled={isViewMode}
+              sx={voucherStyles.centerField}
               InputLabelProps={{
                 shrink: true,
               }}
+              inputProps={{ style: { textAlign: 'center' } }}
               error={!!errors.date}
               helperText={errors.date?.message}
             />
           </Grid>
 
           <Grid size={6}>
-            <Autocomplete
-              options={accountOptions}
-              value={watch('from_account') || ''}
-              onChange={(_, newValue) => setValue('from_account', newValue || '')}
-              disabled={isViewMode}
-              freeSolo
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="From Account"
-                  error={!!errors.from_account}
-                  helperText={errors.from_account?.message}
-                />
-              )}
-            />
-          </Grid>
-
-          <Grid size={6}>
-            <Autocomplete
-              options={accountOptions}
-              value={watch('to_account') || ''}
-              onChange={(_, newValue) => setValue('to_account', newValue || '')}
-              disabled={isViewMode}
-              freeSolo
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="To Account"
-                  error={!!errors.to_account}
-                  helperText={errors.to_account?.message}
-                />
-              )}
-            />
+            <FormControl fullWidth disabled={isViewMode}>
+              <InputLabel>Transfer Type</InputLabel>
+              <Select
+                {...control.register('transfer_type')}
+                value={watch('transfer_type') || ''}
+                onChange={(e) => setValue('transfer_type', e.target.value)}
+                error={!!errors.transfer_type}
+                required
+              >
+                {transferTypes.map((type) => (
+                  <MenuItem key={type} value={type}>
+                    {type}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </Grid>
 
           <Grid size={6}>
             <TextField
-              {...control.register('total_amount', {
+              {...control.register('amount', {
                 required: 'Amount is required',
-                min: { value: 0.01, message: 'Amount must be greater than 0' }
+                min: { value: 0.01, message: 'Amount must be greater than 0' },
+                setValueAs: (value) => parseRateField(value)
               })}
               label="Amount"
               type="number"
               fullWidth
               disabled={isViewMode}
-              error={!!errors.total_amount}
-              helperText={errors.total_amount?.message}
-              InputProps={{
-                inputProps: { step: "0.01" }
+              error={!!errors.amount}
+              helperText={errors.amount?.message}
+              sx={{
+                ...voucherStyles.rateField,
+                ...voucherStyles.centerField
               }}
+              InputProps={{
+                inputProps: { 
+                  step: "0.01",
+                  style: { textAlign: 'center' }
+                }
+              }}
+              onChange={(e) => {
+                const value = parseRateField(e.target.value);
+                setValue('amount', value);
+              }}
+            />
+          </Grid>
+
+          <Grid size={6}>
+            <FormControl fullWidth disabled={isViewMode}>
+              <InputLabel>From Account</InputLabel>
+              <Select
+                {...control.register('from_account')}
+                value={watch('from_account') || ''}
+                onChange={(e) => setValue('from_account', e.target.value)}
+                error={!!errors.from_account}
+                required
+              >
+                {bankAccounts.map((account) => (
+                  <MenuItem key={account} value={account}>
+                    {account}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+
+          <Grid size={6}>
+            <FormControl fullWidth disabled={isViewMode}>
+              <InputLabel>To Account</InputLabel>
+              <Select
+                {...control.register('to_account')}
+                value={watch('to_account') || ''}
+                onChange={(e) => setValue('to_account', e.target.value)}
+                error={!!errors.to_account}
+                required
+              >
+                {bankAccounts.map((account) => (
+                  <MenuItem key={account} value={account}>
+                    {account}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+
+          <Grid size={12}>
+            <TextField
+              {...control.register('reference')}
+              label="Reference"
+              fullWidth
+              disabled={isViewMode}
+              error={!!errors.reference}
+              helperText={errors.reference?.message}
+              placeholder="Enter reference number or details..."
             />
           </Grid>
 
           <Grid size={12}>
             <TextField
-              {...control.register('notes')}
-              label="Notes"
+              {...control.register('description')}
+              label="Description"
               multiline
               rows={3}
               fullWidth
               disabled={isViewMode}
-              error={!!errors.notes}
-              helperText={errors.notes?.message}
+              error={!!errors.description}
+              helperText={errors.description?.message}
+              placeholder="Enter transaction description..."
             />
           </Grid>
 
-          {totalAmountValue > 0 && (
+          {totalAmount > 0 && (
             <Grid size={12}>
-              <Typography variant="body2" color="textSecondary">
-                Amount in Words: {getAmountInWords(totalAmountValue)}
-              </Typography>
+              <TextField
+                fullWidth
+                label="Amount in Words"
+                value={getAmountInWords(totalAmount)}
+                disabled
+                InputLabelProps={{ shrink: true, style: { fontSize: 12 } }}
+                inputProps={{ style: { fontSize: 14, textAlign: 'center' } }}
+                size="small"
+              />
             </Grid>
           )}
 
+          {/* Action buttons - removed Generate PDF */}
           <Grid size={12}>
             <Box display="flex" gap={2}>
-              <Button
-                type="submit"
-                variant="contained"
-                color="primary"
-                disabled={isViewMode || createMutation.isPending || updateMutation.isPending}
-              >
-                {mode === 'create' ? 'Create' : 'Update'} Contra Voucher
-              </Button>
+              {mode !== 'view' && (
+                <Button
+                  type="submit"
+                  variant="contained"
+                  color="success"
+                  disabled={createMutation.isPending || updateMutation.isPending}
+                  sx={{ fontSize: 12 }}
+                >
+                  Save
+                </Button>
+              )}
               <Button
                 variant="outlined"
                 onClick={handleCreate}
+                sx={{ fontSize: 12 }}
               >
                 Clear
               </Button>
-              {!isViewMode && (
-                <Button
-                  variant="outlined"
-                  onClick={() => handleGeneratePDF()}
-                  disabled={!watch('voucher_number')}
-                >
-                  Generate PDF
-                </Button>
-              )}
             </Box>
           </Grid>
         </Grid>
       </Box>
-          </Paper>
-        </Grid>
-      </Grid>
+    </Box>
+  );
 
+  if (isLoading) {
+    return (
+      <Container>
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+          <CircularProgress />
+        </Box>
+      </Container>
+    );
+  }
+
+  return (
+    <>
+      <VoucherLayout
+        voucherType="Contra Vouchers"
+        voucherTitle="Contra Voucher"
+        indexContent={indexContent}
+        formContent={formContent}
+        onShowAll={handleModalOpen}
+        showAllButton={true}
+        centerAligned={true}
+        modalContent={
+          <VoucherListModal
+            open={showFullModal}
+            onClose={handleModalClose}
+            voucherType="Contra Vouchers"
+            vouchers={sortedVouchers || []}
+            onVoucherClick={handleVoucherClick}
+            onEdit={handleEdit}
+            onView={handleView}
+            onDelete={handleDelete}
+            onGeneratePDF={handleGeneratePDF}
+            customerList={customerList}
+            vendorList={vendorList}
+          />
+        }
+      />
+      
+      {/* Keep context menu for right-click functionality */}
       <VoucherContextMenu
         voucherType="Contra Voucher"
         contextMenu={contextMenu}
@@ -297,149 +427,7 @@ const ContraVoucher: React.FC = () => {
           handleContextMenuClose();
         }}
       />
-
-      <Modal
-        open={showFullModal}
-        onClose={handleModalClose}
-        aria-labelledby="voucher-list-modal"
-      >
-        <Box sx={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          width: '90%',
-          maxWidth: 1200,
-          bgcolor: 'background.paper',
-          border: '2px solid #000',
-          boxShadow: 24,
-          p: 4,
-          maxHeight: '90vh',
-          overflow: 'auto'
-        }}>
-          <Typography variant="h6" component="h2" gutterBottom>
-            Contra Vouchers
-          </Typography>
-          
-          <Grid container spacing={2} sx={{ mb: 2 }}>
-            <Grid size={4}>
-              <TextField
-                fullWidth
-                label="Search"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                size="small"
-              />
-            </Grid>
-            <Grid size={3}>
-              <TextField
-                fullWidth
-                label="From Date"
-                type="date"
-                value={fromDate}
-                onChange={(e) => setFromDate(e.target.value)}
-                InputLabelProps={{ shrink: true }}
-                size="small"
-              />
-            </Grid>
-            <Grid size={3}>
-              <TextField
-                fullWidth
-                label="To Date"
-                type="date"
-                value={toDate}
-                onChange={(e) => setToDate(e.target.value)}
-                InputLabelProps={{ shrink: true }}
-                size="small"
-              />
-            </Grid>
-            <Grid size={2}>
-              <Button
-                fullWidth
-                variant="outlined"
-                onClick={handleSearch}
-                size="small"
-              >
-                Filter
-              </Button>
-            </Grid>
-          </Grid>
-
-          <Box sx={{ height: 400, overflow: 'auto' }}>
-            {(filteredVouchers.length > 0 ? filteredVouchers : sortedVouchers).map((voucher: any) => (
-              <Box
-                key={voucher.id}
-                sx={{
-                  p: 2,
-                  border: '1px solid #e0e0e0',
-                  borderRadius: 1,
-                  mb: 1,
-                  cursor: 'pointer',
-                  '&:hover': { bgcolor: 'grey.50' }
-                }}
-                onContextMenu={(e) => handleContextMenu(e, voucher)}
-              >
-                <Grid container spacing={2} alignItems="center">
-                  <Grid size={2}>
-                    <Typography variant="body2" fontWeight="bold">
-                      {voucher.voucher_number}
-                    </Typography>
-                  </Grid>
-                  <Grid size={2}>
-                    <Typography variant="body2">
-                      {new Date(voucher.date).toLocaleDateString()}
-                    </Typography>
-                  </Grid>
-                  <Grid size={3}>
-                    <Typography variant="body2" noWrap>
-                      {voucher.from_account}
-                    </Typography>
-                  </Grid>
-                  <Grid size={3}>
-                    <Typography variant="body2" noWrap>
-                      {voucher.to_account}
-                    </Typography>
-                  </Grid>
-                  <Grid size={1}>
-                    <Typography variant="body2" fontWeight="bold">
-                      ₹{voucher.total_amount?.toFixed(2)}
-                    </Typography>
-                  </Grid>
-                  <Grid size={1}>
-                    <Box display="flex" gap={1}>
-                      <Tooltip title="View">
-                        <Button
-                          size="small"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleView(voucher);
-                            handleModalClose();
-                          }}
-                        >
-                          <Visibility fontSize="small" />
-                        </Button>
-                      </Tooltip>
-                      <Tooltip title="Edit">
-                        <Button
-                          size="small"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEdit(voucher);
-                            handleModalClose();
-                          }}
-                        >
-                          <Edit fontSize="small" />
-                        </Button>
-                      </Tooltip>
-                    </Box>
-                  </Grid>
-                </Grid>
-              </Box>
-            ))}
-          </Box>
-        </Box>
-      </Modal>
-    </Container>
+    </>
   );
 };
 
