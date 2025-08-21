@@ -480,19 +480,173 @@ export const VOUCHER_CONFIGS = {
 } as const;
 
 /**
+ * Reference column configurations for voucher types
+ * Defines which voucher types can reference which other voucher types
+ */
+export const REFERENCE_CONFIGS = {
+  'purchase-voucher': {
+    allowedTypes: ['purchase-order', 'grn'],
+    label: 'Reference Document'
+  },
+  'purchase-return': {
+    allowedTypes: ['purchase-voucher'],
+    label: 'Reference Purchase Voucher'
+  },
+  'sales-voucher': {
+    allowedTypes: ['delivery-challan', 'sales-order', 'quotation', 'proforma-invoice'],
+    label: 'Reference Document'
+  },
+  'sales-return': {
+    allowedTypes: ['delivery-challan', 'sales-voucher'],
+    label: 'Reference Document'
+  },
+  'delivery-challan': {
+    allowedTypes: ['sales-order', 'quotation', 'proforma-invoice'],
+    label: 'Reference Document'
+  },
+  'sales-order': {
+    allowedTypes: ['quotation', 'proforma-invoice'],
+    label: 'Reference Document'
+  },
+  'proforma-invoice': {
+    allowedTypes: ['quotation', 'sales-order'],
+    label: 'Reference Document'
+  },
+  // These voucher types don't have reference columns per requirements
+  'grn': null,
+  'quotation': null,
+  'purchase-order': null,
+} as const;
+
+/**
+ * Voucher types that should NOT have GST/totals sections
+ */
+export const NO_GST_VOUCHER_TYPES = ['grn', 'delivery-challan'] as const;
+
+/**
+ * Default pagination settings for all voucher types
+ */
+export const VOUCHER_PAGINATION_DEFAULTS = {
+  pageSize: 5,
+  sortOrder: 'desc', // Latest on top
+  sortBy: 'created_at'
+} as const;
+
+/**
  * Get voucher configuration by type
  */
 export const getVoucherConfig = (voucherType: keyof typeof VOUCHER_CONFIGS) => {
-  return VOUCHER_CONFIGS[voucherType];
+  const baseConfig = VOUCHER_CONFIGS[voucherType];
+  const referenceConfig = REFERENCE_CONFIGS[voucherType as keyof typeof REFERENCE_CONFIGS];
+  const hasGstSection = !NO_GST_VOUCHER_TYPES.includes(voucherType as any);
+  
+  return {
+    ...baseConfig,
+    referenceConfig,
+    hasGstSection,
+    pagination: VOUCHER_PAGINATION_DEFAULTS
+  };
 };
 
 /**
- * Common styling utilities for voucher forms and tables
+ * Get reference voucher options for a given voucher type
+ */
+export const getReferenceVoucherOptions = (voucherType: keyof typeof REFERENCE_CONFIGS) => {
+  const config = REFERENCE_CONFIGS[voucherType];
+  if (!config) return [];
+  
+  return config.allowedTypes.map(type => ({
+    value: type,
+    label: VOUCHER_CONFIGS[type]?.voucherTitle || type,
+    endpoint: VOUCHER_CONFIGS[type]?.endpoint || `/${type}s`
+  }));
+};
+
+/**
+ * Check if a voucher type should have GST/totals section
+ */
+export const shouldShowGstSection = (voucherType: string): boolean => {
+  return !NO_GST_VOUCHER_TYPES.includes(voucherType as any);
+};
+
+/**
+ * Enhanced rate field utilities with strict 2 decimal place formatting
+ */
+export const enhancedRateUtils = {
+  /**
+   * Format rate to exactly 2 decimal places
+   */
+  formatRate: (value: number | string): string => {
+    const numValue = typeof value === 'string' ? parseFloat(value) : value;
+    return isNaN(numValue) ? '0.00' : numValue.toFixed(2);
+  },
+  
+  /**
+   * Parse rate input ensuring 2 decimal places max
+   */
+  parseRate: (value: string): number => {
+    const parsed = parseFloat(value);
+    return isNaN(parsed) ? 0 : Math.round(parsed * 100) / 100;
+  },
+  
+  /**
+   * Validate rate input (positive number with max 2 decimal places)
+   */
+  validateRate: (value: string): boolean => {
+    const regex = /^\d+(\.\d{1,2})?$/;
+    return regex.test(value) && parseFloat(value) >= 0;
+  }
+};
+
+/**
+ * Enhanced voucher list utilities with standardized pagination and sorting
+ */
+export const voucherListUtils = {
+  /**
+   * Sort vouchers with latest first
+   */
+  sortLatestFirst: (vouchers: any[]) => {
+    return [...vouchers].sort((a, b) => {
+      const dateA = new Date(a.created_at || a.date);
+      const dateB = new Date(b.created_at || b.date);
+      return dateB.getTime() - dateA.getTime();
+    });
+  },
+  
+  /**
+   * Paginate vouchers with default 5 per page
+   */
+  paginate: (vouchers: any[], page: number = 1, pageSize: number = 5) => {
+    const startIndex = (page - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    return {
+      items: vouchers.slice(startIndex, endIndex),
+      totalPages: Math.ceil(vouchers.length / pageSize),
+      currentPage: page,
+      totalItems: vouchers.length,
+      hasNext: endIndex < vouchers.length,
+      hasPrev: page > 1
+    };
+  },
+  
+  /**
+   * Get latest vouchers for dashboard display
+   */
+  getLatestVouchers: (vouchers: any[], count: number = 5) => {
+    return voucherListUtils.sortLatestFirst(vouchers).slice(0, count);
+  }
+};
+
+/**
+ * Common styling utilities for voucher forms and tables with enhanced center alignment
  */
 export const getVoucherStyles = () => ({
   // Center alignment for all text elements
   centerText: {
     textAlign: 'center' as const,
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center'
   },
   
   // Center alignment for form fields
@@ -520,6 +674,9 @@ export const getVoucherStyles = () => ({
     flexDirection: 'column' as const,
     alignItems: 'center',
     width: '100%',
+    maxWidth: '1200px',
+    margin: '0 auto',
+    padding: '16px'
   },
   
   // Form container with center alignment
@@ -563,4 +720,39 @@ export const getVoucherStyles = () => ({
       margin: 0,
     },
   },
+  
+  // Enhanced title styling with center alignment
+  voucherTitle: {
+    textAlign: 'center' as const,
+    fontWeight: 'bold',
+    fontSize: '1.25rem',
+    marginBottom: '16px',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  
+  // Date field styling to ensure visibility in view mode
+  dateField: {
+    '& .MuiInputBase-input': {
+      textAlign: 'center' as const,
+    },
+    '& .MuiFormLabel-root': {
+      display: 'block !important',
+      visibility: 'visible !important'
+    }
+  },
+  
+  // Pagination styling for 5 per page standard
+  paginationContainer: {
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: '16px',
+    '& .MuiPagination-root': {
+      '& .MuiPaginationItem-root': {
+        fontSize: '0.875rem'
+      }
+    }
+  }
 });
