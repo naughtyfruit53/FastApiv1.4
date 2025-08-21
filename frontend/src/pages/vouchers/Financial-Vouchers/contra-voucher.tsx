@@ -248,7 +248,7 @@ const ContraVoucher: React.FC = () => {
               fullWidth
               disabled={isViewMode}
               error={!!errors.amount}
-              helperText={errors.amount?.message}
+              helperText={errors.amount?.message?.toString()}
               sx={{
                 ...voucherStyles.rateField,
                 ...voucherStyles.centerField
@@ -311,7 +311,7 @@ const ContraVoucher: React.FC = () => {
               fullWidth
               disabled={isViewMode}
               error={!!errors.reference}
-              helperText={errors.reference?.message}
+              helperText={errors.reference?.message?.toString()}
               placeholder="Enter reference number or details..."
             />
           </Grid>
@@ -325,7 +325,7 @@ const ContraVoucher: React.FC = () => {
               fullWidth
               disabled={isViewMode}
               error={!!errors.description}
-              helperText={errors.description?.message}
+              helperText={errors.description?.message?.toString()}
               placeholder="Enter transaction description..."
             />
           </Grid>
