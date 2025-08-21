@@ -10,6 +10,7 @@ import VoucherContextMenu from '../../../components/VoucherContextMenu';
 import VoucherLayout from '../../../components/VoucherLayout';
 import VoucherHeaderActions from '../../../components/VoucherHeaderActions';
 import VoucherListModal from '../../../components/VoucherListModal';
+import VoucherReferenceDropdown from '../../../components/VoucherReferenceDropdown';
 import BalanceDisplay from '../../../components/BalanceDisplay';
 import StockDisplay from '../../../components/StockDisplay';
 import ProductAutocomplete from '../../../components/ProductAutocomplete';
@@ -52,7 +53,15 @@ const PurchaseVoucherPage: React.FC = () => {
     setFromDate,
     toDate,
     setToDate,
-    filteredVouchers,
+    // Enhanced pagination
+    currentPage,
+    pageSize,
+    paginationData,
+    handlePageChange,
+
+    // Reference document handling
+    referenceDocument,
+    handleReferenceSelected,
 
     // Form
     control,
@@ -98,8 +107,9 @@ const PurchaseVoucherPage: React.FC = () => {
     refreshMasterData,
     getAmountInWords,
 
-    // Utilities
+    // Enhanced utilities
     isViewMode,
+    enhancedRateUtils,
   } = useVoucherPage(config);
 
   // Additional state for voucher list modal
@@ -335,8 +345,8 @@ const PurchaseVoucherPage: React.FC = () => {
         />
       </Box>
 
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <Grid container spacing={1}>
+      <form onSubmit={handleSubmit(onSubmit)} style={voucherStyles.formContainer}>
+        <Grid container spacing={1} sx={voucherStyles.centerText}>
           {/* Voucher Number */}
           <Grid size={6}>
             <TextField
@@ -359,10 +369,13 @@ const PurchaseVoucherPage: React.FC = () => {
               type="date"
               {...control.register('date')}
               disabled={mode === 'view'}
-              InputLabelProps={{ shrink: true, style: { fontSize: 12 } }}
+              InputLabelProps={{ shrink: true, style: { fontSize: 12, display: 'block', visibility: 'visible' } }}
               inputProps={{ style: { fontSize: 14, textAlign: 'center' } }}
               size="small"
-              sx={{ '& .MuiInputBase-root': { height: 27 } }}
+              sx={{ 
+                '& .MuiInputBase-root': { height: 27 },
+                ...voucherStyles.dateField
+              }}
             />
           </Grid>
 
@@ -397,15 +410,20 @@ const PurchaseVoucherPage: React.FC = () => {
           </Grid>
 
           <Grid size={4}>
-            <TextField
-              fullWidth
-              label="Reference"
-              {...control.register('reference')}
+            <VoucherReferenceDropdown
+              voucherType="purchase-voucher"
+              value={{
+                referenceType: watch('reference_type'),
+                referenceId: watch('reference_id'),
+                referenceNumber: watch('reference_number')
+              }}
+              onChange={(reference) => {
+                setValue('reference_type', reference.referenceType || '');
+                setValue('reference_id', reference.referenceId || null);
+                setValue('reference_number', reference.referenceNumber || '');
+              }}
               disabled={mode === 'view'}
-              InputLabelProps={{ shrink: true, style: { fontSize: 12 } }}
-              inputProps={{ style: { fontSize: 14 } }}
-              size="small"
-              sx={{ '& .MuiInputBase-root': { height: 27 } }}
+              onReferenceSelected={handleReferenceSelected}
             />
           </Grid>
 
@@ -443,7 +461,7 @@ const PurchaseVoucherPage: React.FC = () => {
 
           {/* Items Table */}
           <Grid size={12}>
-            <TableContainer component={Paper} sx={{ maxHeight: 300 }}>
+            <TableContainer component={Paper} sx={{ maxHeight: 300, ...voucherStyles.centeredTable }}>
               <Table stickyHeader size="small">
                 <TableHead>
                   <TableRow>
@@ -495,7 +513,7 @@ const PurchaseVoucherPage: React.FC = () => {
                             type="number"
                             {...control.register(`items.${index}.unit_price`, { 
                               valueAsNumber: true,
-                              setValueAs: (value) => parseRateField(value)
+                              setValueAs: (value) => enhancedRateUtils.parseRate(value)
                             })}
                             disabled={mode === 'view'}
                             size="small"
@@ -664,9 +682,17 @@ const PurchaseVoucherPage: React.FC = () => {
     <>
       <VoucherLayout
         voucherType={config.voucherTitle}
+        voucherTitle={config.voucherTitle}
         indexContent={indexContent}
         formContent={formContent}
         onShowAll={() => setShowVoucherListModal(true)}
+        pagination={paginationData ? {
+          currentPage: currentPage,
+          totalPages: paginationData.totalPages,
+          onPageChange: handlePageChange,
+          totalItems: paginationData.totalItems
+        } : undefined}
+        centerAligned={true}
         modalContent={
           <VoucherListModal
             open={showVoucherListModal}
