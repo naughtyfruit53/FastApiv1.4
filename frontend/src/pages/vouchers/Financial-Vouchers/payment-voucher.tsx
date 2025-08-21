@@ -8,6 +8,7 @@ import VoucherHeaderActions from '../../../components/VoucherHeaderActions';
 import VoucherListModal from '../../../components/VoucherListModal';
 import { useVoucherPage } from '../../../hooks/useVoucherPage';
 import { getVoucherConfig, getVoucherStyles, parseRateField, formatRateField } from '../../../utils/voucherUtils';
+import { useReferenceOptions } from '../../../utils/nameRefUtils';
 
 const PaymentVoucher: React.FC = () => {
   const config = getVoucherConfig('payment-voucher');
@@ -95,11 +96,8 @@ const PaymentVoucher: React.FC = () => {
     ...(customerList || []).map((c: any) => ({ ...c, type: 'Customer' }))
   ];
 
-  // TODO: Add unpaid vouchers query for payment voucher specific functionality
-  const referenceOptions = [
-    'Advance',
-    'On Account'
-  ];
+  // Get reference options including unpaid vouchers for the selected name
+  const referenceOptions = useReferenceOptions(selectedNameId, selectedNameType);
 
   // Payment methods for payment vouchers
   const paymentMethods = [
