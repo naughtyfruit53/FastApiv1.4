@@ -19,7 +19,7 @@ router = APIRouter(tags=["quotations"])
 @router.get("/", response_model=List[QuotationInDB])
 async def get_quotations(
     skip: int = Query(0, ge=0, description="Number of records to skip (for pagination)"),
-    limit: int = Query(100, ge=1, le=500, description="Maximum number of records to return"),
+    limit: int = Query(5, ge=1, le=500, description="Maximum number of records to return (default 5 for UI standard)"),
     status: Optional[str] = Query(None, description="Optional filter by voucher status (e.g., 'draft', 'approved')"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
