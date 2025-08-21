@@ -316,7 +316,7 @@ const ProformaInvoicePage: React.FC = () => {
                       onView={() => handleViewWithData(voucher)}
                       onEdit={() => handleEditWithData(voucher)}
                       onDelete={() => handleDelete(voucher)}
-                      onPrint={() => handleGeneratePDF(voucher)}
+                      onPrint={() => handleGeneratePDF()}
                       showKebab={true}
                       onClose={() => {}}
                     />
