@@ -7,6 +7,64 @@ import { toast } from 'react-toastify';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
 
+// Token expiry handling with state preservation
+const handleTokenExpiry = () => {
+  console.log('[API] Handling token expiry - preserving application state');
+  
+  // Store current location for redirect after login
+  const currentPath = window.location.pathname;
+  const currentSearch = window.location.search;
+  const currentHash = window.location.hash;
+  const returnUrl = `${currentPath}${currentSearch}${currentHash}`;
+  
+  // Store form data if available (attempt to preserve form state)
+  try {
+    const forms = document.querySelectorAll('form');
+    const formData: { [key: string]: any } = {};
+    
+    forms.forEach((form, index) => {
+      const formDataObj = new FormData(form);
+      const formEntries: { [key: string]: any } = {};
+      
+      for (const [key, value] of formDataObj.entries()) {
+        if (typeof value === 'string' && value.trim()) {
+          formEntries[key] = value;
+        }
+      }
+      
+      if (Object.keys(formEntries).length > 0) {
+        formData[`form_${index}`] = formEntries;
+      }
+    });
+    
+    if (Object.keys(formData).length > 0) {
+      sessionStorage.setItem('formDataBeforeExpiry', JSON.stringify(formData));
+      console.log('[API] Preserved form data before logout');
+    }
+  } catch (error) {
+    console.warn('[API] Could not preserve form data:', error);
+  }
+  
+  // Store return URL for redirect after successful login
+  if (returnUrl !== '/' && !returnUrl.includes('/login')) {
+    sessionStorage.setItem('returnUrlAfterLogin', returnUrl);
+    console.log('[API] Stored return URL:', returnUrl);
+  }
+  
+  // Clear auth data
+  localStorage.removeItem('token');
+  localStorage.removeItem('user_role');
+  localStorage.removeItem('is_super_admin');
+  
+  // Reset auth ready state
+  resetAuthReady();
+  
+  // Add a small delay to allow logging and toast to complete, then redirect to login
+  setTimeout(() => {
+    window.location.href = '/login';
+  }, 100);
+};
+
 // Auth state management for request queuing
 let isAuthReady = false;
 let authReadyPromise: Promise<void> | null = null;
@@ -139,7 +197,7 @@ api.interceptors.response.use(
     });
     
     if (error.response?.status === 401 || error.response?.status === 403) {
-      console.log(`[API] ${error.response.status} Auth error - clearing auth data and redirecting`);
+      console.log(`[API] ${error.response.status} Auth error - handling token expiry`);
       
       // Show specific error message if available before redirect
       const errorDetail = error.response?.data?.detail;
@@ -157,17 +215,8 @@ api.interceptors.response.use(
         });
       }
       
-      localStorage.removeItem('token');
-      localStorage.removeItem('user_role');
-      localStorage.removeItem('is_super_admin');
-      
-      // Reset auth ready state
-      resetAuthReady();
-      
-      // Add a small delay to allow logging and toast to complete
-      setTimeout(() => {
-        window.location.href = '/';
-      }, 100);
+      // Store current location and form state before logout
+      handleTokenExpiry();
     } else if (error.response?.status === 404 && url?.includes('/companies/current')) {
       // Special handling for company missing scenario - DO NOT logout
       console.log('[API] 404 on /companies/current - company setup required, not an auth error');
