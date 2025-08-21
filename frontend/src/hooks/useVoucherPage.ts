@@ -480,11 +480,18 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     }
   }, [isOrgContextReady, refetchVoucherList]);
 
-  // Refetch list after create/update
+  // Refetch list after create/update - Enhanced for immediate refresh
   useEffect(() => {
     if (createMutation.isSuccess || updateMutation.isSuccess) {
+      // Immediate invalidation and refetch
       queryClient.invalidateQueries({ queryKey: [config.voucherType] });
+      // Force immediate refetch
       refetchVoucherList();
+      
+      // Additional immediate refresh after short delay to ensure backend has processed
+      setTimeout(() => {
+        refetchVoucherList();
+      }, 500);
     }
   }, [createMutation.isSuccess, updateMutation.isSuccess, queryClient, config.voucherType, refetchVoucherList]);
 

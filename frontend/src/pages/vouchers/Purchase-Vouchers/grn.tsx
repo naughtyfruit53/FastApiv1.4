@@ -14,7 +14,7 @@ import BalanceDisplay from '../../../components/BalanceDisplay';
 import StockDisplay from '../../../components/StockDisplay';
 import ProductAutocomplete from '../../../components/ProductAutocomplete';
 import { useVoucherPage } from '../../../hooks/useVoucherPage';
-import { getVoucherConfig, numberToWords, GST_SLABS } from '../../../utils/voucherUtils';
+import { getVoucherConfig, numberToWords, GST_SLABS, parseRateField, formatRateField } from '../../../utils/voucherUtils';
 import { getStock } from '../../../services/masterService';
 import { voucherService } from '../../../services/vouchersService';
 import api from '../../../lib/api';  // Import api for direct call
@@ -612,65 +612,11 @@ const GoodsReceiptNotePage: React.FC = () => {
             </TableContainer>
           </Grid>
 
-          {/* Totals Section */}
-          <Grid size={12}>
-            <Box sx={{ mt: 2, p: 2, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Typography variant="h6" sx={{ fontSize: 16, fontWeight: 'bold', textAlign: 'center' }}>
-                  Totals
-                </Typography>
-                <Grid container spacing={1} sx={{ maxWidth: 300 }}>
-                  <Grid size={6}>
-                    <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14 }}>
-                      Subtotal:
-                    </Typography>
-                  </Grid>
-                  <Grid size={6}>
-                    <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14, fontWeight: 'bold' }}>
-                      ₹{totalSubtotal.toLocaleString()}
-                    </Typography>
-                  </Grid>
-                  <Grid size={6}>
-                    <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14 }}>
-                      GST:
-                    </Typography>
-                  </Grid>
-                  <Grid size={6}>
-                    <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14, fontWeight: 'bold' }}>
-                      ₹{totalGst.toLocaleString()}
-                    </Typography>
-                  </Grid>
-                  <Grid size={6}>
-                    <Typography variant="h6" sx={{ textAlign: 'right', fontSize: 16, fontWeight: 'bold' }}>
-                      Total:
-                    </Typography>
-                  </Grid>
-                  <Grid size={6}>
-                    <Typography variant="h6" sx={{ textAlign: 'right', fontSize: 16, fontWeight: 'bold' }}>
-                      ₹{totalAmount.toLocaleString()}
-                    </Typography>
-                  </Grid>
-                </Grid>
-              </Box>
-            </Box>
-          </Grid>
-
-          {/* Amount in Words */}
-          <Grid size={12}>
-            <TextField
-              fullWidth
-              label="Amount in Words"
-              value={getAmountInWords(totalAmount)}
-              disabled
-              InputLabelProps={{ shrink: true, style: { fontSize: 12 } }}
-              inputProps={{ style: { fontSize: 14, textAlign: 'center' } }}
-              size="small"
-            />
-          </Grid>
+          {/* GRN does not have totals section - removed as per requirements */}
 
           {/* Action buttons */}
           <Grid size={12}>
-            <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
+            <Box sx={{ mt: 2, display: 'flex', gap: 1, justifyContent: 'center' }}>
               {mode !== 'view' && (
                 <Button 
                   type="submit" 

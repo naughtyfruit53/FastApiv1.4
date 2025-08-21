@@ -116,7 +116,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
       });
       
       if (response.data.success) {
-        let extractedData = response.data.extracted_data;
+        const extractedData = response.data.extracted_data;
         
         // Auto-populate form fields with processed extracted data, excluding city/state (allow state_code)
         Object.entries(extractedData).forEach(([key, value]) => {

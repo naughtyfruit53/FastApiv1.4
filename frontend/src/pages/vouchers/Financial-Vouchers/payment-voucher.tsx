@@ -7,10 +7,12 @@ import VoucherContextMenu from '../../../components/VoucherContextMenu';
 import VoucherHeaderActions from '../../../components/VoucherHeaderActions';
 import VoucherListModal from '../../../components/VoucherListModal';
 import { useVoucherPage } from '../../../hooks/useVoucherPage';
-import { getVoucherConfig } from '../../../utils/voucherUtils';
+import { getVoucherConfig, getVoucherStyles, parseRateField, formatRateField } from '../../../utils/voucherUtils';
 
 const PaymentVoucher: React.FC = () => {
   const config = getVoucherConfig('payment-voucher');
+  const voucherStyles = getVoucherStyles();
+  
   const {
     // State
     mode,
@@ -206,7 +208,14 @@ const PaymentVoucher: React.FC = () => {
               </Box>
             )}
 
-            <Box component="form" onSubmit={handleSubmit(handleSubmitForm)} sx={{ mt: 3 }}>
+            <Box 
+              component="form" 
+              onSubmit={handleSubmit(handleSubmitForm)} 
+              sx={{ 
+                mt: 3,
+                ...voucherStyles.formContainer
+              }}
+            >
               <Grid container spacing={3}>
           <Grid size={6}>
             <TextField
@@ -214,8 +223,10 @@ const PaymentVoucher: React.FC = () => {
               label="Voucher Number"
               fullWidth
               disabled={true}
+              sx={voucherStyles.centerField}
               InputProps={{
                 readOnly: true,
+                style: { textAlign: 'center', fontWeight: 'bold' }
               }}
             />
           </Grid>
@@ -226,9 +237,11 @@ const PaymentVoucher: React.FC = () => {
               type="date"
               fullWidth
               disabled={isViewMode}
+              sx={voucherStyles.centerField}
               InputLabelProps={{
                 shrink: true,
               }}
+              inputProps={{ style: { textAlign: 'center' } }}
               error={!!errors.date}
               helperText={errors.date?.message}
             />
@@ -314,7 +327,8 @@ const PaymentVoucher: React.FC = () => {
             <TextField
               {...control.register('total_amount', {
                 required: 'Amount is required',
-                min: { value: 0.01, message: 'Amount must be greater than 0' }
+                min: { value: 0.01, message: 'Amount must be greater than 0' },
+                setValueAs: (value) => parseRateField(value)
               })}
               label="Amount"
               type="number"
@@ -322,8 +336,19 @@ const PaymentVoucher: React.FC = () => {
               disabled={isViewMode}
               error={!!errors.total_amount}
               helperText={errors.total_amount?.message}
+              sx={{
+                ...voucherStyles.rateField,
+                ...voucherStyles.centerField
+              }}
               InputProps={{
-                inputProps: { step: "0.01" }
+                inputProps: { 
+                  step: "0.01",
+                  style: { textAlign: 'center' }
+                }
+              }}
+              onChange={(e) => {
+                const value = parseRateField(e.target.value);
+                setValue('total_amount', value);
               }}
             />
           </Grid>
