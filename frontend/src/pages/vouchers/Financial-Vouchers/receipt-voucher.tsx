@@ -97,7 +97,7 @@ const ReceiptVoucher: React.FC = () => {
     <Container maxWidth="xl" sx={{ py: 2 }}>
       <Grid container spacing={3}>
         {/* Left side - Voucher List */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Paper sx={{ p: 2, height: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column' }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
               <Typography variant="h6">Receipt Vouchers</Typography>
@@ -145,7 +145,7 @@ const ReceiptVoucher: React.FC = () => {
         </Grid>
 
         {/* Right side - Voucher Form */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Paper sx={{ p: 3, height: 'calc(100vh - 120px)', overflow: 'auto' }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
               <Typography variant="h6">
@@ -161,7 +161,7 @@ const ReceiptVoucher: React.FC = () => {
 
             <form onSubmit={handleSubmit(handleSubmitForm)} className="space-y-4">
               <Grid container spacing={2}>
-                <Grid item xs={6}>
+                <Grid size={6}>
                   <TextField
                     {...control.register('voucher_number')}
                     label="Voucher Number"
@@ -171,7 +171,7 @@ const ReceiptVoucher: React.FC = () => {
                     helperText={errors.voucher_number?.message}
                   />
                 </Grid>
-                <Grid item xs={6}>
+                <Grid size={6}>
                   <TextField
                     {...control.register('date')}
                     label="Date"
@@ -184,7 +184,7 @@ const ReceiptVoucher: React.FC = () => {
                   />
                 </Grid>
 
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <Autocomplete
                     options={allNameOptions}
                     getOptionLabel={(option: any) => option?.name || ''}
@@ -248,7 +248,7 @@ const ReceiptVoucher: React.FC = () => {
                   />
                 </Grid>
 
-                <Grid item xs={6}>
+                <Grid size={6}>
                   <TextField
                     {...control.register('receipt_method')}
                     label="Receipt Method"
@@ -258,7 +258,7 @@ const ReceiptVoucher: React.FC = () => {
                     helperText={errors.receipt_method?.message}
                   />
                 </Grid>
-                <Grid item xs={6}>
+                <Grid size={6}>
                   <TextField
                     {...control.register('reference')}
                     label="Reference"
@@ -269,7 +269,7 @@ const ReceiptVoucher: React.FC = () => {
                   />
                 </Grid>
 
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <TextField
                     {...control.register('total_amount', { 
                       valueAsNumber: true,
@@ -300,14 +300,14 @@ const ReceiptVoucher: React.FC = () => {
                 </Grid>
 
                 {totalAmount > 0 && (
-                  <Grid item xs={12}>
+                  <Grid size={12}>
                     <Alert severity="info" sx={{ mb: 2 }}>
                       <strong>Amount in words:</strong> {numberToWords(totalAmount)}
                     </Alert>
                   </Grid>
                 )}
 
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <TextField
                     {...control.register('notes')}
                     label="Notes"
@@ -321,7 +321,7 @@ const ReceiptVoucher: React.FC = () => {
                 </Grid>
 
                 {mode !== 'view' && (
-                  <Grid item xs={12}>
+                  <Grid size={12}>
                     <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
                       <Button 
                         variant="outlined" 

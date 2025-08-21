@@ -172,7 +172,7 @@ const OrganizationForm: React.FC<OrganizationFormProps> = ({
   return (
     <form onSubmit={handleSubmit}>
       <Grid container spacing={2}>
-        <Grid item xs={12} sm={6}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <TextField
             fullWidth
             label="Organization Name"
@@ -184,7 +184,7 @@ const OrganizationForm: React.FC<OrganizationFormProps> = ({
         </Grid>
         
         {!isLicenseMode && (
-          <Grid item xs={12} sm={6}>
+          <Grid size={{ xs: 12, sm: 6 }}>
             <TextField
               fullWidth
               label="Subdomain"
@@ -198,7 +198,7 @@ const OrganizationForm: React.FC<OrganizationFormProps> = ({
         )}
         
         {isLicenseMode && (
-          <Grid item xs={12} sm={6}>
+          <Grid size={{ xs: 12, sm: 6 }}>
             <TextField
               fullWidth
               label="Admin Password"
@@ -211,7 +211,7 @@ const OrganizationForm: React.FC<OrganizationFormProps> = ({
           </Grid>
         )}
         
-        <Grid item xs={12} sm={6}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <TextField
             fullWidth
             label="Primary Email"
@@ -223,7 +223,7 @@ const OrganizationForm: React.FC<OrganizationFormProps> = ({
           />
         </Grid>
         
-        <Grid item xs={12} sm={6}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <TextField
             fullWidth
             label="Primary Phone"
@@ -236,7 +236,7 @@ const OrganizationForm: React.FC<OrganizationFormProps> = ({
         
         {!isLicenseMode && (
           <>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <FormControl fullWidth>
                 <InputLabel>Business Type</InputLabel>
                 <Select
@@ -254,7 +254,7 @@ const OrganizationForm: React.FC<OrganizationFormProps> = ({
               </FormControl>
             </Grid>
             
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 fullWidth
                 label="Industry"
@@ -264,7 +264,7 @@ const OrganizationForm: React.FC<OrganizationFormProps> = ({
               />
             </Grid>
             
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 fullWidth
                 label="Website"
@@ -275,7 +275,7 @@ const OrganizationForm: React.FC<OrganizationFormProps> = ({
               />
             </Grid>
             
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 fullWidth
                 label="Max Users"
@@ -289,7 +289,7 @@ const OrganizationForm: React.FC<OrganizationFormProps> = ({
           </>
         )}
         
-        <Grid item xs={12}>
+        <Grid size={12}>
           <TextField
             fullWidth
             label="Address"
@@ -300,7 +300,7 @@ const OrganizationForm: React.FC<OrganizationFormProps> = ({
           />
         </Grid>
         
-        <Grid item xs={12} sm={4}>
+        <Grid size={{ xs: 12, sm: 4 }}>
           <TextField
             fullWidth
             label="City"
@@ -311,7 +311,7 @@ const OrganizationForm: React.FC<OrganizationFormProps> = ({
           />
         </Grid>
         
-        <Grid item xs={12} sm={4}>
+        <Grid size={{ xs: 12, sm: 4 }}>
           <TextField
             fullWidth
             label="State"
@@ -322,7 +322,7 @@ const OrganizationForm: React.FC<OrganizationFormProps> = ({
           />
         </Grid>
         
-        <Grid item xs={12} sm={4}>
+        <Grid size={{ xs: 12, sm: 4 }}>
           <TextField
             fullWidth
             label="PIN Code"
@@ -336,7 +336,7 @@ const OrganizationForm: React.FC<OrganizationFormProps> = ({
           />
         </Grid>
         
-        <Grid item xs={12} sm={6}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <TextField
             fullWidth
             label="State Code"
@@ -347,7 +347,7 @@ const OrganizationForm: React.FC<OrganizationFormProps> = ({
           />
         </Grid>
         
-        <Grid item xs={12} sm={6}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <TextField
             fullWidth
             label="GST No."
@@ -358,7 +358,7 @@ const OrganizationForm: React.FC<OrganizationFormProps> = ({
         </Grid>
         
         {!isLicenseMode && (
-          <Grid item xs={12}>
+          <Grid size={12}>
             <TextField
               fullWidth
               label="Description"
@@ -371,7 +371,7 @@ const OrganizationForm: React.FC<OrganizationFormProps> = ({
           </Grid>
         )}
         
-        <Grid item xs={12}>
+        <Grid size={12}>
           <Button type="submit" variant="contained" color="primary">
             {isEditing ? 'Update Organization' : (isLicenseMode ? 'Create License' : 'Create Organization')}
           </Button>

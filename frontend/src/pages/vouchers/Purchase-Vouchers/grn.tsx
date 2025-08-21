@@ -55,6 +55,16 @@ const GoodsReceiptNotePage: React.FC = () => {
     setToDate,
     filteredVouchers,
 
+    // Enhanced pagination
+    currentPage,
+    pageSize,
+    paginationData,
+    handlePageChange,
+
+    // Reference document handling
+    referenceDocument,
+    handleReferenceSelected,
+
     // Form
     control,
     handleSubmit,
@@ -412,7 +422,7 @@ const GoodsReceiptNotePage: React.FC = () => {
         />
       </Box>
 
-      <form onSubmit={handleSubmit(handleFormSubmit)}>
+      <form onSubmit={handleSubmit(handleFormSubmit)} style={voucherStyles.formContainer}>
         <Grid container spacing={1}>
           {/* Voucher Number */}
           <Grid size={6}>
@@ -436,7 +446,7 @@ const GoodsReceiptNotePage: React.FC = () => {
               type="date"
               {...control.register('date')}
               disabled={mode === 'view'}
-              InputLabelProps={{ shrink: true, style: { fontSize: 12 } }}
+              InputLabelProps={{ shrink: true, style: { fontSize: 12, display: 'block', visibility: 'visible' } }}
               inputProps={{ style: { fontSize: 14, textAlign: 'center' } }}
               size="small"
               sx={{ '& .MuiInputBase-root': { height: 27 } }}
@@ -543,7 +553,7 @@ const GoodsReceiptNotePage: React.FC = () => {
 
           {/* Items Table */}
           <Grid size={12}>
-            <TableContainer component={Paper} sx={{ maxHeight: 300 }}>
+            <TableContainer component={Paper} sx={{ maxHeight: 300, ...voucherStyles.centeredTable }}>
               <Table stickyHeader size="small">
                 <TableHead>
                   <TableRow>
@@ -649,9 +659,17 @@ const GoodsReceiptNotePage: React.FC = () => {
     <>
       <VoucherLayout
         voucherType={config.voucherTitle}
+        voucherTitle={config.voucherTitle}
         indexContent={indexContent}
         formContent={formContent}
         onShowAll={() => setShowVoucherListModal(true)}
+        pagination={paginationData ? {
+          currentPage: currentPage,
+          totalPages: paginationData.totalPages,
+          onPageChange: handlePageChange,
+          totalItems: paginationData.totalItems
+        } : undefined}
+        centerAligned={true}
         modalContent={
           <VoucherListModal
             open={showVoucherListModal}

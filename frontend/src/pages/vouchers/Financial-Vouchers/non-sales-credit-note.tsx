@@ -67,7 +67,7 @@ const NonSalesCreditNote: React.FC = () => {
     <Container maxWidth="xl" sx={{ py: 2 }}>
       <Grid container spacing={3}>
         {/* Left side - Voucher List */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Paper sx={{ p: 2, height: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column' }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
               <Typography variant="h6">Non-Sales Credit Notes</Typography>
@@ -117,7 +117,7 @@ const NonSalesCreditNote: React.FC = () => {
         </Grid>
 
         {/* Right side - Voucher Form */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Paper sx={{ p: 3, height: 'calc(100vh - 120px)', overflow: 'auto' }}>
             <Typography variant="h6" gutterBottom>
               {mode === 'create' ? 'Create' : mode === 'edit' ? 'Edit' : 'View'} Non-Sales Credit Note
@@ -125,7 +125,7 @@ const NonSalesCreditNote: React.FC = () => {
 
             <form onSubmit={handleSubmit(handleSubmitForm)} className="space-y-4">
               <Grid container spacing={2}>
-                <Grid item xs={6}>
+                <Grid size={6}>
                   <TextField
                     {...control.register('voucher_number')}
                     label="Credit Note Number"
@@ -135,7 +135,7 @@ const NonSalesCreditNote: React.FC = () => {
                     helperText={errors.voucher_number?.message}
                   />
                 </Grid>
-                <Grid item xs={6}>
+                <Grid size={6}>
                   <TextField
                     {...control.register('date')}
                     label="Date"
@@ -148,7 +148,7 @@ const NonSalesCreditNote: React.FC = () => {
                   />
                 </Grid>
 
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <Autocomplete
                     options={customerList || []}
                     getOptionLabel={(option: any) => option?.name || ''}
@@ -187,7 +187,7 @@ const NonSalesCreditNote: React.FC = () => {
                   />
                 </Grid>
 
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <TextField
                     {...control.register('total_amount', { valueAsNumber: true })}
                     label="Credit Amount"
@@ -203,7 +203,7 @@ const NonSalesCreditNote: React.FC = () => {
                   />
                 </Grid>
 
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <TextField
                     {...control.register('reference')}
                     label="Reference"
@@ -215,14 +215,14 @@ const NonSalesCreditNote: React.FC = () => {
                 </Grid>
 
                 {totalAmount > 0 && (
-                  <Grid item xs={12}>
+                  <Grid size={12}>
                     <Alert severity="info" sx={{ mb: 2 }}>
                       <strong>Amount in words:</strong> {numberToWords(totalAmount)}
                     </Alert>
                   </Grid>
                 )}
 
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <TextField
                     {...control.register('notes')}
                     label="Notes"
@@ -236,7 +236,7 @@ const NonSalesCreditNote: React.FC = () => {
                 </Grid>
 
                 {mode !== 'view' && (
-                  <Grid item xs={12}>
+                  <Grid size={12}>
                     <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
                       <Button 
                         variant="outlined" 
@@ -321,7 +321,7 @@ const NonSalesCreditNote: React.FC = () => {
           </Typography>
           
           <Grid container spacing={2} sx={{ mb: 3 }}>
-            <Grid item xs={12} md={4}>
+            <Grid size={{ xs: 12, md: 4 }}>
               <TextField
                 label="Search"
                 value={searchTerm}
@@ -330,7 +330,7 @@ const NonSalesCreditNote: React.FC = () => {
                 placeholder="Credit note number, reference, notes..."
               />
             </Grid>
-            <Grid item xs={6} md={3}>
+            <Grid size={6} md={3}>
               <TextField
                 label="From Date"
                 type="date"
@@ -340,7 +340,7 @@ const NonSalesCreditNote: React.FC = () => {
                 fullWidth
               />
             </Grid>
-            <Grid item xs={6} md={3}>
+            <Grid size={6} md={3}>
               <TextField
                 label="To Date"
                 type="date"
@@ -350,7 +350,7 @@ const NonSalesCreditNote: React.FC = () => {
                 fullWidth
               />
             </Grid>
-            <Grid item xs={12} md={2}>
+            <Grid size={12} md={2}>
               <Button
                 variant="contained"
                 onClick={handleSearch}

@@ -72,7 +72,7 @@ const JournalVoucher: React.FC = () => {
     <Container maxWidth="xl" sx={{ py: 2 }}>
       <Grid container spacing={3}>
         {/* Left side - Voucher List */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Paper sx={{ p: 2, height: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column' }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
               <Typography variant="h6">Journal Vouchers</Typography>
@@ -124,7 +124,7 @@ const JournalVoucher: React.FC = () => {
         </Grid>
 
         {/* Right side - Voucher Form */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Paper sx={{ p: 3, height: 'calc(100vh - 120px)', overflow: 'auto' }}>
             <Typography variant="h6" gutterBottom>
               {mode === 'create' ? 'Create' : mode === 'edit' ? 'Edit' : 'View'} Journal Voucher
@@ -132,7 +132,7 @@ const JournalVoucher: React.FC = () => {
 
             <form onSubmit={handleSubmit(handleSubmitForm)} className="space-y-4">
               <Grid container spacing={2}>
-                <Grid item xs={6}>
+                <Grid size={6}>
                   <TextField
                     {...control.register('voucher_number')}
                     label="Voucher Number"
@@ -142,7 +142,7 @@ const JournalVoucher: React.FC = () => {
                     helperText={errors.voucher_number?.message}
                   />
                 </Grid>
-                <Grid item xs={6}>
+                <Grid size={6}>
                   <TextField
                     {...control.register('date')}
                     label="Date"
@@ -155,7 +155,7 @@ const JournalVoucher: React.FC = () => {
                   />
                 </Grid>
 
-                <Grid item xs={6}>
+                <Grid size={6}>
                   <Autocomplete
                     options={accountOptions}
                     value={watch('from_account') || ''}
@@ -173,7 +173,7 @@ const JournalVoucher: React.FC = () => {
                   />
                 </Grid>
 
-                <Grid item xs={6}>
+                <Grid size={6}>
                   <Autocomplete
                     options={accountOptions}
                     value={watch('to_account') || ''}
@@ -191,7 +191,7 @@ const JournalVoucher: React.FC = () => {
                   />
                 </Grid>
 
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <TextField
                     {...control.register('total_amount', { valueAsNumber: true })}
                     label="Total Amount"
@@ -207,7 +207,7 @@ const JournalVoucher: React.FC = () => {
                   />
                 </Grid>
 
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <TextField
                     {...control.register('reference')}
                     label="Reference"
@@ -219,14 +219,14 @@ const JournalVoucher: React.FC = () => {
                 </Grid>
 
                 {totalAmount > 0 && (
-                  <Grid item xs={12}>
+                  <Grid size={12}>
                     <Alert severity="info" sx={{ mb: 2 }}>
                       <strong>Amount in words:</strong> {numberToWords(totalAmount)}
                     </Alert>
                   </Grid>
                 )}
 
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <TextField
                     {...control.register('notes')}
                     label="Notes"
@@ -240,7 +240,7 @@ const JournalVoucher: React.FC = () => {
                 </Grid>
 
                 {mode !== 'view' && (
-                  <Grid item xs={12}>
+                  <Grid size={12}>
                     <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
                       <Button 
                         variant="outlined" 
@@ -317,7 +317,7 @@ const JournalVoucher: React.FC = () => {
           </Typography>
           
           <Grid container spacing={2} sx={{ mb: 3 }}>
-            <Grid item xs={12} md={4}>
+            <Grid size={{ xs: 12, md: 4 }}>
               <TextField
                 label="Search"
                 value={searchTerm}
@@ -326,7 +326,7 @@ const JournalVoucher: React.FC = () => {
                 placeholder="Voucher number, reference, notes..."
               />
             </Grid>
-            <Grid item xs={6} md={3}>
+            <Grid size={6} md={3}>
               <TextField
                 label="From Date"
                 type="date"
@@ -336,7 +336,7 @@ const JournalVoucher: React.FC = () => {
                 fullWidth
               />
             </Grid>
-            <Grid item xs={6} md={3}>
+            <Grid size={6} md={3}>
               <TextField
                 label="To Date"
                 type="date"
@@ -346,7 +346,7 @@ const JournalVoucher: React.FC = () => {
                 fullWidth
               />
             </Grid>
-            <Grid item xs={12} md={2}>
+            <Grid size={12} md={2}>
               <Button
                 variant="contained"
                 onClick={handleSearch}

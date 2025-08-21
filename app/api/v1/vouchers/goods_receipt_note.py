@@ -19,7 +19,7 @@ router = APIRouter(tags=["goods-receipt-notes"])
 @router.get("/", response_model=List[GRNInDB])
 async def get_goods_receipt_notes(
     skip: int = Query(0, ge=0, description="Number of records to skip (for pagination)"),
-    limit: int = Query(100, ge=1, le=500, description="Maximum number of records to return"),
+    limit: int = Query(5, ge=1, le=500, description="Maximum number of records to return (default 5 for UI standard)"),
     status: Optional[str] = Query(None, description="Optional filter by voucher status (e.g., 'draft', 'approved')"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
@@ -31,6 +31,17 @@ async def get_goods_receipt_notes(
     
     if status:
         query = query.filter(GoodsReceiptNote.status == status)
+    
+    # Enhanced sorting - latest first by default
+    if hasattr(GoodsReceiptNote, sortBy):
+        sort_attr = getattr(GoodsReceiptNote, sortBy)
+        if sort.lower() == "asc":
+            query = query.order_by(sort_attr.asc())
+        else:
+            query = query.order_by(sort_attr.desc())
+    else:
+        # Default to created_at desc if invalid sortBy field
+        query = query.order_by(GoodsReceiptNote.created_at.desc())
     
     invoices = query.offset(skip).limit(limit).all()
     return invoices

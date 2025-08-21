@@ -95,7 +95,7 @@ const InventoryManagement: React.FC = () => {
   // Fetch data from APIs
   const { data: stock, isLoading: stockLoading, refetch: refetchStock } = useQuery({
     queryKey: ['stock'],
-    queryFn: masterDataService.getStock,
+    queryFn: () => masterDataService.getStock(),
     refetchInterval: 30000 // Refresh every 30 seconds
   });
 

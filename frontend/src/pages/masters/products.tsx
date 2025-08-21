@@ -296,7 +296,7 @@ const ProductsPage: React.FC = () => {
           <DialogContent>
             {errorMessage && <Alert severity="error" sx={{ mb: 2 }}>{errorMessage}</Alert>}
             <Grid container spacing={2} sx={{ mt: 1 }}>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   fullWidth
                   label="Product Name"
@@ -305,7 +305,7 @@ const ProductsPage: React.FC = () => {
                   required
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   fullWidth
                   label="HSN Code"
@@ -313,7 +313,7 @@ const ProductsPage: React.FC = () => {
                   onChange={(e) => setFormData(prev => ({ ...prev, hsn_code: e.target.value }))}
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   fullWidth
                   label="Part Number"
@@ -321,7 +321,7 @@ const ProductsPage: React.FC = () => {
                   onChange={(e) => setFormData(prev => ({ ...prev, part_number: e.target.value }))}
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   fullWidth
                   label="Unit"
@@ -330,7 +330,7 @@ const ProductsPage: React.FC = () => {
                   required
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   fullWidth
                   label="Unit Price"
@@ -340,7 +340,7 @@ const ProductsPage: React.FC = () => {
                   required
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   fullWidth
                   label="GST Rate (%)"
@@ -349,7 +349,7 @@ const ProductsPage: React.FC = () => {
                   onChange={(e) => setFormData(prev => ({ ...prev, gst_rate: e.target.value }))}
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   fullWidth
                   label="Reorder Level"
@@ -358,7 +358,7 @@ const ProductsPage: React.FC = () => {
                   onChange={(e) => setFormData(prev => ({ ...prev, reorder_level: e.target.value }))}
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <FormControlLabel
                   control={
                     <Checkbox
@@ -369,7 +369,7 @@ const ProductsPage: React.FC = () => {
                   label="GST Inclusive Pricing"
                 />
               </Grid>
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <TextField
                   fullWidth
                   label="Description"
@@ -379,7 +379,7 @@ const ProductsPage: React.FC = () => {
                   onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <FormControlLabel
                   control={
                     <Checkbox
@@ -390,7 +390,7 @@ const ProductsPage: React.FC = () => {
                   label="Manufactured Product"
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <FormControlLabel
                   control={
                     <Checkbox

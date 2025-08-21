@@ -357,7 +357,7 @@ export default function JobCardVoucher() {
 
       <Grid container spacing={3}>
         {/* Voucher List - Left Side */}
-        <Grid item xs={12} md={5}>
+        <Grid size={12} md={5}>
           <Card>
             <CardContent>
               <Box display="flex" justifyContent="between" alignItems="center" mb={2}>
@@ -420,7 +420,7 @@ export default function JobCardVoucher() {
         </Grid>
 
         {/* Voucher Form - Right Side */}
-        <Grid item xs={12} md={7}>
+        <Grid size={12} md={7}>
           <Card>
             <CardContent>
               <Box display="flex" justifyContent="between" alignItems="center" mb={2}>
@@ -443,7 +443,7 @@ export default function JobCardVoucher() {
               <form onSubmit={handleSubmit(onSubmit)}>
                 {/* Basic Details */}
                 <Grid container spacing={2} mb={3}>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <TextField
                       label="Voucher Number"
                       {...control.register('voucher_number')}
@@ -452,7 +452,7 @@ export default function JobCardVoucher() {
                       value={watch('voucher_number')}
                     />
                   </Grid>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <TextField
                       label="Date"
                       type="date"
@@ -462,7 +462,7 @@ export default function JobCardVoucher() {
                       disabled={mode === 'view'}
                     />
                   </Grid>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <FormControl fullWidth>
                       <InputLabel>Job Type</InputLabel>
                       <Select
@@ -478,7 +478,7 @@ export default function JobCardVoucher() {
                       </Select>
                     </FormControl>
                   </Grid>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <Autocomplete
                       options={vendorOptions}
                       getOptionLabel={(option) => option.name || ''}
@@ -490,7 +490,7 @@ export default function JobCardVoucher() {
                       disabled={mode === 'view'}
                     />
                   </Grid>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <Autocomplete
                       options={manufacturingOrderOptions}
                       getOptionLabel={(option) => option.voucher_number || ''}
@@ -502,7 +502,7 @@ export default function JobCardVoucher() {
                       disabled={mode === 'view'}
                     />
                   </Grid>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <FormControl fullWidth>
                       <InputLabel>Job Status</InputLabel>
                       <Select
@@ -527,7 +527,7 @@ export default function JobCardVoucher() {
                   </AccordionSummary>
                   <AccordionDetails>
                     <Grid container spacing={2}>
-                      <Grid item xs={12}>
+                      <Grid size={12}>
                         <TextField
                           label="Job Description"
                           {...control.register('job_description')}
@@ -538,7 +538,7 @@ export default function JobCardVoucher() {
                           disabled={mode === 'view'}
                         />
                       </Grid>
-                      <Grid item xs={12} sm={6}>
+                      <Grid size={{ xs: 12, sm: 6 }}>
                         <TextField
                           label="Job Category"
                           {...control.register('job_category')}
@@ -547,7 +547,7 @@ export default function JobCardVoucher() {
                           disabled={mode === 'view'}
                         />
                       </Grid>
-                      <Grid item xs={12} sm={6}>
+                      <Grid size={{ xs: 12, sm: 6 }}>
                         <FormControl fullWidth>
                           <InputLabel>Materials Supplied By</InputLabel>
                           <Select
@@ -563,7 +563,7 @@ export default function JobCardVoucher() {
                           </Select>
                         </FormControl>
                       </Grid>
-                      <Grid item xs={12} sm={6}>
+                      <Grid size={{ xs: 12, sm: 6 }}>
                         <TextField
                           label="Expected Completion Date"
                           type="date"
@@ -573,7 +573,7 @@ export default function JobCardVoucher() {
                           disabled={mode === 'view'}
                         />
                       </Grid>
-                      <Grid item xs={12} sm={6}>
+                      <Grid size={{ xs: 12, sm: 6 }}>
                         <TextField
                           label="Actual Completion Date"
                           type="date"
@@ -583,7 +583,7 @@ export default function JobCardVoucher() {
                           disabled={mode === 'view'}
                         />
                       </Grid>
-                      <Grid item xs={12} sm={6}>
+                      <Grid size={{ xs: 12, sm: 6 }}>
                         <TextField
                           label="Transport Mode"
                           {...control.register('transport_mode')}
@@ -591,7 +591,7 @@ export default function JobCardVoucher() {
                           disabled={mode === 'view'}
                         />
                       </Grid>
-                      <Grid item xs={12}>
+                      <Grid size={12}>
                         <TextField
                           label="Delivery Address"
                           {...control.register('delivery_address')}
@@ -612,7 +612,7 @@ export default function JobCardVoucher() {
                   </AccordionSummary>
                   <AccordionDetails>
                     <Grid container spacing={2}>
-                      <Grid item xs={12}>
+                      <Grid size={12}>
                         <FormControlLabel
                           control={
                             <Checkbox
@@ -624,7 +624,7 @@ export default function JobCardVoucher() {
                           label="Quality Check Required"
                         />
                       </Grid>
-                      <Grid item xs={12}>
+                      <Grid size={12}>
                         <TextField
                           label="Quality Specifications"
                           {...control.register('quality_specifications')}
@@ -892,7 +892,7 @@ export default function JobCardVoucher() {
 
                 {/* Notes */}
                 <Grid container spacing={2} mt={2}>
-                  <Grid item xs={12}>
+                  <Grid size={12}>
                     <TextField
                       label="Notes"
                       {...control.register('notes')}

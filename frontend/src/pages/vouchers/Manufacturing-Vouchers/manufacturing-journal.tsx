@@ -315,7 +315,7 @@ export default function ManufacturingJournalVoucher() {
 
       <Grid container spacing={3}>
         {/* Voucher List - Left Side */}
-        <Grid item xs={12} md={5}>
+        <Grid size={12} md={5}>
           <Card>
             <CardContent>
               <Box display="flex" justifyContent="between" alignItems="center" mb={2}>
@@ -372,7 +372,7 @@ export default function ManufacturingJournalVoucher() {
         </Grid>
 
         {/* Voucher Form - Right Side */}
-        <Grid item xs={12} md={7}>
+        <Grid size={12} md={7}>
           <Card>
             <CardContent>
               <Box display="flex" justifyContent="between" alignItems="center" mb={2}>
@@ -395,7 +395,7 @@ export default function ManufacturingJournalVoucher() {
               <form onSubmit={handleSubmit(onSubmit)}>
                 {/* Basic Details */}
                 <Grid container spacing={2} mb={3}>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <TextField
                       label="Voucher Number"
                       {...control.register('voucher_number')}
@@ -404,7 +404,7 @@ export default function ManufacturingJournalVoucher() {
                       value={watch('voucher_number')}
                     />
                   </Grid>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <TextField
                       label="Date"
                       type="date"
@@ -414,7 +414,7 @@ export default function ManufacturingJournalVoucher() {
                       disabled={mode === 'view'}
                     />
                   </Grid>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <Autocomplete
                       options={manufacturingOrderOptions}
                       getOptionLabel={(option) => option.voucher_number || ''}
@@ -431,7 +431,7 @@ export default function ManufacturingJournalVoucher() {
                       disabled={mode === 'view'}
                     />
                   </Grid>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <Autocomplete
                       options={bomOptions}
                       getOptionLabel={(option) => option.bom_name || ''}
@@ -443,7 +443,7 @@ export default function ManufacturingJournalVoucher() {
                       disabled={mode === 'view'}
                     />
                   </Grid>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <TextField
                       label="Date of Manufacture"
                       type="datetime-local"
@@ -453,7 +453,7 @@ export default function ManufacturingJournalVoucher() {
                       disabled={mode === 'view'}
                     />
                   </Grid>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <TextField
                       label="Shift"
                       {...control.register('shift')}
@@ -461,7 +461,7 @@ export default function ManufacturingJournalVoucher() {
                       disabled={mode === 'view'}
                     />
                   </Grid>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <TextField
                       label="Operator"
                       {...control.register('operator')}
@@ -469,7 +469,7 @@ export default function ManufacturingJournalVoucher() {
                       disabled={mode === 'view'}
                     />
                   </Grid>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <TextField
                       label="Supervisor"
                       {...control.register('supervisor')}
@@ -477,7 +477,7 @@ export default function ManufacturingJournalVoucher() {
                       disabled={mode === 'view'}
                     />
                   </Grid>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <TextField
                       label="Machine Used"
                       {...control.register('machine_used')}
@@ -494,7 +494,7 @@ export default function ManufacturingJournalVoucher() {
                   </AccordionSummary>
                   <AccordionDetails>
                     <Grid container spacing={2}>
-                      <Grid item xs={12} sm={3}>
+                      <Grid size={12} sm={3}>
                         <TextField
                           label="Finished Quantity"
                           type="number"
@@ -503,7 +503,7 @@ export default function ManufacturingJournalVoucher() {
                           disabled={mode === 'view'}
                         />
                       </Grid>
-                      <Grid item xs={12} sm={3}>
+                      <Grid size={12} sm={3}>
                         <TextField
                           label="Scrap Quantity"
                           type="number"
@@ -512,7 +512,7 @@ export default function ManufacturingJournalVoucher() {
                           disabled={mode === 'view'}
                         />
                       </Grid>
-                      <Grid item xs={12} sm={3}>
+                      <Grid size={12} sm={3}>
                         <TextField
                           label="Rework Quantity"
                           type="number"
@@ -521,7 +521,7 @@ export default function ManufacturingJournalVoucher() {
                           disabled={mode === 'view'}
                         />
                       </Grid>
-                      <Grid item xs={12} sm={3}>
+                      <Grid size={12} sm={3}>
                         <TextField
                           label="Byproduct Quantity"
                           type="number"
@@ -541,7 +541,7 @@ export default function ManufacturingJournalVoucher() {
                   </AccordionSummary>
                   <AccordionDetails>
                     <Grid container spacing={2}>
-                      <Grid item xs={12} sm={4}>
+                      <Grid size={{ xs: 12, sm: 4 }}>
                         <TextField
                           label="Material Cost"
                           type="number"
@@ -550,7 +550,7 @@ export default function ManufacturingJournalVoucher() {
                           disabled={mode === 'view'}
                         />
                       </Grid>
-                      <Grid item xs={12} sm={4}>
+                      <Grid size={{ xs: 12, sm: 4 }}>
                         <TextField
                           label="Labor Cost"
                           type="number"
@@ -559,7 +559,7 @@ export default function ManufacturingJournalVoucher() {
                           disabled={mode === 'view'}
                         />
                       </Grid>
-                      <Grid item xs={12} sm={4}>
+                      <Grid size={{ xs: 12, sm: 4 }}>
                         <TextField
                           label="Overhead Cost"
                           type="number"
@@ -574,7 +574,7 @@ export default function ManufacturingJournalVoucher() {
 
                 {/* Quality Information */}
                 <Grid container spacing={2} mt={2}>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <TextField
                       label="Quality Grade"
                       {...control.register('quality_grade')}
@@ -582,7 +582,7 @@ export default function ManufacturingJournalVoucher() {
                       disabled={mode === 'view'}
                     />
                   </Grid>
-                  <Grid item xs={12}>
+                  <Grid size={12}>
                     <TextField
                       label="Quality Remarks"
                       {...control.register('quality_remarks')}
@@ -592,7 +592,7 @@ export default function ManufacturingJournalVoucher() {
                       disabled={mode === 'view'}
                     />
                   </Grid>
-                  <Grid item xs={12}>
+                  <Grid size={12}>
                     <TextField
                       label="Narration"
                       {...control.register('narration')}
@@ -602,7 +602,7 @@ export default function ManufacturingJournalVoucher() {
                       disabled={mode === 'view'}
                     />
                   </Grid>
-                  <Grid item xs={12}>
+                  <Grid size={12}>
                     <TextField
                       label="Notes"
                       {...control.register('notes')}

@@ -304,7 +304,7 @@ export default function MaterialReceiptVoucher() {
 
       <Grid container spacing={3}>
         {/* Voucher List - Left Side */}
-        <Grid item xs={12} md={5}>
+        <Grid size={12} md={5}>
           <Card>
             <CardContent>
               <Box display="flex" justifyContent="between" alignItems="center" mb={2}>
@@ -367,7 +367,7 @@ export default function MaterialReceiptVoucher() {
         </Grid>
 
         {/* Voucher Form - Right Side */}
-        <Grid item xs={12} md={7}>
+        <Grid size={12} md={7}>
           <Card>
             <CardContent>
               <Box display="flex" justifyContent="between" alignItems="center" mb={2}>
@@ -390,7 +390,7 @@ export default function MaterialReceiptVoucher() {
               <form onSubmit={handleSubmit(onSubmit)}>
                 {/* Basic Details */}
                 <Grid container spacing={2} mb={3}>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <TextField
                       label="Voucher Number"
                       {...control.register('voucher_number')}
@@ -399,7 +399,7 @@ export default function MaterialReceiptVoucher() {
                       value={watch('voucher_number')}
                     />
                   </Grid>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <TextField
                       label="Date"
                       type="date"
@@ -409,7 +409,7 @@ export default function MaterialReceiptVoucher() {
                       disabled={mode === 'view'}
                     />
                   </Grid>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <FormControl fullWidth>
                       <InputLabel>Source Type</InputLabel>
                       <Select
@@ -425,7 +425,7 @@ export default function MaterialReceiptVoucher() {
                       </Select>
                     </FormControl>
                   </Grid>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <TextField
                       label="Source Reference"
                       {...control.register('source_reference')}
@@ -433,7 +433,7 @@ export default function MaterialReceiptVoucher() {
                       disabled={mode === 'view'}
                     />
                   </Grid>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <Autocomplete
                       options={manufacturingOrderOptions}
                       getOptionLabel={(option) => option.voucher_number || ''}
@@ -445,7 +445,7 @@ export default function MaterialReceiptVoucher() {
                       disabled={mode === 'view'}
                     />
                   </Grid>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <TextField
                       label="Receipt Time"
                       type="datetime-local"
@@ -460,7 +460,7 @@ export default function MaterialReceiptVoucher() {
                 {/* Receipt Details */}
                 <Typography variant="h6" gutterBottom>Receipt Details</Typography>
                 <Grid container spacing={2} mb={3}>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <TextField
                       label="Received From Department"
                       {...control.register('received_from_department')}
@@ -468,7 +468,7 @@ export default function MaterialReceiptVoucher() {
                       disabled={mode === 'view'}
                     />
                   </Grid>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <TextField
                       label="Received From Employee"
                       {...control.register('received_from_employee')}
@@ -476,7 +476,7 @@ export default function MaterialReceiptVoucher() {
                       disabled={mode === 'view'}
                     />
                   </Grid>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <TextField
                       label="Received By Employee"
                       {...control.register('received_by_employee')}
@@ -484,7 +484,7 @@ export default function MaterialReceiptVoucher() {
                       disabled={mode === 'view'}
                     />
                   </Grid>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <TextField
                       label="Condition on Receipt"
                       {...control.register('condition_on_receipt')}
@@ -497,7 +497,7 @@ export default function MaterialReceiptVoucher() {
                 {/* Inspection Details */}
                 <Typography variant="h6" gutterBottom>Inspection Details</Typography>
                 <Grid container spacing={2} mb={3}>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <FormControlLabel
                       control={
                         <Checkbox
@@ -509,7 +509,7 @@ export default function MaterialReceiptVoucher() {
                       label="Inspection Required"
                     />
                   </Grid>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <FormControl fullWidth>
                       <InputLabel>Inspection Status</InputLabel>
                       <Select
@@ -525,7 +525,7 @@ export default function MaterialReceiptVoucher() {
                       </Select>
                     </FormControl>
                   </Grid>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <TextField
                       label="Inspector Name"
                       {...control.register('inspector_name')}
@@ -533,7 +533,7 @@ export default function MaterialReceiptVoucher() {
                       disabled={mode === 'view'}
                     />
                   </Grid>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <TextField
                       label="Inspection Date"
                       type="datetime-local"
@@ -543,7 +543,7 @@ export default function MaterialReceiptVoucher() {
                       disabled={mode === 'view'}
                     />
                   </Grid>
-                  <Grid item xs={12}>
+                  <Grid size={12}>
                     <TextField
                       label="Inspection Remarks"
                       {...control.register('inspection_remarks')}
@@ -720,7 +720,7 @@ export default function MaterialReceiptVoucher() {
 
                 {/* Notes */}
                 <Grid container spacing={2} mb={3}>
-                  <Grid item xs={12}>
+                  <Grid size={12}>
                     <TextField
                       label="Notes"
                       {...control.register('notes')}

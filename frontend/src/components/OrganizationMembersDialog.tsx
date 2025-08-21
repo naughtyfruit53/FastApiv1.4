@@ -165,7 +165,7 @@ const OrganizationMembersDialog: React.FC<OrganizationMembersDialogProps> = ({
               Invite New User
             </Typography>
             <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   fullWidth
                   label="Email"
@@ -175,7 +175,7 @@ const OrganizationMembersDialog: React.FC<OrganizationMembersDialogProps> = ({
                   required
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   fullWidth
                   label="Username"
@@ -184,7 +184,7 @@ const OrganizationMembersDialog: React.FC<OrganizationMembersDialogProps> = ({
                   required
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   fullWidth
                   label="Full Name"
@@ -193,7 +193,7 @@ const OrganizationMembersDialog: React.FC<OrganizationMembersDialogProps> = ({
                   required
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   fullWidth
                   label="Temporary Password"
@@ -203,7 +203,7 @@ const OrganizationMembersDialog: React.FC<OrganizationMembersDialogProps> = ({
                   required
                 />
               </Grid>
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <Box display="flex" gap={1} justifyContent="flex-end">
                   <Button
                     onClick={() => setShowInviteForm(false)}

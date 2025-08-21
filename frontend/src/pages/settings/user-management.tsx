@@ -92,6 +92,62 @@ const UserManagement: React.FC = () => {
   const canManage = canManageUsers(currentUser);
   const canReset = canResetPasswords(currentUser);
 
+  // Get current organization ID from auth context only (no localStorage fallback)
+  const currentOrgId = currentUser?.organization_id;
+
+  // Real API calls using organization-scoped endpoints - all hooks must be at the top
+  const { data: users, isLoading } = useQuery<User[]>({
+    queryKey: ['organization-users', currentOrgId],
+    queryFn: () => organizationService.getOrganizationUsers(currentOrgId!),
+    enabled: canManage && !!currentOrgId && authReady // Only fetch if user has permission and org ID exists
+  });
+
+  const createUserMutation = useMutation({
+    mutationFn: (userData: any) => organizationService.createUserInOrganization(currentOrgId!, userData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['organization-users', currentOrgId] });
+      setCreateDialogOpen(false);
+      resetForm();
+    },
+    enabled: !!currentOrgId
+  });
+
+  const updateUserMutation = useMutation({
+    mutationFn: ({ userId, userData }: { userId: number; userData: any }) => 
+      organizationService.updateUserInOrganization(currentOrgId!, userId, userData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['organization-users', currentOrgId] });
+      setEditDialogOpen(false);
+      setSelectedUser(null);
+      resetForm();
+    },
+    enabled: !!currentOrgId
+  });
+
+  const userActionMutation = useMutation({
+    mutationFn: ({ userId, action }: { userId: number; action: string }) => {
+      switch (action) {
+        case 'reset':
+          return organizationService.resetUserPassword(currentOrgId!, userId);
+        case 'activate':
+          return organizationService.activateUser(currentOrgId!, userId);
+        case 'deactivate':
+          return organizationService.deactivateUser(currentOrgId!, userId);
+        case 'delete':
+          return organizationService.deleteUser(currentOrgId!, userId);
+        default:
+          throw new Error('Invalid action');
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['organization-users', currentOrgId] });
+      setActionDialogOpen(false);
+      setSelectedUser(null);
+      setActionType(null);
+    },
+    enabled: !!currentOrgId
+  });
+
   // Wait for authentication and organization context to be ready
   if (!authReady) {
     return (
@@ -103,9 +159,6 @@ const UserManagement: React.FC = () => {
     );
   }
 
-  // Get current organization ID from auth context only (no localStorage fallback)
-  const currentOrgId = currentUser?.organization_id;
-
   // Ensure we have a valid organization ID
   if (!currentOrgId) {
     return (
@@ -116,56 +169,6 @@ const UserManagement: React.FC = () => {
       </Container>
     );
   }
-
-  // Real API calls using organization-scoped endpoints
-  const { data: users, isLoading } = useQuery<User[]>({
-    queryKey: ['organization-users', currentOrgId],
-    queryFn: () => organizationService.getOrganizationUsers(currentOrgId!),
-    enabled: canManage && !!currentOrgId // Only fetch if user has permission and org ID exists
-  });
-
-  const createUserMutation = useMutation({
-    mutationFn: (userData: any) => organizationService.createUserInOrganization(currentOrgId!, userData),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['organization-users', currentOrgId] });
-      setCreateDialogOpen(false);
-      resetForm();
-    }
-  });
-
-  const updateUserMutation = useMutation({
-    mutationFn: ({ userId, data }: { userId: number; data: any }) => 
-      organizationService.updateUserInOrganization(currentOrgId!, userId, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['organization-users', currentOrgId] });
-      setEditDialogOpen(false);
-      setSelectedUser(null);
-      resetForm();
-    }
-  });
-
-  const userActionMutation = useMutation({
-    mutationFn: async ({ userId, action }: { userId: number; action: string }) => {
-      switch (action) {
-        case 'reset':
-          return userService.resetUserPassword(userId);
-        case 'activate':
-          return organizationService.updateUserInOrganization(currentOrgId!, userId, { is_active: true });
-        case 'deactivate':
-          return organizationService.updateUserInOrganization(currentOrgId!, userId, { is_active: false });
-        case 'delete':
-          return organizationService.deleteUserFromOrganization(currentOrgId!, userId);
-        default:
-          throw new Error('Unknown action');
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['organization-users', currentOrgId] });
-      setActionDialogOpen(false);
-      setSelectedUser(null);
-      setActionType(null);
-    }
-  });
 
   // If user doesn't have permission to manage users, redirect or show message
   if (!canManage) {

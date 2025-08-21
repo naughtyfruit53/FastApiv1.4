@@ -48,11 +48,15 @@ const createWrapper = () => {
     }
   });
   
-  return ({ children }: { children: React.ReactNode }) => (
+  const TestProvider = ({ children }: { children: React.ReactNode }) => (
     <QueryClientProvider client={queryClient}>
       {children}
     </QueryClientProvider>
   );
+  
+  TestProvider.displayName = 'TestProvider';
+  
+  return TestProvider;
 };
 
 describe('UserManagement Component', () => {
@@ -153,6 +157,7 @@ describe('UserManagement Component', () => {
       }
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     jest.mocked(require('../context/AuthContext').useAuth).mockReturnValue(standardUserContext);
     
     render(<UserManagement />, { wrapper: createWrapper() });

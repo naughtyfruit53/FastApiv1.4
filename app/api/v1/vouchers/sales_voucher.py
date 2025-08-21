@@ -19,18 +19,31 @@ router = APIRouter(tags=["sales-vouchers"])
 @router.get("/", response_model=List[SalesVoucherInDB])
 async def get_sales_vouchers(
     skip: int = Query(0, ge=0, description="Number of records to skip (for pagination)"),
-    limit: int = Query(100, ge=1, le=500, description="Maximum number of records to return"),
+    limit: int = Query(5, ge=1, le=500, description="Maximum number of records to return (default 5 for UI standard)"),
     status: Optional[str] = Query(None, description="Optional filter by voucher status (e.g., 'draft', 'approved')"),
+    sort: str = Query("desc", description="Sort order: 'asc' or 'desc' (default 'desc' for latest first)"),
+    sortBy: str = Query("created_at", description="Field to sort by (default 'created_at')"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """Get all sales vouchers"""
+    """Get all sales vouchers with enhanced sorting and pagination"""
     query = db.query(SalesVoucher).options(joinedload(SalesVoucher.customer)).filter(
         SalesVoucher.organization_id == current_user.organization_id
     )
     
     if status:
         query = query.filter(SalesVoucher.status == status)
+    
+    # Enhanced sorting - latest first by default
+    if hasattr(SalesVoucher, sortBy):
+        sort_attr = getattr(SalesVoucher, sortBy)
+        if sort.lower() == "asc":
+            query = query.order_by(sort_attr.asc())
+        else:
+            query = query.order_by(sort_attr.desc())
+    else:
+        # Default to created_at desc if invalid sortBy field
+        query = query.order_by(SalesVoucher.created_at.desc())
     
     invoices = query.offset(skip).limit(limit).all()
     return invoices
