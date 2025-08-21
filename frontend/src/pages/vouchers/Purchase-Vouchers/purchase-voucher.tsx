@@ -322,7 +322,7 @@ const PurchaseVoucherPage: React.FC = () => {
     <Box>
       {/* Header Actions */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h5" sx={{ fontSize: 20, fontWeight: 'bold' }}>
+        <Typography variant="h5" sx={{ fontSize: 20, fontWeight: 'bold', textAlign: 'center', flex: 1 }}>
           {config.voucherTitle} - {mode === 'create' ? 'Create' : mode === 'edit' ? 'Edit' : 'View'}
         </Typography>
         <VoucherHeaderActions
@@ -435,8 +435,8 @@ const PurchaseVoucherPage: React.FC = () => {
           </Grid>
 
           {/* Items section */}
-          <Grid size={12} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 27 }}>
-            <Typography variant="h6" sx={{ fontSize: 16, fontWeight: 'bold' }}>Items</Typography>
+          <Grid size={12} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 27 }}>
+            <Typography variant="h6" sx={{ fontSize: 16, fontWeight: 'bold', textAlign: 'center' }}>Items</Typography>
           </Grid>
 
           {/* Items Table */}
@@ -445,14 +445,14 @@ const PurchaseVoucherPage: React.FC = () => {
               <Table stickyHeader size="small">
                 <TableHead>
                   <TableRow>
-                    <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1, width: '30%' }}>Product</TableCell>
-                    <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1, textAlign: 'right' }}>Qty</TableCell>
-                    <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1, textAlign: 'right' }}>Rate</TableCell>
-                    <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1 }}>Disc%</TableCell>
-                    <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1 }}>GST%</TableCell>
-                    <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1 }}>Amount</TableCell>
+                    <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1, width: '30%', textAlign: 'center' }}>Product</TableCell>
+                    <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1, textAlign: 'center' }}>Qty</TableCell>
+                    <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1, textAlign: 'center' }}>Rate</TableCell>
+                    <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1, textAlign: 'center' }}>Disc%</TableCell>
+                    <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1, textAlign: 'center' }}>GST%</TableCell>
+                    <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1, textAlign: 'center' }}>Amount</TableCell>
                     {mode !== 'view' && (
-                      <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1 }}>Action</TableCell>
+                      <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1, textAlign: 'center' }}>Action</TableCell>
                     )}
                   </TableRow>
                 </TableHead>
@@ -607,7 +607,7 @@ const PurchaseVoucherPage: React.FC = () => {
               value={getAmountInWords(totalAmount)}
               disabled
               InputLabelProps={{ shrink: true, style: { fontSize: 12 } }}
-              inputProps={{ style: { fontSize: 14 } }}
+              inputProps={{ style: { fontSize: 14, textAlign: 'center' } }}
               size="small"
             />
           </Grid>

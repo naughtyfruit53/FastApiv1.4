@@ -33,7 +33,7 @@ const VoucherLayout: React.FC<VoucherLayoutProps> = ({
           <Grid size={{ xs: 12, md: 5, lg: 5 }}>
             <Paper sx={{ p: 2 }}>
               <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
-                <Typography variant="h6" sx={{ fontSize: 18, fontWeight: 'bold' }}>
+                <Typography variant="h6" sx={{ fontSize: 18, fontWeight: 'bold', textAlign: 'center', flex: 1 }}>
                   {voucherType}
                 </Typography>
                 {showAllButton && (
