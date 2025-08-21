@@ -16,6 +16,7 @@ const DebitNotePage: React.FC = () => {
   const {
     // State
     mode,
+    setMode,
     isLoading,
     showAddCustomerModal,
     setShowAddCustomerModal,
@@ -85,7 +86,7 @@ const DebitNotePage: React.FC = () => {
   };
 
   // Handle customer creation success
-  const handleCustomerCreated = (newCustomer: any) => {
+  const handleCustomerCreated = async (newCustomer: any): Promise<void> => {
     setValue('customer_id', newCustomer.id);
     refreshMasterData();
   };
@@ -99,9 +100,11 @@ const DebitNotePage: React.FC = () => {
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
               <Typography variant="h6">Debit Notes</Typography>
               <VoucherHeaderActions
-                onCreate={handleCreate}
-                onSearch={handleModalOpen}
+                mode={mode}
                 voucherType="Debit Note"
+                voucherRoute="/vouchers/Financial-Vouchers/debit-note"
+                onModeChange={(newMode) => setMode(newMode)}
+                onModalOpen={handleModalOpen}
               />
             </Box>
 
@@ -224,7 +227,7 @@ const DebitNotePage: React.FC = () => {
                         required
                         disabled={isViewMode}
                         error={!!errors.customer_id}
-                        helperText={errors.customer_id?.message}
+                        helperText={errors.customer_id?.message as string}
                         InputProps={{
                           ...params.InputProps,
                           endAdornment: (
@@ -319,13 +322,14 @@ const DebitNotePage: React.FC = () => {
       <AddCustomerModal
         open={showAddCustomerModal}
         onClose={() => setShowAddCustomerModal(false)}
-        onCustomerAdded={handleCustomerCreated}
-        isLoading={addCustomerLoading}
-        setIsLoading={setAddCustomerLoading}
+        onAdd={handleCustomerCreated}
+        loading={addCustomerLoading}
+        
       />
 
       {/* Context Menu */}
       <VoucherContextMenu
+        voucherType="debit-note"
         contextMenu={contextMenu}
         onClose={handleContextMenuClose}
         onView={handleView}
@@ -340,16 +344,11 @@ const DebitNotePage: React.FC = () => {
         onClose={handleModalClose}
         vouchers={filteredVouchers}
         voucherType="Debit Note"
+        onVoucherClick={handleView}
         onView={handleView}
         onEdit={handleEdit}
         onDelete={handleDelete}
-        onPrint={handleGeneratePDF}
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        fromDate={fromDate}
-        onFromDateChange={setFromDate}
-        toDate={toDate}
-        onToDateChange={setToDate}
+        onGeneratePDF={handleGeneratePDF}
       />
     </Container>
   );
