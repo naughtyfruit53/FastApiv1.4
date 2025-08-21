@@ -554,15 +554,15 @@ const GoodsReceiptNotePage: React.FC = () => {
 
           {/* Items Table */}
           <Grid size={12}>
-            <TableContainer component={Paper} sx={{ maxHeight: 300, ...voucherStyles.centeredTable }}>
+            <TableContainer component={Paper} sx={{ maxHeight: 300, ...voucherStyles.centeredTable, ...voucherStyles.optimizedTableContainer }}>
               <Table stickyHeader size="small">
                 <TableHead>
                   <TableRow>
-                    <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1, width: '30%', textAlign: 'center' }}>Product</TableCell>
-                    <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1, textAlign: 'center' }}>Order Qty</TableCell>
-                    <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1, textAlign: 'center' }}>Received Qty</TableCell>
-                    <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1, textAlign: 'center' }}>Accepted Qty</TableCell>
-                    <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1, textAlign: 'center' }}>Rejected Qty</TableCell>
+                    <TableCell sx={voucherStyles.grnTableColumns.productName}>Product</TableCell>
+                    <TableCell sx={voucherStyles.grnTableColumns.orderQty}>Order Qty</TableCell>
+                    <TableCell sx={voucherStyles.grnTableColumns.receivedQty}>Received Qty</TableCell>
+                    <TableCell sx={voucherStyles.grnTableColumns.acceptedQty}>Accepted Qty</TableCell>
+                    <TableCell sx={voucherStyles.grnTableColumns.rejectedQty}>Rejected Qty</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
