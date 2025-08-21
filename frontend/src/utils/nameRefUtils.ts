@@ -3,39 +3,52 @@
 import { useQuery } from '@tanstack/react-query';
 import api from '../lib/api';
 import { getVendors, getCustomers } from '../services/masterService';
+import { useEntityOptions } from '../hooks/useEntity';
+import { EntityType } from '../types/entity.types';
 
+/**
+ * Legacy hook for name options - now uses Entity abstraction
+ * @deprecated Use useEntityOptions from useEntity hook instead
+ */
 export const useNameOptions = () => {
-  const { data: vendorList } = useQuery({
-    queryKey: ['vendors'],
-    queryFn: () => getVendors()
-  });
-
-  const { data: customerList } = useQuery({
-    queryKey: ['customers'],
-    queryFn: () => getCustomers()
-  });
-
-  // Future: Add more types here, e.g., employees = await getEmployees();
-  return [
-    ...(vendorList || []).map(v => ({ ...v, type: 'Vendor' })),
-    ...(customerList || []).map(c => ({ ...c, type: 'Customer' }))
-    // Future: ...(employeeList || []).map(e => ({ ...e, type: 'Employee' })),
-  ];
+  const { options } = useEntityOptions(['Vendor', 'Customer']);
+  
+  // Convert to legacy format for backward compatibility
+  return options.map(option => ({
+    ...option.originalData,
+    type: option.type
+  }));
 };
 
-export const useReferenceOptions = (selectedNameId: number | null, selectedNameType: 'Vendor' | 'Customer' | null) => {
+/**
+ * Enhanced reference options with Entity support
+ */
+export const useReferenceOptions = (
+  selectedEntityId: number | null, 
+  selectedEntityType: EntityType | null
+) => {
   const { data: unpaidVouchers } = useQuery({
-    queryKey: ['unpaid-vouchers', selectedNameId, selectedNameType],
+    queryKey: ['unpaid-vouchers', selectedEntityId, selectedEntityType],
     queryFn: () => {
-      if (!selectedNameId || !selectedNameType) return [];
-      const endpoint = selectedNameType === 'Vendor' ? '/purchase-vouchers' : '/sales-vouchers';
-      return api.get(endpoint, { params: { vendor_id: selectedNameId, customer_id: selectedNameId } }).then(res => res.data);
+      if (!selectedEntityId || !selectedEntityType) return [];
+      
+      // Map entity types to voucher endpoints
+      const endpoint = selectedEntityType === 'Vendor' ? '/purchase-vouchers' : 
+                     selectedEntityType === 'Customer' ? '/sales-vouchers' : null;
+      
+      if (!endpoint) return [];
+      
+      const params = selectedEntityType === 'Vendor' 
+        ? { vendor_id: selectedEntityId }
+        : { customer_id: selectedEntityId };
+      
+      return api.get(endpoint, { params }).then(res => res.data);
     },
-    enabled: !!selectedNameId && !!selectedNameType,
+    enabled: !!selectedEntityId && !!selectedEntityType,
   });
 
   return [
-    ... (unpaidVouchers || []).map(v => v.voucher_number),
+    ...(unpaidVouchers || []).map(v => v.voucher_number),
     'Advance',
     'On Account'
   ];

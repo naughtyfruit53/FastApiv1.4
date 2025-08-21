@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { Box, Button, TextField, Typography, Grid, CircularProgress, Container, Autocomplete, InputAdornment, Tooltip, Modal, FormControl, InputLabel, Select, MenuItem, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
 import { Add, Visibility, Edit } from '@mui/icons-material';
-import AddVendorModal from '../../../components/AddVendorModal';
-import AddCustomerModal from '../../../components/AddCustomerModal';
+import EntitySelector from '../../../components/EntitySelector';
 import VoucherContextMenu from '../../../components/VoucherContextMenu';
 import VoucherHeaderActions from '../../../components/VoucherHeaderActions';
 import VoucherListModal from '../../../components/VoucherListModal';
 import { useVoucherPage } from '../../../hooks/useVoucherPage';
 import { getVoucherConfig, getVoucherStyles, parseRateField, formatRateField } from '../../../utils/voucherUtils';
+import { useReferenceOptions } from '../../../utils/nameRefUtils';
 
 const PaymentVoucher: React.FC = () => {
   const config = getVoucherConfig('payment-voucher');
@@ -17,14 +17,6 @@ const PaymentVoucher: React.FC = () => {
     // State
     mode,
     isLoading,
-    showAddVendorModal,
-    setShowAddVendorModal,
-    showAddCustomerModal,
-    setShowAddCustomerModal,
-    addVendorLoading,
-    setAddVendorLoading,
-    addCustomerLoading,
-    setAddCustomerLoading,
     showFullModal,
     contextMenu,
     searchTerm,
@@ -86,20 +78,13 @@ const PaymentVoucher: React.FC = () => {
   const [selectedModule, setSelectedModule] = useState<'Vendor' | 'Customer' | null>(null);
   
   const totalAmountValue = watch('total_amount');
-  const selectedNameId = watch('name_id');
-  const selectedNameType = watch('name_type');
+  const selectedEntity = watch('entity'); // Now using entity instead of name_id/name_type
 
-  // Payment voucher specific computed values
-  const allNameOptions = [
-    ...(vendorList || []).map((v: any) => ({ ...v, type: 'Vendor' })),
-    ...(customerList || []).map((c: any) => ({ ...c, type: 'Customer' }))
-  ];
-
-  // TODO: Add unpaid vouchers query for payment voucher specific functionality
-  const referenceOptions = [
-    'Advance',
-    'On Account'
-  ];
+  // Get reference options including unpaid vouchers for the selected entity
+  const referenceOptions = useReferenceOptions(
+    selectedEntity?.id || null, 
+    selectedEntity?.type || null
+  );
 
   // Payment methods for payment vouchers
   const paymentMethods = [
@@ -113,37 +98,23 @@ const PaymentVoucher: React.FC = () => {
     'Net Banking'
   ];
 
-  // Handle adding new vendor or customer
-  const handleAddName = () => {
-    // Simple logic to determine which modal to show
-    // This could be improved with better UX
-    const result = window.confirm('Add Vendor? (Cancel for Customer)');
-    if (result) {
-      setShowAddVendorModal(true);
-    } else {
-      setShowAddCustomerModal(true);
-    }
-  };
-
-  // Handle vendor creation success 
-  const handleVendorCreated = (newVendor: any) => {
-    setValue('name_id', newVendor.id);
-    setValue('name_type', 'Vendor');
-    refreshMasterData();
-  };
-
-  // Handle customer creation success
-  const handleCustomerCreated = (newCustomer: any) => {
-    setValue('name_id', newCustomer.id);
-    setValue('name_type', 'Customer');
+  // Handle entity creation success
+  const handleEntityCreated = (newEntity: any) => {
+    setValue('entity', {
+      id: newEntity.id,
+      name: newEntity.name,
+      type: newEntity.type || 'Customer', // Default type
+      value: newEntity.id,
+      label: newEntity.name
+    });
     refreshMasterData();
   };
 
   return (
     <Container maxWidth="xl" sx={{ py: 2 }}>
       <Grid container spacing={3}>
-        {/* Left side - Voucher List */}
-        <Grid size={{ xs: 12, md: 4 }}>
+        {/* Left side - Voucher List (40%) */}
+        <Grid size={{ xs: 12, md: 5 }}>
           <Paper sx={{ p: 2, height: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column' }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
               <Typography variant="h6">Payment Vouchers</Typography>
@@ -180,10 +151,10 @@ const PaymentVoucher: React.FC = () => {
                         <TableCell>{voucher.voucher_number}</TableCell>
                         <TableCell>{new Date(voucher.date).toLocaleDateString()}</TableCell>
                         <TableCell>
-                          {voucher.name_type === 'Vendor' 
+                          {voucher.entity?.name || 
+                           (voucher.name_type === 'Vendor' 
                             ? vendorList?.find((v: any) => v.id === voucher.name_id)?.name 
-                            : customerList?.find((c: any) => c.id === voucher.name_id)?.name 
-                            || 'N/A'}
+                            : customerList?.find((c: any) => c.id === voucher.name_id)?.name) || 'N/A'}
                         </TableCell>
                         <TableCell>₹{voucher.total_amount?.toFixed(2) || '0.00'}</TableCell>
                       </TableRow>
@@ -195,8 +166,8 @@ const PaymentVoucher: React.FC = () => {
           </Paper>
         </Grid>
 
-        {/* Right side - Voucher Form */}
-        <Grid size={12} md={8}>
+        {/* Right side - Voucher Form (60%) */}
+        <Grid size={12} md={7}>
           <Paper sx={{ p: 3, height: 'calc(100vh - 120px)', overflow: 'auto' }}>
             <Typography variant="h6" gutterBottom>
               {mode === 'create' ? 'Create' : mode === 'edit' ? 'Edit' : 'View'} Payment Voucher
@@ -248,42 +219,17 @@ const PaymentVoucher: React.FC = () => {
           </Grid>
 
           <Grid size={6}>
-            <Autocomplete
-              options={allNameOptions}
-              getOptionLabel={(option: any) => option?.name || ''}
-              value={allNameOptions.find((option: any) => option.id === selectedNameId) || null}
-              onChange={(_, newValue) => {
-                setValue('name_id', newValue?.id || null);
-                setValue('name_type', newValue?.type || '');
-              }}
+            <EntitySelector
+              name="entity"
+              control={control}
+              label="Party Name"
+              required
+              entityTypes={['Customer', 'Vendor']}
+              allowTypeSelection={true}
+              onEntityCreated={handleEntityCreated}
               disabled={isViewMode}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="Party Name"
-                  error={!!errors.name_id}
-                  helperText={errors.name_id?.message}
-                  InputProps={{
-                    ...params.InputProps,
-                    endAdornment: (
-                      <>
-                        {params.InputProps.endAdornment}
-                        <InputAdornment position="end">
-                          <Tooltip title="Add New Party">
-                            <Button
-                              size="small"
-                              onClick={handleAddName}
-                              disabled={isViewMode}
-                            >
-                              <Add fontSize="small" />
-                            </Button>
-                          </Tooltip>
-                        </InputAdornment>
-                      </>
-                    ),
-                  }}
-                />
-              )}
+              error={!!errors.entity}
+              helperText={errors.entity?.message}
             />
           </Grid>
 
@@ -408,23 +354,6 @@ const PaymentVoucher: React.FC = () => {
       </Grid>
 
       {/* Add Vendor Modal */}
-      <AddVendorModal
-        open={showAddVendorModal}
-        onClose={() => setShowAddVendorModal(false)}
-        onSuccess={handleVendorCreated}
-        loading={addVendorLoading}
-        setLoading={setAddVendorLoading}
-      />
-
-      {/* Add Customer Modal */}
-      <AddCustomerModal
-        open={showAddCustomerModal}
-        onClose={() => setShowAddCustomerModal(false)}
-        onSuccess={handleCustomerCreated}
-        loading={addCustomerLoading}
-        setLoading={setAddCustomerLoading}
-      />
-
       <VoucherContextMenu
         voucherType="Payment Voucher"
         contextMenu={contextMenu}

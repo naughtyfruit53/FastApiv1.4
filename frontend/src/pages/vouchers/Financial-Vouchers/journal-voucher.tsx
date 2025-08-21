@@ -71,8 +71,8 @@ const JournalVoucher: React.FC = () => {
   return (
     <Container maxWidth="xl" sx={{ py: 2 }}>
       <Grid container spacing={3}>
-        {/* Left side - Voucher List */}
-        <Grid size={{ xs: 12, md: 6 }}>
+        {/* Left side - Voucher List (40%) */}
+        <Grid size={{ xs: 12, md: 5 }}>
           <Paper sx={{ p: 2, height: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column' }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
               <Typography variant="h6">Journal Vouchers</Typography>
@@ -123,8 +123,8 @@ const JournalVoucher: React.FC = () => {
           </Paper>
         </Grid>
 
-        {/* Right side - Voucher Form */}
-        <Grid size={{ xs: 12, md: 6 }}>
+        {/* Right side - Voucher Form (60%) */}
+        <Grid size={{ xs: 12, md: 7 }}>
           <Paper sx={{ p: 3, height: 'calc(100vh - 120px)', overflow: 'auto' }}>
             <Typography variant="h6" gutterBottom>
               {mode === 'create' ? 'Create' : mode === 'edit' ? 'Edit' : 'View'} Journal Voucher

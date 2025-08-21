@@ -22,6 +22,8 @@ import {
 } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { voucherService, reportsService } from '../../services/authService';
+import { voucherService as voucherApi } from '../../services/vouchersService';
+import { generateVoucherPDF, getVoucherPdfConfig } from '../../utils/pdfUtils';
 import MegaMenu from '../../components/MegaMenu';
 import VoucherContextMenu from '../../components/VoucherContextMenu';
 import Grid from '@mui/material/Grid';
@@ -101,9 +103,23 @@ const VoucherManagement: React.FC = () => {
     router.push(`/vouchers/${type.toLowerCase()}/edit/${id}`);
   };
 
-  const handlePrintVoucher = (type: string, id: number) => {
-    // TODO: Implement print functionality, e.g., open a print dialog or generate PDF
-    alert(`Printing ${type} voucher ${id}`);
+  const handlePrintVoucher = async (type: string, id: number) => {
+    try {
+      // Map display type to API type
+      const voucherType = type === 'Purchase' ? 'purchase-vouchers' : 
+                         type === 'Sales' ? 'sales-vouchers' : 
+                         type.toLowerCase().replace(' ', '-');
+      
+      // Fetch voucher data
+      const voucherData = await voucherApi.getVoucherById(voucherType, id);
+      
+      // Generate PDF using the existing PDF utility
+      const pdfConfig = getVoucherPdfConfig(voucherType);
+      await generateVoucherPDF(voucherData, pdfConfig);
+    } catch (error: any) {
+      console.error('Error generating PDF:', error);
+      alert(`Error generating PDF: ${error.message || 'Unknown error'}`);
+    }
   };
 
   const handleEmailVoucher = async (type: string, id: number) => {
@@ -121,13 +137,28 @@ const VoucherManagement: React.FC = () => {
   const handleDeleteVoucher = async (type: string, id: number) => {
     if (window.confirm(`Are you sure you want to delete this ${type} voucher?`)) {
       try {
-        const voucherType = type === 'Purchase' ? 'purchase-vouchers' : (type === 'Sales' ? 'sales-vouchers' : '');
-        if (!voucherType) return alert('Delete not supported for this type');
-
-        // TODO: Implement delete API
-        alert(`Delete functionality will be implemented for ${type} voucher ${id}`);
+        // Map display type to API type
+        const voucherType = type === 'Purchase' ? 'purchase-vouchers' : 
+                           type === 'Sales' ? 'sales-vouchers' : 
+                           type.toLowerCase().replace(' ', '-');
+        
+        await voucherApi.deleteVoucher(voucherType, id);
+        
+        // Refresh the appropriate voucher data
+        if (type === 'Purchase') {
+          refetchPurchaseVouchers();
+        } else if (type === 'Sales') {
+          refetchSalesVouchers();
+        } else if (type === 'Financial') {
+          refetchFinancialVouchers();
+        } else if (type === 'Internal') {
+          refetchInternalVouchers();
+        }
+        
+        alert('Voucher deleted successfully');
       } catch (error: any) {
-        alert(`Error deleting voucher: ${error.message || 'Unknown error'}`);
+        console.error('Error deleting voucher:', error);
+        alert(`Error deleting voucher: ${error.response?.data?.detail || error.message || 'Unknown error'}`);
       }
     }
   };
@@ -151,15 +182,43 @@ const VoucherManagement: React.FC = () => {
     queryKey: ['dashboardStats'],
     queryFn: reportsService.getDashboardStats
   });
-  const { data: purchaseVouchers, isLoading: purchaseLoading } = useQuery({
+  const { data: purchaseVouchers, isLoading: purchaseLoading, refetch: refetchPurchaseVouchers } = useQuery({
     queryKey: ['purchaseVouchers'],
     queryFn: () => voucherService.getVouchers('purchase-vouchers'),
     enabled: tabValue === 0
   });
-  const { data: salesVouchers, isLoading: salesLoading } = useQuery({
+  const { data: salesVouchers, isLoading: salesLoading, refetch: refetchSalesVouchers } = useQuery({
     queryKey: ['salesVouchers'],
     queryFn: () => voucherService.getVouchers('sales-vouchers'),
     enabled: tabValue === 1
+  });
+  
+  // Financial vouchers queries
+  const { data: financialVouchers, isLoading: financialLoading, refetch: refetchFinancialVouchers } = useQuery({
+    queryKey: ['financialVouchers'],
+    queryFn: async () => {
+      const [payments, receipts, journals, contras] = await Promise.all([
+        voucherService.getVouchers('payment-vouchers').catch(() => []),
+        voucherService.getVouchers('receipt-vouchers').catch(() => []),
+        voucherService.getVouchers('journal-vouchers').catch(() => []),
+        voucherService.getVouchers('contra-vouchers').catch(() => [])
+      ]);
+      return [...payments, ...receipts, ...journals, ...contras];
+    },
+    enabled: tabValue === 2
+  });
+  
+  // Internal vouchers queries  
+  const { data: internalVouchers, isLoading: internalLoading, refetch: refetchInternalVouchers } = useQuery({
+    queryKey: ['internalVouchers'],
+    queryFn: async () => {
+      const [manufacturing, stock] = await Promise.all([
+        voucherService.getVouchers('manufacturing-journals').catch(() => []),
+        voucherService.getVouchers('stock-journals').catch(() => [])
+      ]);
+      return [...manufacturing, ...stock];
+    },
+    enabled: tabValue === 3
   });
 
   // Voucher types with real data
@@ -181,16 +240,16 @@ const VoucherManagement: React.FC = () => {
     {
       title: 'Financial Vouchers',
       description: 'Manage payments, receipts, and journal entries',
-      count: 0, // TODO: Implement financial vouchers API
+      count: (financialVouchers || []).length,
       color: '#7B1FA2',
-      vouchers: []
+      vouchers: financialVouchers || []
     },
     {
       title: 'Internal Vouchers',
       description: 'Manage internal transfers and adjustments',
-      count: 0, // TODO: Implement internal vouchers API
+      count: (internalVouchers || []).length,
       color: '#F57C00',
-      vouchers: []
+      vouchers: internalVouchers || []
     }
   ];
 

@@ -14,13 +14,14 @@ import BalanceDisplay from '../../../components/BalanceDisplay';
 import StockDisplay from '../../../components/StockDisplay';
 import ProductAutocomplete from '../../../components/ProductAutocomplete';
 import { useVoucherPage } from '../../../hooks/useVoucherPage';
-import { getVoucherConfig, numberToWords, GST_SLABS } from '../../../utils/voucherUtils';
+import { getVoucherConfig, numberToWords, GST_SLABS, getVoucherStyles } from '../../../utils/voucherUtils';
 import { getStock } from '../../../services/masterService';
 import { voucherService } from '../../../services/vouchersService';
 import api from '../../../lib/api';  // Import api for direct call
 
 const PurchaseOrderPage: React.FC = () => {
   const config = getVoucherConfig('purchase-order');
+  const voucherStyles = getVoucherStyles();
   const {
     // State
     mode,
