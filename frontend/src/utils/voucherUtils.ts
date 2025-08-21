@@ -776,5 +776,158 @@ export const getVoucherStyles = () => ({
         fontSize: '0.875rem'
       }
     }
+  },
+
+  // Optimized table column widths for voucher product tables
+  productTableColumns: {
+    productName: {
+      width: '35%',
+      minWidth: '200px',
+      fontSize: 12,
+      fontWeight: 'bold',
+      padding: '4px 8px',
+      textAlign: 'center' as const
+    },
+    quantity: {
+      width: '12%',
+      minWidth: '80px',
+      fontSize: 12,
+      fontWeight: 'bold',
+      padding: '4px 8px',
+      textAlign: 'center' as const
+    },
+    rate: {
+      width: '10%',
+      minWidth: '70px',
+      fontSize: 12,
+      fontWeight: 'bold',
+      padding: '4px 8px',
+      textAlign: 'center' as const
+    },
+    discount: {
+      width: '8%',
+      minWidth: '60px',
+      fontSize: 12,
+      fontWeight: 'bold',
+      padding: '4px 8px',
+      textAlign: 'center' as const
+    },
+    gst: {
+      width: '8%',
+      minWidth: '60px',
+      fontSize: 12,
+      fontWeight: 'bold',
+      padding: '4px 8px',
+      textAlign: 'center' as const
+    },
+    amount: {
+      width: '12%',
+      minWidth: '90px',
+      fontSize: 12,
+      fontWeight: 'bold',
+      padding: '4px 8px',
+      textAlign: 'center' as const
+    },
+    hsn: {
+      width: '10%',
+      minWidth: '80px',
+      fontSize: 12,
+      fontWeight: 'bold',
+      padding: '4px 8px',
+      textAlign: 'center' as const
+    },
+    action: {
+      width: '8%',
+      minWidth: '60px',
+      fontSize: 12,
+      fontWeight: 'bold',
+      padding: '4px 8px',
+      textAlign: 'center' as const
+    }
+  },
+
+  // GRN specific column widths (different from standard vouchers)
+  grnTableColumns: {
+    productName: {
+      width: '30%',
+      minWidth: '180px',
+      fontSize: 12,
+      fontWeight: 'bold',
+      padding: '4px 8px',
+      textAlign: 'center' as const
+    },
+    orderQty: {
+      width: '12%',
+      minWidth: '80px',
+      fontSize: 12,
+      fontWeight: 'bold',
+      padding: '4px 8px',
+      textAlign: 'center' as const
+    },
+    receivedQty: {
+      width: '12%',
+      minWidth: '80px',
+      fontSize: 12,
+      fontWeight: 'bold',
+      padding: '4px 8px',
+      textAlign: 'center' as const
+    },
+    acceptedQty: {
+      width: '12%',
+      minWidth: '80px',
+      fontSize: 12,
+      fontWeight: 'bold',
+      padding: '4px 8px',
+      textAlign: 'center' as const
+    },
+    rejectedQty: {
+      width: '12%',
+      minWidth: '80px',
+      fontSize: 12,
+      fontWeight: 'bold',
+      padding: '4px 8px',
+      textAlign: 'center' as const
+    },
+    action: {
+      width: '10%',
+      minWidth: '70px',
+      fontSize: 12,
+      fontWeight: 'bold',
+      padding: '4px 8px',
+      textAlign: 'center' as const
+    }
+  },
+
+  // Enhanced table container with minimal gaps
+  optimizedTableContainer: {
+    '& .MuiTableContainer-root': {
+      borderRadius: '4px',
+      border: '1px solid #e0e0e0'
+    },
+    '& .MuiTable-root': {
+      borderCollapse: 'separate',
+      borderSpacing: 0
+    },
+    '& .MuiTableCell-root': {
+      padding: '4px 8px',
+      borderRight: '1px solid #f0f0f0',
+      '&:last-child': {
+        borderRight: 'none'
+      }
+    },
+    '& .MuiTableHead-root .MuiTableCell-root': {
+      backgroundColor: '#fafafa',
+      borderBottom: '2px solid #e0e0e0',
+      fontSize: '12px',
+      fontWeight: 'bold'
+    },
+    '& .MuiTableBody-root .MuiTableRow-root': {
+      '&:hover': {
+        backgroundColor: '#f8f9fa'
+      },
+      '&:nth-of-type(even)': {
+        backgroundColor: '#fafbfc'
+      }
+    }
   }
 });

@@ -461,18 +461,18 @@ const PurchaseVoucherPage: React.FC = () => {
 
           {/* Items Table */}
           <Grid size={12}>
-            <TableContainer component={Paper} sx={{ maxHeight: 300, ...voucherStyles.centeredTable }}>
+            <TableContainer component={Paper} sx={{ maxHeight: 300, ...voucherStyles.centeredTable, ...voucherStyles.optimizedTableContainer }}>
               <Table stickyHeader size="small">
                 <TableHead>
                   <TableRow>
-                    <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1, width: '30%', textAlign: 'center' }}>Product</TableCell>
-                    <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1, textAlign: 'center' }}>Qty</TableCell>
-                    <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1, textAlign: 'center' }}>Rate</TableCell>
-                    <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1, textAlign: 'center' }}>Disc%</TableCell>
-                    <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1, textAlign: 'center' }}>GST%</TableCell>
-                    <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1, textAlign: 'center' }}>Amount</TableCell>
+                    <TableCell sx={voucherStyles.productTableColumns.productName}>Product</TableCell>
+                    <TableCell sx={voucherStyles.productTableColumns.quantity}>Qty</TableCell>
+                    <TableCell sx={voucherStyles.productTableColumns.rate}>Rate</TableCell>
+                    <TableCell sx={voucherStyles.productTableColumns.discount}>Disc%</TableCell>
+                    <TableCell sx={voucherStyles.productTableColumns.gst}>GST%</TableCell>
+                    <TableCell sx={voucherStyles.productTableColumns.amount}>Amount</TableCell>
                     {mode !== 'view' && (
-                      <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1, textAlign: 'center' }}>Action</TableCell>
+                      <TableCell sx={voucherStyles.productTableColumns.action}>Action</TableCell>
                     )}
                   </TableRow>
                 </TableHead>

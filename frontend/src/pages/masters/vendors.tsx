@@ -127,22 +127,9 @@ const VendorsPage: React.FC = () => {
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Typography variant="h6">All Vendors</Typography>
             <ExcelImportExport
+              data={vendors || []}
+              entity="Vendors"
               onImport={bulkImportVendors}
-              onImportSuccess={() => queryClient.invalidateQueries({ queryKey: ['vendors'] })}
-              importLabel="Import Vendors"
-              templateData={[
-                {
-                  name: 'Example Vendor',
-                  address1: '123 Main St',
-                  city: 'Delhi',
-                  state: 'Delhi',
-                  pin_code: '110001',
-                  contact_number: '9876543210',
-                  email: 'vendor@example.com',
-                  gst_number: '07AAACR5055K1ZX',
-                  pan_number: 'AAACR5055K'
-                }
-              ]}
             />
           </Box>
           

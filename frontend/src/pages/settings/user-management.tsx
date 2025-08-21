@@ -108,8 +108,7 @@ const UserManagement: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['organization-users', currentOrgId] });
       setCreateDialogOpen(false);
       resetForm();
-    },
-    enabled: !!currentOrgId
+    }
   });
 
   const updateUserMutation = useMutation({
@@ -120,21 +119,14 @@ const UserManagement: React.FC = () => {
       setEditDialogOpen(false);
       setSelectedUser(null);
       resetForm();
-    },
-    enabled: !!currentOrgId
+    }
   });
 
   const userActionMutation = useMutation({
     mutationFn: ({ userId, action }: { userId: number; action: string }) => {
       switch (action) {
-        case 'reset':
-          return organizationService.resetUserPassword(currentOrgId!, userId);
-        case 'activate':
-          return organizationService.activateUser(currentOrgId!, userId);
-        case 'deactivate':
-          return organizationService.deactivateUser(currentOrgId!, userId);
         case 'delete':
-          return organizationService.deleteUser(currentOrgId!, userId);
+          return organizationService.deleteUserFromOrganization(currentOrgId!, userId);
         default:
           throw new Error('Invalid action');
       }
@@ -144,8 +136,7 @@ const UserManagement: React.FC = () => {
       setActionDialogOpen(false);
       setSelectedUser(null);
       setActionType(null);
-    },
-    enabled: !!currentOrgId
+    }
   });
 
   // Wait for authentication and organization context to be ready
@@ -248,7 +239,7 @@ const UserManagement: React.FC = () => {
       }
       updateUserMutation.mutate({
         userId: selectedUser.id,
-        data: userData
+        userData: userData
       });
     }
   };

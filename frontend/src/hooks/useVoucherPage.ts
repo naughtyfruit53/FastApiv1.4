@@ -122,6 +122,18 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
 
   const itemsWatch = useWatch({ control, name: 'items' });
 
+  const { data: vendorList } = useQuery({
+    queryKey: ['vendors'],
+    queryFn: getVendors,
+    enabled: isOrgContextReady && (config.entityType === 'purchase' || config.entityType === 'financial'),
+  });
+
+  const { data: customerList } = useQuery({
+    queryKey: ['customers'],
+    queryFn: getCustomers,
+    enabled: isOrgContextReady && (config.entityType === 'sales' || config.entityType === 'financial'),
+  });
+
   // Enhanced computed values with rate formatting and GST breakdown
   const { computedItems, totalAmount, totalSubtotal, totalGst, totalCgst, totalSgst, totalIgst } = useMemo(() => {
     if (config.hasItems === false || !itemsWatch) {
@@ -199,18 +211,6 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
       console.error(`[useVoucherPage] Error fetching vouchers for ${config.voucherType}`);
     }
   }, [isLoadingList, voucherList, config.voucherType]);
-
-  const { data: vendorList } = useQuery({
-    queryKey: ['vendors'],
-    queryFn: getVendors,
-    enabled: isOrgContextReady && (config.entityType === 'purchase' || config.entityType === 'financial'),
-  });
-
-  const { data: customerList } = useQuery({
-    queryKey: ['customers'],
-    queryFn: getCustomers,
-    enabled: isOrgContextReady && (config.entityType === 'sales' || config.entityType === 'financial'),
-  });
 
   const { data: employeeList } = useQuery({
     queryKey: ['employees'],

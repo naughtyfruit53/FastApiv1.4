@@ -99,9 +99,10 @@ const CreditNotePage: React.FC = () => {
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
               <Typography variant="h6">Credit Notes</Typography>
               <VoucherHeaderActions
-                onCreate={handleCreate}
-                onSearch={handleModalOpen}
+                mode="create"
                 voucherType="Credit Note"
+                voucherRoute="/vouchers/financial-vouchers/credit-note"
+                onModalOpen={handleModalOpen}
               />
             </Box>
 
@@ -224,7 +225,7 @@ const CreditNotePage: React.FC = () => {
                         required
                         disabled={isViewMode}
                         error={!!errors.customer_id}
-                        helperText={errors.customer_id?.message}
+                        helperText={errors.customer_id?.message?.toString()}
                         InputProps={{
                           ...params.InputProps,
                           endAdornment: (

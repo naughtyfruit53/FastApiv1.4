@@ -75,13 +75,13 @@ const StockManagement: React.FC = () => {
   // Only fetch stock data if organization context is ready
   const { data: stockData, isLoading, error: stockError } = useQuery({
     queryKey: ['stock', stockParams],
-    queryFn: masterDataService.getStock,  // No argument; service uses queryKey[1] as rawParams, cleans, sends
+    queryFn: () => masterDataService.getStock(),  // Fix the function call
     enabled: isOrgContextReady, // Wait for organization context before fetching
   });
 
   const { data: products } = useQuery({
     queryKey: ['products'],
-    queryFn: masterDataService.getProducts,
+    queryFn: () => masterDataService.getProducts(),
     enabled: isOrgContextReady, // Wait for organization context before fetching
   });
   const { data: companyData } = useQuery({
@@ -248,7 +248,7 @@ const StockManagement: React.FC = () => {
               Unable to load stock data
             </Typography>
             <Typography variant="body2" sx={{ mt: 1 }}>
-              {stockError?.userMessage || 'Please check your organization setup and try again.'}
+              {(stockError as any)?.userMessage || stockError?.message || 'Please check your organization setup and try again.'}
             </Typography>
           </Paper>
         )}
