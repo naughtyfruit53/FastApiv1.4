@@ -221,10 +221,15 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
       console.warn('[useVoucherPage] voucherList is not an array:', voucherList);
       return [];
     }
-    return [...voucherList].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    // Sort by voucher number descending (newest voucher numbers at top)
+    return [...voucherList].sort((a, b) => {
+      const aNum = parseInt(a.voucher_number?.toString().replace(/\D/g, '') || '0');
+      const bNum = parseInt(b.voucher_number?.toString().replace(/\D/g, '') || '0');
+      return bNum - aNum;
+    });
   }, [voucherList]);
 
-  const latestVouchers = useMemo(() => sortedVouchers.slice(0, 10), [sortedVouchers]);
+  const latestVouchers = useMemo(() => sortedVouchers.slice(0, 5), [sortedVouchers]);
 
   const handleSearch = () => {
     if (fromDate && toDate && new Date(toDate) < new Date(fromDate)) {

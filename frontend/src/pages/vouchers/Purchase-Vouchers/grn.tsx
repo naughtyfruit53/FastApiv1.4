@@ -401,7 +401,7 @@ const GoodsReceiptNotePage: React.FC = () => {
     <Box>
       {/* Header Actions */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h5" sx={{ fontSize: 20, fontWeight: 'bold' }}>
+        <Typography variant="h5" sx={{ fontSize: 20, fontWeight: 'bold', textAlign: 'center', flex: 1 }}>
           {config.voucherTitle} - {mode === 'create' ? 'Create' : mode === 'edit' ? 'Edit' : 'View'}
         </Typography>
         <VoucherHeaderActions
@@ -537,8 +537,8 @@ const GoodsReceiptNotePage: React.FC = () => {
           </Grid>
 
           {/* Items section */}
-          <Grid size={12} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 27 }}>
-            <Typography variant="h6" sx={{ fontSize: 16, fontWeight: 'bold' }}>Items</Typography>
+          <Grid size={12} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 27 }}>
+            <Typography variant="h6" sx={{ fontSize: 16, fontWeight: 'bold', textAlign: 'center' }}>Items</Typography>
           </Grid>
 
           {/* Items Table */}
@@ -547,74 +547,64 @@ const GoodsReceiptNotePage: React.FC = () => {
               <Table stickyHeader size="small">
                 <TableHead>
                   <TableRow>
-                    <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1, width: '30%' }}>Product</TableCell>
-                    <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1, textAlign: 'right' }}>Order Qty</TableCell>
-                    <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1, textAlign: 'right' }}>Received Qty</TableCell>
-                    <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1, textAlign: 'right' }}>Accepted Qty</TableCell>
-                    <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1, textAlign: 'right' }}>Rejected Qty</TableCell>
+                    <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1, width: '30%', textAlign: 'center' }}>Product</TableCell>
+                    <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1, textAlign: 'center' }}>Order Qty</TableCell>
+                    <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1, textAlign: 'center' }}>Received Qty</TableCell>
+                    <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1, textAlign: 'center' }}>Accepted Qty</TableCell>
+                    <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1, textAlign: 'center' }}>Rejected Qty</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {fields.map((field: any, index: number) => (
                     <React.Fragment key={field.id}>
                       <TableRow>
-                        <TableCell sx={{ p: 1 }}>
+                        <TableCell sx={{ p: 1, textAlign: 'center' }}>
                           <TextField
                             fullWidth
                             value={selectedProducts[index]?.name || ''}
                             disabled
                             size="small"
+                            inputProps={{ style: { textAlign: 'center' } }}
                           />
                         </TableCell>
-                        <TableCell sx={{ p: 1, textAlign: 'right' }}>
+                        <TableCell sx={{ p: 1, textAlign: 'center' }}>
                           <TextField
                             type="number"
                             value={watch(`items.${index}.order_qty`)}
                             disabled
                             size="small"
                             sx={{ width: 80 }}
+                            inputProps={{ style: { textAlign: 'center' } }}
                           />
                         </TableCell>
-                        <TableCell sx={{ p: 1, textAlign: 'right' }}>
+                        <TableCell sx={{ p: 1, textAlign: 'center' }}>
                           <TextField
                             type="number"
-                            {...control.register(`items.${index}.received_qty`, { valueAsNumber: true })}
-                            disabled={mode === 'view'}
-                            size="small"
-                            sx={{ width: 80 }}
+                            inputProps={{ style: { textAlign: 'center' } }}
                           />
                         </TableCell>
-                        <TableCell sx={{ p: 1, textAlign: 'right' }}>
+                        <TableCell sx={{ p: 1, textAlign: 'center' }}>
                           <TextField
                             type="number"
                             {...control.register(`items.${index}.accepted_qty`, { valueAsNumber: true })}
                             disabled={mode === 'view'}
                             size="small"
                             sx={{ width: 80 }}
+                            inputProps={{ style: { textAlign: 'center' } }}
                           />
                         </TableCell>
-                        <TableCell sx={{ p: 1, textAlign: 'right' }}>
+                        <TableCell sx={{ p: 1, textAlign: 'center' }}>
                           <TextField
                             type="number"
                             {...control.register(`items.${index}.rejected_qty`, { valueAsNumber: true })}
                             disabled={mode === 'view'}
                             size="small"
                             sx={{ width: 80 }}
+                            inputProps={{ style: { textAlign: 'center' } }}
                           />
                         </TableCell>
                       </TableRow>
-                      {/* Stock display below the row - only qty and unit */}
-                      <TableRow>
-                        <TableCell colSpan={5} sx={{ py: 0.5, pl: 2, bgcolor: 'action.hover' }}>
-                          {stockLoading[index] ? (
-                            <CircularProgress size={12} />
-                          ) : watch(`items.${index}.product_id`) ? (
-                            <Typography variant="caption" color={getStockColor(watch(`items.${index}.current_stock`), watch(`items.${index}.reorder_level`))}>
-                              {watch(`items.${index}.current_stock`)} {watch(`items.${index}.unit`)}
-                            </Typography>
-                          ) : null}
-                        </TableCell>
-                      </TableRow>
+                      {/* Hide stock display below the row for GRN */}
                     </React.Fragment>
                   ))}
                 </TableBody>
@@ -622,7 +612,61 @@ const GoodsReceiptNotePage: React.FC = () => {
             </TableContainer>
           </Grid>
 
-          {/* No totals as per changes */}
+          {/* Totals Section */}
+          <Grid size={12}>
+            <Box sx={{ mt: 2, p: 2, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography variant="h6" sx={{ fontSize: 16, fontWeight: 'bold', textAlign: 'center' }}>
+                  Totals
+                </Typography>
+                <Grid container spacing={1} sx={{ maxWidth: 300 }}>
+                  <Grid size={6}>
+                    <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14 }}>
+                      Subtotal:
+                    </Typography>
+                  </Grid>
+                  <Grid size={6}>
+                    <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14, fontWeight: 'bold' }}>
+                      ₹{totalSubtotal.toLocaleString()}
+                    </Typography>
+                  </Grid>
+                  <Grid size={6}>
+                    <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14 }}>
+                      GST:
+                    </Typography>
+                  </Grid>
+                  <Grid size={6}>
+                    <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14, fontWeight: 'bold' }}>
+                      ₹{totalGst.toLocaleString()}
+                    </Typography>
+                  </Grid>
+                  <Grid size={6}>
+                    <Typography variant="h6" sx={{ textAlign: 'right', fontSize: 16, fontWeight: 'bold' }}>
+                      Total:
+                    </Typography>
+                  </Grid>
+                  <Grid size={6}>
+                    <Typography variant="h6" sx={{ textAlign: 'right', fontSize: 16, fontWeight: 'bold' }}>
+                      ₹{totalAmount.toLocaleString()}
+                    </Typography>
+                  </Grid>
+                </Grid>
+              </Box>
+            </Box>
+          </Grid>
+
+          {/* Amount in Words */}
+          <Grid size={12}>
+            <TextField
+              fullWidth
+              label="Amount in Words"
+              value={getAmountInWords(totalAmount)}
+              disabled
+              InputLabelProps={{ shrink: true, style: { fontSize: 12 } }}
+              inputProps={{ style: { fontSize: 14, textAlign: 'center' } }}
+              size="small"
+            />
+          </Grid>
 
           {/* Action buttons */}
           <Grid size={12}>
