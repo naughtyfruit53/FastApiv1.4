@@ -266,6 +266,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
         {
           title: 'Financial Reports',
           items: [
+            { name: 'Ledgers', path: '/reports/ledgers', icon: <AccountBalance /> },
             { name: 'Trial Balance', path: '/reports/trial-balance', icon: <BarChart /> },
             { name: 'Profit & Loss', path: '/reports/profit-loss', icon: <TrendingUp /> },
             { name: 'Balance Sheet', path: '/reports/balance-sheet', icon: <Assessment /> }

@@ -690,7 +690,7 @@ const DeliveryChallanPage: React.FC = () => {
       <AddCustomerModal 
         open={showAddCustomerModal}
         onClose={() => setShowAddCustomerModal(false)}
-        onCustomerAdded={refreshMasterData}
+        onAdd={refreshMasterData}
         loading={addCustomerLoading}
         setLoading={setAddCustomerLoading}
       />

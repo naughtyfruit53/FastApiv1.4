@@ -424,7 +424,7 @@ const GoodsReceiptNotePage: React.FC = () => {
       </Box>
 
       <form onSubmit={handleSubmit(handleFormSubmit)} style={voucherStyles.formContainer}>
-        <Grid container spacing={1}>
+        <Grid container spacing={0.5}>
           {/* Voucher Number */}
           <Grid size={6}>
             <TextField
@@ -455,7 +455,7 @@ const GoodsReceiptNotePage: React.FC = () => {
           </Grid>
 
           {/* Voucher Type */}
-          <Grid size={4}>
+          <Grid size={3}>
             <Autocomplete
               size="small"
               options={[{value: 'purchase-order', label: 'Purchase Order'}, {value: 'purchase-voucher', label: 'Purchase Voucher'}]}
@@ -480,7 +480,7 @@ const GoodsReceiptNotePage: React.FC = () => {
           </Grid>
 
           {/* Voucher Number */}
-          <Grid size={4}>
+          <Grid size={3}>
             <Autocomplete
               size="small"
               options={voucherOptions}
@@ -503,8 +503,8 @@ const GoodsReceiptNotePage: React.FC = () => {
             />
           </Grid>
 
-          {/* Vendor */}
-          <Grid size={4}>
+          {/* Vendor - Increased width for better readability */}
+          <Grid size={6}>
             <Autocomplete
               size="small"
               options={enhancedVendorOptions}
@@ -559,6 +559,7 @@ const GoodsReceiptNotePage: React.FC = () => {
                 <TableHead>
                   <TableRow>
                     <TableCell sx={voucherStyles.grnTableColumns.productName}>Product</TableCell>
+                    <TableCell sx={{ ...voucherStyles.grnTableColumns.orderQty, width: '100px' }}>Available Stock</TableCell>
                     <TableCell sx={voucherStyles.grnTableColumns.orderQty}>Order Qty</TableCell>
                     <TableCell sx={voucherStyles.grnTableColumns.receivedQty}>Received Qty</TableCell>
                     <TableCell sx={voucherStyles.grnTableColumns.acceptedQty}>Accepted Qty</TableCell>
@@ -579,6 +580,13 @@ const GoodsReceiptNotePage: React.FC = () => {
                           />
                         </TableCell>
                         <TableCell sx={{ p: 1, textAlign: 'center' }}>
+                          <StockDisplay 
+                            productId={watch(`items.${index}.product_id`)}
+                            showLabel={true}
+                            compact={true}
+                          />
+                        </TableCell>
+                        <TableCell sx={{ p: 1, textAlign: 'center' }}>
                           <TextField
                             type="number"
                             value={watch(`items.${index}.order_qty`)}
@@ -586,12 +594,28 @@ const GoodsReceiptNotePage: React.FC = () => {
                             size="small"
                             sx={{ width: 80 }}
                             inputProps={{ style: { textAlign: 'center' } }}
+                            InputProps={{
+                              endAdornment: watch(`items.${index}.unit`) && (
+                                <span style={{ fontSize: '12px', color: '#666' }}>
+                                  {watch(`items.${index}.unit`)}
+                                </span>
+                              )
+                            }}
                           />
                         </TableCell>
                         <TableCell sx={{ p: 1, textAlign: 'center' }}>
                           <TextField
                             type="number"
                             inputProps={{ style: { textAlign: 'center' } }}
+                            size="small"
+                            sx={{ width: 80 }}
+                            InputProps={{
+                              endAdornment: watch(`items.${index}.unit`) && (
+                                <span style={{ fontSize: '12px', color: '#666' }}>
+                                  {watch(`items.${index}.unit`)}
+                                </span>
+                              )
+                            }}
                           />
                         </TableCell>
                         <TableCell sx={{ p: 1, textAlign: 'center' }}>
@@ -602,6 +626,13 @@ const GoodsReceiptNotePage: React.FC = () => {
                             size="small"
                             sx={{ width: 80 }}
                             inputProps={{ style: { textAlign: 'center' } }}
+                            InputProps={{
+                              endAdornment: watch(`items.${index}.unit`) && (
+                                <span style={{ fontSize: '12px', color: '#666' }}>
+                                  {watch(`items.${index}.unit`)}
+                                </span>
+                              )
+                            }}
                           />
                         </TableCell>
                         <TableCell sx={{ p: 1, textAlign: 'center' }}>
@@ -612,6 +643,13 @@ const GoodsReceiptNotePage: React.FC = () => {
                             size="small"
                             sx={{ width: 80 }}
                             inputProps={{ style: { textAlign: 'center' } }}
+                            InputProps={{
+                              endAdornment: watch(`items.${index}.unit`) && (
+                                <span style={{ fontSize: '12px', color: '#666' }}>
+                                  {watch(`items.${index}.unit`)}
+                                </span>
+                              )
+                            }}
                           />
                         </TableCell>
                       </TableRow>

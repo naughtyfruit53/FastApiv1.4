@@ -72,7 +72,7 @@ const VoucherReferenceDropdown: React.FC<VoucherReferenceDropdownProps> = ({
         const documents = Array.isArray(response.data) ? response.data : [response.data];
         setReferenceOptions(documents.map((doc: any) => ({
           id: doc.id,
-          label: `${doc.voucher_number || doc.number} - ${doc.date}`,
+          label: `${doc.voucher_number || doc.number}`,
           value: doc.id,
           data: doc
         })));

@@ -85,7 +85,7 @@ const CreditNotePage: React.FC = () => {
   };
 
   // Handle customer creation success
-  const handleCustomerCreated = (newCustomer: any) => {
+  const handleCustomerCreated = async (newCustomer: any): Promise<void> => {
     setValue('customer_id', newCustomer.id);
     refreshMasterData();
   };
@@ -320,13 +320,13 @@ const CreditNotePage: React.FC = () => {
       <AddCustomerModal
         open={showAddCustomerModal}
         onClose={() => setShowAddCustomerModal(false)}
-        onCustomerAdded={handleCustomerCreated}
-        isLoading={addCustomerLoading}
-        setIsLoading={setAddCustomerLoading}
+        onAdd={handleCustomerCreated}
+        loading={addCustomerLoading}
       />
 
       {/* Context Menu */}
       <VoucherContextMenu
+        voucherType="credit-note"
         contextMenu={contextMenu}
         onClose={handleContextMenuClose}
         onView={handleView}
@@ -341,16 +341,11 @@ const CreditNotePage: React.FC = () => {
         onClose={handleModalClose}
         vouchers={filteredVouchers}
         voucherType="Credit Note"
+        onVoucherClick={handleView}
         onView={handleView}
         onEdit={handleEdit}
         onDelete={handleDelete}
-        onPrint={handleGeneratePDF}
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        fromDate={fromDate}
-        onFromDateChange={setFromDate}
-        toDate={toDate}
-        onToDateChange={setToDate}
+        onGeneratePDF={handleGeneratePDF}
       />
     </Container>
   );

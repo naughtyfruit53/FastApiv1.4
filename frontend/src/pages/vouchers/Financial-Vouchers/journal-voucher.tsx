@@ -6,6 +6,7 @@ import VoucherContextMenu from '../../../components/VoucherContextMenu';
 import VoucherHeaderActions from '../../../components/VoucherHeaderActions';
 import VoucherListModal from '../../../components/VoucherListModal';
 import VoucherLayout from '../../../components/VoucherLayout';
+import EntitySelector from '../../../components/EntitySelector';
 import { useVoucherPage } from '../../../hooks/useVoucherPage';
 import { getVoucherConfig, numberToWords, getVoucherStyles, parseRateField, formatRateField } from '../../../utils/voucherUtils';
 
@@ -123,7 +124,7 @@ const JournalVoucher: React.FC = () => {
                     onView={() => handleView(voucher.id)}
                     onEdit={() => handleEdit(voucher.id)}
                     onDelete={() => handleDelete(voucher)}
-                    onPrint={() => handleGeneratePDF(voucher)}
+                    onPrint={() => handleGeneratePDF()}
                     showKebab={true}
                     onClose={() => {}}
                   />
@@ -193,19 +194,19 @@ const JournalVoucher: React.FC = () => {
               }}
               inputProps={{ style: { textAlign: 'center' } }}
               error={!!errors.date}
-              helperText={errors.date?.message}
+              helperText={errors.date?.message as string}
             />
           </Grid>
 
           <Grid size={12}>
-            <TextField
-              {...control.register('debit_account')}
+            <EntitySelector
+              name="debit_account"
+              control={control}
               label="Debit Account"
-              fullWidth
+              entityTypes={['ExpenseAccount', 'Customer', 'Vendor', 'Employee']}
+              allowTypeSelection={true}
+              required={true}
               disabled={isViewMode}
-              error={!!errors.debit_account}
-              helperText={errors.debit_account?.message}
-              required
             />
           </Grid>
 
@@ -221,7 +222,7 @@ const JournalVoucher: React.FC = () => {
               fullWidth
               disabled={isViewMode}
               error={!!errors.debit_amount}
-              helperText={errors.debit_amount?.message}
+              helperText={errors.debit_amount??.message as string}
               sx={{
                 ...voucherStyles.rateField,
                 ...voucherStyles.centerField
@@ -253,7 +254,7 @@ const JournalVoucher: React.FC = () => {
               fullWidth
               disabled={isViewMode}
               error={!!errors.credit_amount}
-              helperText={errors.credit_amount?.message}
+              helperText={errors.credit_amount??.message as string}
               sx={{
                 ...voucherStyles.rateField,
                 ...voucherStyles.centerField
@@ -274,14 +275,14 @@ const JournalVoucher: React.FC = () => {
           </Grid>
 
           <Grid size={12}>
-            <TextField
-              {...control.register('credit_account')}
+            <EntitySelector
+              name="credit_account"
+              control={control}
               label="Credit Account"
-              fullWidth
+              entityTypes={['ExpenseAccount', 'Customer', 'Vendor', 'Employee']}
+              allowTypeSelection={true}
+              required={true}
               disabled={isViewMode}
-              error={!!errors.credit_account}
-              helperText={errors.credit_account?.message}
-              required
             />
           </Grid>
 
@@ -294,7 +295,7 @@ const JournalVoucher: React.FC = () => {
               fullWidth
               disabled={isViewMode}
               error={!!errors.description}
-              helperText={errors.description?.message}
+              helperText={errors.description??.message as string}
               placeholder="Enter transaction description..."
             />
           </Grid>
