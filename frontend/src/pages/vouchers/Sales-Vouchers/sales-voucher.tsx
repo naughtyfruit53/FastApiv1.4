@@ -14,13 +14,15 @@ import BalanceDisplay from '../../../components/BalanceDisplay';
 import StockDisplay from '../../../components/StockDisplay';
 import ProductAutocomplete from '../../../components/ProductAutocomplete';
 import { useVoucherPage } from '../../../hooks/useVoucherPage';
-import { getVoucherConfig, numberToWords, GST_SLABS } from '../../../utils/voucherUtils';
+import { getVoucherConfig, numberToWords, GST_SLABS, parseRateField, formatRateField, getVoucherStyles } from '../../../utils/voucherUtils';
 import { getStock } from '../../../services/masterService';
 import { voucherService } from '../../../services/vouchersService';
 import api from '../../../lib/api';  // Import api for direct call
 
 const SalesVoucherPage: React.FC = () => {
   const config = getVoucherConfig('sales-voucher');
+  const voucherStyles = getVoucherStyles();
+  
   const {
     // State
     mode,
@@ -488,13 +490,28 @@ const SalesVoucherPage: React.FC = () => {
                             <Typography sx={{ ml: 1, fontSize: 12 }}>{watch(`items.${index}.unit`)}</Typography>
                           </Box>
                         </TableCell>
-                        <TableCell sx={{ p: 1, textAlign: 'right' }}>
+                        <TableCell sx={{ p: 1, textAlign: 'center' }}>
                           <TextField
                             type="number"
-                            {...control.register(`items.${index}.unit_price`, { valueAsNumber: true })}
+                            {...control.register(`items.${index}.unit_price`, { 
+                              valueAsNumber: true,
+                              setValueAs: (value) => parseRateField(value)
+                            })}
                             disabled={mode === 'view'}
                             size="small"
-                            sx={{ width: 80 }}
+                            sx={{
+                              width: 80,
+                              ...voucherStyles.rateField
+                            }}
+                            inputProps={{ 
+                              min: 0, 
+                              step: 0.01,
+                              style: { textAlign: 'center' }
+                            }}
+                            onChange={(e) => {
+                              const value = parseRateField(e.target.value);
+                              setValue(`items.${index}.unit_price`, value);
+                            }}
                           />
                         </TableCell>
                         <TableCell sx={{ p: 1 }}>

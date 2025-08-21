@@ -9,10 +9,12 @@ import VoucherContextMenu from '../../../components/VoucherContextMenu';
 import VoucherHeaderActions from '../../../components/VoucherHeaderActions';
 import VoucherListModal from '../../../components/VoucherListModal';
 import { useVoucherPage } from '../../../hooks/useVoucherPage';
-import { getVoucherConfig, numberToWords } from '../../../utils/voucherUtils';
+import { getVoucherConfig, numberToWords, getVoucherStyles, parseRateField, formatRateField } from '../../../utils/voucherUtils';
 
 const ReceiptVoucher: React.FC = () => {
   const config = getVoucherConfig('receipt-voucher');
+  const voucherStyles = getVoucherStyles();
+  
   const {
     // State
     mode,
@@ -269,16 +271,30 @@ const ReceiptVoucher: React.FC = () => {
 
                 <Grid item xs={12}>
                   <TextField
-                    {...control.register('total_amount', { valueAsNumber: true })}
+                    {...control.register('total_amount', { 
+                      valueAsNumber: true,
+                      setValueAs: (value) => parseRateField(value)
+                    })}
                     label="Total Amount"
                     type="number"
                     fullWidth
                     disabled={mode === 'view'}
+                    sx={{
+                      ...voucherStyles.rateField,
+                      ...voucherStyles.centerField
+                    }}
                     error={!!errors.total_amount}
                     helperText={errors.total_amount?.message}
                     InputProps={{
                       startAdornment: <InputAdornment position="start">₹</InputAdornment>,
-                      inputProps: { step: "0.01" }
+                      inputProps: { 
+                        step: "0.01",
+                        style: { textAlign: 'center' }
+                      }
+                    }}
+                    onChange={(e) => {
+                      const value = parseRateField(e.target.value);
+                      setValue('total_amount', value);
                     }}
                   />
                 </Grid>
