@@ -1,8 +1,8 @@
 # app/api/v1/vouchers/inter_department_voucher.py
 
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Query
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
 from app.models.base import User
@@ -16,18 +16,32 @@ router = APIRouter(prefix="/inter-department-vouchers", tags=["inter-department-
 
 @router.get("/", response_model=List[InterDepartmentVoucherInDB])
 async def get_inter_department_vouchers(
-    skip: int = 0,
-    limit: int = 100,
-    status: str = None,
+    skip: int = Query(0, ge=0, description="Number of records to skip (for pagination)"),
+    limit: int = Query(5, ge=1, le=500, description="Maximum number of records to return (default 5 for UI standard)"),
+    status: Optional[str] = Query(None, description="Optional filter by voucher status (e.g., 'draft', 'approved')"),
+    sort: str = Query("desc", description="Sort order: 'asc' or 'desc' (default 'desc' for latest first)"),
+    sortBy: str = Query("created_at", description="Field to sort by (default 'created_at')"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    """Get all inter department vouchers with enhanced sorting and pagination"""
     query = db.query(InterDepartmentVoucher).filter(
         InterDepartmentVoucher.organization_id == current_user.organization_id
     )
     
     if status:
         query = query.filter(InterDepartmentVoucher.status == status)
+    
+    # Enhanced sorting - latest first by default
+    if hasattr(InterDepartmentVoucher, sortBy):
+        sort_attr = getattr(InterDepartmentVoucher, sortBy)
+        if sort.lower() == "asc":
+            query = query.order_by(sort_attr.asc())
+        else:
+            query = query.order_by(sort_attr.desc())
+    else:
+        # Default to created_at desc if invalid sortBy field
+        query = query.order_by(InterDepartmentVoucher.created_at.desc())
     
     vouchers = query.offset(skip).limit(limit).all()
     return vouchers
