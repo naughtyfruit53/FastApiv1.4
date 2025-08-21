@@ -32,6 +32,17 @@ async def get_sales_orders(
     if status:
         query = query.filter(SalesOrder.status == status)
     
+    # Enhanced sorting - latest first by default
+    if hasattr(SalesOrder, sortBy):
+        sort_attr = getattr(SalesOrder, sortBy)
+        if sort.lower() == "asc":
+            query = query.order_by(sort_attr.asc())
+        else:
+            query = query.order_by(sort_attr.desc())
+    else:
+        # Default to created_at desc if invalid sortBy field
+        query = query.order_by(SalesOrder.created_at.desc())
+    
     invoices = query.offset(skip).limit(limit).all()
     return invoices
 

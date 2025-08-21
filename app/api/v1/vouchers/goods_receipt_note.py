@@ -32,6 +32,17 @@ async def get_goods_receipt_notes(
     if status:
         query = query.filter(GoodsReceiptNote.status == status)
     
+    # Enhanced sorting - latest first by default
+    if hasattr(GoodsReceiptNote, sortBy):
+        sort_attr = getattr(GoodsReceiptNote, sortBy)
+        if sort.lower() == "asc":
+            query = query.order_by(sort_attr.asc())
+        else:
+            query = query.order_by(sort_attr.desc())
+    else:
+        # Default to created_at desc if invalid sortBy field
+        query = query.order_by(GoodsReceiptNote.created_at.desc())
+    
     invoices = query.offset(skip).limit(limit).all()
     return invoices
 

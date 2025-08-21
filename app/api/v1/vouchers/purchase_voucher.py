@@ -19,18 +19,31 @@ router = APIRouter(tags=["purchase-vouchers"])
 @router.get("/", response_model=List[PurchaseVoucherInDB])
 async def get_purchase_vouchers(
     skip: int = Query(0, ge=0, description="Number of records to skip (for pagination)"),
-    limit: int = Query(100, ge=1, le=500, description="Maximum number of records to return"),
+    limit: int = Query(5, ge=1, le=500, description="Maximum number of records to return (default 5 for UI standard)"),
     status: Optional[str] = Query(None, description="Optional filter by voucher status (e.g., 'draft', 'approved')"),
+    sort: str = Query("desc", description="Sort order: 'asc' or 'desc' (default 'desc' for latest first)"),
+    sortBy: str = Query("created_at", description="Field to sort by (default 'created_at')"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """Get all purchase vouchers"""
+    """Get all purchase vouchers with enhanced sorting and pagination"""
     query = db.query(PurchaseVoucher).options(joinedload(PurchaseVoucher.vendor)).filter(
         PurchaseVoucher.organization_id == current_user.organization_id
     )
     
     if status:
         query = query.filter(PurchaseVoucher.status == status)
+    
+    # Enhanced sorting - latest first by default
+    if hasattr(PurchaseVoucher, sortBy):
+        sort_attr = getattr(PurchaseVoucher, sortBy)
+        if sort.lower() == "asc":
+            query = query.order_by(sort_attr.asc())
+        else:
+            query = query.order_by(sort_attr.desc())
+    else:
+        # Default to created_at desc if invalid sortBy field
+        query = query.order_by(PurchaseVoucher.created_at.desc())
     
     invoices = query.offset(skip).limit(limit).all()
     return invoices
@@ -44,6 +57,79 @@ async def get_next_purchase_voucher_number(
     return VoucherNumberService.generate_voucher_number(
         db, "PV", current_user.organization_id, PurchaseVoucher
     )
+
+@router.get("/reference-options", response_model=List[dict])
+async def get_purchase_voucher_reference_options(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Get available reference document types for purchase vouchers"""
+    return [
+        {"value": "purchase-order", "label": "Purchase Order", "endpoint": "/purchase-orders"},
+        {"value": "grn", "label": "GRN", "endpoint": "/goods-receipt-notes"}
+    ]
+
+@router.get("/reference-documents/{ref_type}", response_model=List[dict])
+async def get_reference_documents_for_purchase_voucher(
+    ref_type: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Get available reference documents of a specific type for purchase vouchers"""
+    from app.models.vouchers import PurchaseOrder, GoodsReceiptNote
+    
+    if ref_type == "purchase-order":
+        documents = db.query(PurchaseOrder).filter(
+            PurchaseOrder.organization_id == current_user.organization_id
+        ).order_by(PurchaseOrder.created_at.desc()).limit(50).all()
+        
+        return [
+            {
+                "id": doc.id,
+                "voucher_number": doc.voucher_number,
+                "date": doc.date.isoformat() if doc.date else None,
+                "total_amount": doc.total_amount,
+                "vendor_id": doc.vendor_id,
+                "items": [
+                    {
+                        "product_id": item.product_id,
+                        "product_name": item.product_name,
+                        "quantity": item.quantity,
+                        "unit_price": item.unit_price,
+                        "unit": item.unit,
+                        "gst_rate": item.gst_rate
+                    } for item in doc.items
+                ] if hasattr(doc, 'items') and doc.items else []
+            } for doc in documents
+        ]
+    
+    elif ref_type == "grn":
+        documents = db.query(GoodsReceiptNote).filter(
+            GoodsReceiptNote.organization_id == current_user.organization_id
+        ).order_by(GoodsReceiptNote.created_at.desc()).limit(50).all()
+        
+        return [
+            {
+                "id": doc.id,
+                "voucher_number": doc.voucher_number,
+                "date": doc.date.isoformat() if doc.date else None,
+                "total_amount": doc.total_amount,
+                "vendor_id": doc.vendor_id,
+                "items": [
+                    {
+                        "product_id": item.product_id,
+                        "product_name": item.product_name,
+                        "quantity": item.quantity,
+                        "unit_price": item.unit_price,
+                        "unit": item.unit,
+                        "gst_rate": item.gst_rate
+                    } for item in doc.items
+                ] if hasattr(doc, 'items') and doc.items else []
+            } for doc in documents
+        ]
+    
+    else:
+        raise HTTPException(status_code=400, detail=f"Invalid reference type: {ref_type}")
 
 # Register both "" and "/" for POST to support both /api/v1/purchase-vouchers and /api/v1/purchase-vouchers/
 @router.post("", response_model=PurchaseVoucherInDB, include_in_schema=False)
