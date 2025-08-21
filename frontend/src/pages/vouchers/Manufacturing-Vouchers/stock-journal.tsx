@@ -320,7 +320,7 @@ export default function StockJournal() {
 
       <Grid container spacing={3}>
         {/* Journal List - Left Side */}
-        <Grid item xs={12} md={5}>
+        <Grid size={12} md={5}>
           <Card>
             <CardContent>
               <Box display="flex" justifyContent="between" alignItems="center" mb={2}>
@@ -383,7 +383,7 @@ export default function StockJournal() {
         </Grid>
 
         {/* Journal Form - Right Side */}
-        <Grid item xs={12} md={7}>
+        <Grid size={12} md={7}>
           <Card>
             <CardContent>
               <Box display="flex" justifyContent="between" alignItems="center" mb={2}>
@@ -406,7 +406,7 @@ export default function StockJournal() {
               <form onSubmit={handleSubmit(onSubmit)}>
                 {/* Basic Details */}
                 <Grid container spacing={2} mb={3}>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <TextField
                       label="Voucher Number"
                       {...control.register('voucher_number')}
@@ -415,7 +415,7 @@ export default function StockJournal() {
                       value={watch('voucher_number')}
                     />
                   </Grid>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <TextField
                       label="Date"
                       type="date"
@@ -425,7 +425,7 @@ export default function StockJournal() {
                       disabled={mode === 'view'}
                     />
                   </Grid>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <FormControl fullWidth>
                       <InputLabel>Journal Type</InputLabel>
                       <Select
@@ -441,7 +441,7 @@ export default function StockJournal() {
                       </Select>
                     </FormControl>
                   </Grid>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <TextField
                       label="Transfer Reason"
                       {...control.register('transfer_reason')}
@@ -454,7 +454,7 @@ export default function StockJournal() {
                 {/* Location Details */}
                 <Typography variant="h6" gutterBottom>Location Details</Typography>
                 <Grid container spacing={2} mb={3}>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <TextField
                       label="From Location"
                       {...control.register('from_location')}
@@ -462,7 +462,7 @@ export default function StockJournal() {
                       disabled={mode === 'view'}
                     />
                   </Grid>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <TextField
                       label="To Location"
                       {...control.register('to_location')}
@@ -470,7 +470,7 @@ export default function StockJournal() {
                       disabled={mode === 'view'}
                     />
                   </Grid>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <TextField
                       label="From Warehouse"
                       {...control.register('from_warehouse')}
@@ -478,7 +478,7 @@ export default function StockJournal() {
                       disabled={mode === 'view'}
                     />
                   </Grid>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <TextField
                       label="To Warehouse"
                       {...control.register('to_warehouse')}
@@ -493,7 +493,7 @@ export default function StockJournal() {
                   <>
                     <Typography variant="h6" gutterBottom>Manufacturing Details</Typography>
                     <Grid container spacing={2} mb={3}>
-                      <Grid item xs={12} sm={6}>
+                      <Grid size={{ xs: 12, sm: 6 }}>
                         <Autocomplete
                           options={manufacturingOrderOptions}
                           getOptionLabel={(option) => option.voucher_number || ''}
@@ -505,7 +505,7 @@ export default function StockJournal() {
                           disabled={mode === 'view'}
                         />
                       </Grid>
-                      <Grid item xs={12} sm={6}>
+                      <Grid size={{ xs: 12, sm: 6 }}>
                         <Autocomplete
                           options={bomOptions}
                           getOptionLabel={(option) => option.bom_name || ''}
@@ -526,7 +526,7 @@ export default function StockJournal() {
                   <>
                     <Typography variant="h6" gutterBottom>Assembly Details</Typography>
                     <Grid container spacing={2} mb={3}>
-                      <Grid item xs={12} sm={6}>
+                      <Grid size={{ xs: 12, sm: 6 }}>
                         <Autocomplete
                           options={productOptions}
                           getOptionLabel={(option) => option.name || ''}
@@ -538,7 +538,7 @@ export default function StockJournal() {
                           disabled={mode === 'view'}
                         />
                       </Grid>
-                      <Grid item xs={12} sm={6}>
+                      <Grid size={{ xs: 12, sm: 6 }}>
                         <TextField
                           label="Assembly Quantity"
                           type="number"
@@ -554,7 +554,7 @@ export default function StockJournal() {
                 {/* Verification Details */}
                 <Typography variant="h6" gutterBottom>Physical Verification</Typography>
                 <Grid container spacing={2} mb={3}>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <FormControlLabel
                       control={
                         <Checkbox
@@ -566,7 +566,7 @@ export default function StockJournal() {
                       label="Physical Verification Done"
                     />
                   </Grid>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <TextField
                       label="Verified By"
                       {...control.register('verified_by')}
@@ -574,7 +574,7 @@ export default function StockJournal() {
                       disabled={mode === 'view'}
                     />
                   </Grid>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <TextField
                       label="Verification Date"
                       type="datetime-local"
@@ -760,7 +760,7 @@ export default function StockJournal() {
 
                 {/* Notes */}
                 <Grid container spacing={2} mb={3}>
-                  <Grid item xs={12}>
+                  <Grid size={12}>
                     <TextField
                       label="Notes"
                       {...control.register('notes')}

@@ -143,7 +143,7 @@ const PaymentVoucher: React.FC = () => {
     <Container maxWidth="xl" sx={{ py: 2 }}>
       <Grid container spacing={3}>
         {/* Left side - Voucher List */}
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Paper sx={{ p: 2, height: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column' }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
               <Typography variant="h6">Payment Vouchers</Typography>
@@ -196,7 +196,7 @@ const PaymentVoucher: React.FC = () => {
         </Grid>
 
         {/* Right side - Voucher Form */}
-        <Grid item xs={12} md={8}>
+        <Grid size={12} md={8}>
           <Paper sx={{ p: 3, height: 'calc(100vh - 120px)', overflow: 'auto' }}>
             <Typography variant="h6" gutterBottom>
               {mode === 'create' ? 'Create' : mode === 'edit' ? 'Edit' : 'View'} Payment Voucher

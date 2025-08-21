@@ -66,8 +66,8 @@ const waitForAuthIfNeeded = async (config: any) => {
     try {
       await Promise.race([authReadyPromise, authTimeout]);
       console.log('[API] Auth context ready, proceeding with request:', config.url);
-    } catch (error) {
-      console.warn('[API] Auth wait failed or timed out, proceeding anyway:', error.message);
+    } catch (error: any) {
+      console.warn('[API] Auth wait failed or timed out, proceeding anyway:', error?.message || error);
       // Continue with request even if auth wait fails
     }
   }

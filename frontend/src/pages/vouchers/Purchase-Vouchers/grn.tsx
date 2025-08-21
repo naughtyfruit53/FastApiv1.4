@@ -422,7 +422,7 @@ const GoodsReceiptNotePage: React.FC = () => {
         />
       </Box>
 
-      <form onSubmit={handleSubmit(handleFormSubmit)}> style={voucherStyles.formContainer}>
+      <form onSubmit={handleSubmit(handleFormSubmit)} style={voucherStyles.formContainer}>
         <Grid container spacing={1}>
           {/* Voucher Number */}
           <Grid size={6}>
@@ -444,9 +444,9 @@ const GoodsReceiptNotePage: React.FC = () => {
               fullWidth
               label="Date"
               type="date"
-              {...control.register(\'date\')}
-              disabled={mode === \'view\'}
-              InputLabelProps={{ shrink: true, style: { fontSize: 12, display: \'block\', visibility: \'visible\' } }}
+              {...control.register('date')}
+              disabled={mode === 'view'}
+              InputLabelProps={{ shrink: true, style: { fontSize: 12, display: 'block', visibility: 'visible' } }}
               inputProps={{ style: { fontSize: 14, textAlign: 'center' } }}
               size="small"
               sx={{ '& .MuiInputBase-root': { height: 27 } }}

@@ -48,17 +48,17 @@ const VoucherReferenceDropdown: React.FC<VoucherReferenceDropdownProps> = ({
   const config = getVoucherConfig(voucherType as any);
   const allowedTypes = getReferenceVoucherOptions(voucherType as any);
 
+  // Fetch reference documents when reference type changes
+  useEffect(() => {
+    if (value.referenceType && config.referenceConfig) {
+      fetchReferenceDocuments(value.referenceType);
+    }
+  }, [value.referenceType, config.referenceConfig]);
+
   // If this voucher type doesn't support references, don't render
   if (!config.referenceConfig) {
     return null;
   }
-
-  // Fetch reference documents when reference type changes
-  useEffect(() => {
-    if (value.referenceType) {
-      fetchReferenceDocuments(value.referenceType);
-    }
-  }, [value.referenceType]);
 
   const fetchReferenceDocuments = async (referenceType: string) => {
     setLoadingReferences(true);
@@ -122,7 +122,7 @@ const VoucherReferenceDropdown: React.FC<VoucherReferenceDropdownProps> = ({
     <Box sx={{ width: '100%' }}>
       <Grid container spacing={2}>
         {/* Reference Type Selection */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <FormControl fullWidth size="small">
             <InputLabel 
               id="reference-type-label"
@@ -159,7 +159,7 @@ const VoucherReferenceDropdown: React.FC<VoucherReferenceDropdownProps> = ({
 
         {/* Reference Document Selection */}
         {value.referenceType && (
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <Autocomplete
               size="small"
               options={referenceOptions}

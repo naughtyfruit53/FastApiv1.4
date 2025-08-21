@@ -79,7 +79,7 @@ const ProductAutocomplete: React.FC<ProductAutocompleteProps> = ({
   // Filtered options based on input
   const filteredOptions = React.useMemo(() => {
     const lowerInput = inputValue.toLowerCase();
-    return allProducts.filter(product => 
+    return allProducts.filter((product: any) => 
       product.product_name.toLowerCase().includes(lowerInput) ||
       (product.hsn_code || '').toLowerCase().includes(lowerInput) ||
       (product.part_number || '').toLowerCase().includes(lowerInput)

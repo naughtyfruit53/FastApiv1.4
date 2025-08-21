@@ -65,7 +65,7 @@ const FinishedGoodsReceipt: React.FC = () => {
 
         <Grid container spacing={3}>
           {recentProduction.map((order) => (
-            <Grid item xs={12} md={6} key={order.id}>
+            <Grid size={{ xs: 12, md: 6 }} key={order.id}>
               <Card>
                 <CardContent>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
@@ -101,7 +101,7 @@ const FinishedGoodsReceipt: React.FC = () => {
                   </Box>
 
                   <Grid container spacing={2}>
-                    <Grid item xs={6}>
+                    <Grid size={6}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <CheckCircle color="success" fontSize="small" />
                         <Typography variant="body2">
@@ -109,7 +109,7 @@ const FinishedGoodsReceipt: React.FC = () => {
                         </Typography>
                       </Box>
                     </Grid>
-                    <Grid item xs={6}>
+                    <Grid size={6}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Build color="error" fontSize="small" />
                         <Typography variant="body2">
@@ -137,7 +137,7 @@ const FinishedGoodsReceipt: React.FC = () => {
             Integration Points
           </Typography>
           <Grid container spacing={2}>
-            <Grid item xs={12} md={4}>
+            <Grid size={{ xs: 12, md: 4 }}>
               <Card variant="outlined">
                 <CardContent>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
@@ -152,7 +152,7 @@ const FinishedGoodsReceipt: React.FC = () => {
                 </CardContent>
               </Card>
             </Grid>
-            <Grid item xs={12} md={4}>
+            <Grid size={{ xs: 12, md: 4 }}>
               <Card variant="outlined">
                 <CardContent>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
@@ -167,7 +167,7 @@ const FinishedGoodsReceipt: React.FC = () => {
                 </CardContent>
               </Card>
             </Grid>
-            <Grid item xs={12} md={4}>
+            <Grid size={{ xs: 12, md: 4 }}>
               <Card variant="outlined">
                 <CardContent>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>

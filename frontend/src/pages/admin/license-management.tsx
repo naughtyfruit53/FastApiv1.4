@@ -38,7 +38,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { organizationService } from '../../services/authService';
-import { adminService } from '../../services/adminService';
+import adminService from '../../services/adminService';
 import CreateOrganizationLicenseModal from '../../components/CreateOrganizationLicenseModal';
 
 interface Organization {

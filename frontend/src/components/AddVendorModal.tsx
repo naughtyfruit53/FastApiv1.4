@@ -128,7 +128,8 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
         setGstExtractedData(extractedData);
         setGstFile(file);
       } else {
-        throw new Error(response.data.detail || 'Extraction failed');
+        const errorMessage = (response.data as any)?.detail || 'Extraction failed';
+        throw new globalThis.Error(errorMessage);
       }
       
     } catch (error: any) {

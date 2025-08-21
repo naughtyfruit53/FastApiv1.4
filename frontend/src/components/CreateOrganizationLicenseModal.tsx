@@ -304,7 +304,7 @@ const CreateOrganizationLicenseModal: React.FC<CreateOrganizationLicenseModalPro
                 </Typography>
                 
                 <Grid container spacing={3}>
-                  <Grid item xs={12}>
+                  <Grid size={12}>
                     <TextField
                       fullWidth
                       label="Organization Name"
@@ -323,7 +323,7 @@ const CreateOrganizationLicenseModal: React.FC<CreateOrganizationLicenseModalPro
                     />
                   </Grid>
                   
-                  <Grid item xs={12} md={6}>
+                  <Grid size={{ xs: 12, md: 6 }}>
                     <TextField
                       fullWidth
                       label="Primary/Admin Email"
@@ -343,7 +343,7 @@ const CreateOrganizationLicenseModal: React.FC<CreateOrganizationLicenseModalPro
                     />
                   </Grid>
                   
-                  <Grid item xs={12} md={6}>
+                  <Grid size={{ xs: 12, md: 6 }}>
                     <TextField
                       fullWidth
                       label="Primary Phone Number"
@@ -362,7 +362,7 @@ const CreateOrganizationLicenseModal: React.FC<CreateOrganizationLicenseModalPro
                     />
                   </Grid>
                   
-                  <Grid item xs={12} md={6}>
+                  <Grid size={{ xs: 12, md: 6 }}>
                     <TextField
                       fullWidth
                       label="Maximum Users"
@@ -386,7 +386,7 @@ const CreateOrganizationLicenseModal: React.FC<CreateOrganizationLicenseModalPro
                     />
                   </Grid>
                   
-                  <Grid item xs={12} md={6}>
+                  <Grid size={{ xs: 12, md: 6 }}>
                     <TextField
                       fullWidth
                       label="GST Number (Optional)"
@@ -420,7 +420,7 @@ const CreateOrganizationLicenseModal: React.FC<CreateOrganizationLicenseModalPro
                 </Typography>
                 
                 <Grid container spacing={3}>
-                  <Grid item xs={12}>
+                  <Grid size={12}>
                     <TextField
                       fullWidth
                       label="Full Address"
@@ -441,7 +441,7 @@ const CreateOrganizationLicenseModal: React.FC<CreateOrganizationLicenseModalPro
                     />
                   </Grid>
                   
-                  <Grid item xs={12} md={4}>
+                  <Grid size={{ xs: 12, md: 4 }}>
                     <TextField
                       fullWidth
                       label="PIN Code"
@@ -471,7 +471,7 @@ const CreateOrganizationLicenseModal: React.FC<CreateOrganizationLicenseModalPro
                     />
                   </Grid>
                   
-                  <Grid item xs={12} md={4}>
+                  <Grid size={{ xs: 12, md: 4 }}>
                     <TextField
                       fullWidth
                       label="City"
@@ -490,7 +490,7 @@ const CreateOrganizationLicenseModal: React.FC<CreateOrganizationLicenseModalPro
                     />
                   </Grid>
                   
-                  <Grid item xs={12} md={4}>
+                  <Grid size={{ xs: 12, md: 4 }}>
                     <FormControl fullWidth error={!!errors.state} variant="outlined">
                       <InputLabel>State</InputLabel>
                       <Select
@@ -514,7 +514,7 @@ const CreateOrganizationLicenseModal: React.FC<CreateOrganizationLicenseModalPro
                     </FormControl>
                   </Grid>
                   
-                  <Grid item xs={12} md={6}>
+                  <Grid size={{ xs: 12, md: 6 }}>
                     <TextField
                       fullWidth
                       label="State Code"

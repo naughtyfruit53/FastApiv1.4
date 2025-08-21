@@ -82,7 +82,6 @@ const VoucherLayout: React.FC<VoucherLayoutProps> = ({
                   sx={{ 
                     fontSize: 18, 
                     fontWeight: 'bold', 
-                    textAlign: 'center', 
                     flex: 1,
                     ...voucherStyles.centerText
                   }}

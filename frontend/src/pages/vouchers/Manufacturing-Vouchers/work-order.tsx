@@ -45,7 +45,7 @@ const WorkOrder: React.FC = () => {
 
         <Grid container spacing={3} sx={{ mt: 2 }}>
           {workOrderTypes.map((type, index) => (
-            <Grid item xs={12} sm={6} md={6} key={index}>
+            <Grid size={{ xs: 12, sm: 6 }} md={6} key={index}>
               <Card 
                 sx={{ 
                   height: '100%',

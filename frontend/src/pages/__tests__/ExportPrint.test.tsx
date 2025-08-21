@@ -34,11 +34,15 @@ const createWrapper = () => {
     }
   });
   
-  return ({ children }: { children: React.ReactNode }) => (
+  const TestProvider = ({ children }: { children: React.ReactNode }) => (
     <QueryClientProvider client={queryClient}>
       {children}
     </QueryClientProvider>
   );
+  
+  TestProvider.displayName = 'TestProvider';
+  
+  return TestProvider;
 };
 
 describe('Export and Print Functionality', () => {

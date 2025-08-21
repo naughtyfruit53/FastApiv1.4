@@ -110,7 +110,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     }
   }, [config.entityType, config.hasItems]);
 
-  const { control, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm({
+  const { control, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<any>({
     defaultValues
   });
 
@@ -134,7 +134,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     }
     
     // Ensure all rates are properly formatted
-    const formattedItems = itemsWatch.map(item => ({
+    const formattedItems = itemsWatch.map((item: any) => ({
       ...item,
       unit_price: enhancedRateUtils.parseRate(String(item.unit_price || 0))
     }));
@@ -151,19 +151,24 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
       sort: 'desc',
       sortBy: 'created_at'
     }),
-    enabled: isOrgContextReady,
-    onSuccess: (data) => {
-      console.log(`[useVoucherPage] Successfully fetched vouchers for ${config.voucherType}:`, data);
-      // Apply enhanced sorting (latest first)
-      if (Array.isArray(data)) {
-        const sorted = voucherListUtils.sortLatestFirst(data);
-        setFilteredVouchers(sorted);
-      }
-    },
-    onError: (error: any) => {
-      console.error(`[useVoucherPage] Error fetching vouchers for ${config.voucherType}:`, error);
-    },
+    enabled: isOrgContextReady
   });
+
+  // Handle data sorting when vouchers data changes
+  useEffect(() => {
+    if (voucherList && Array.isArray(voucherList)) {
+      console.log(`[useVoucherPage] Successfully fetched vouchers for ${config.voucherType}:`, voucherList);
+      const sorted = voucherListUtils.sortLatestFirst(voucherList);
+      setFilteredVouchers(sorted);
+    }
+  }, [voucherList, config.voucherType]);
+
+  // Handle error logging
+  useEffect(() => {
+    if (isLoadingList === false && !voucherList) {
+      console.error(`[useVoucherPage] Error fetching vouchers for ${config.voucherType}`);
+    }
+  }, [isLoadingList, voucherList, config.voucherType]);
 
   const { data: vendorList } = useQuery({
     queryKey: ['vendors'],
@@ -512,186 +517,6 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     try {
       const response = await masterDataService.createProduct(productData);
       const newProduct = response.data;
-      
-      // Update query data immediately
-      queryClient.setQueryData(['products'], (old: any) => old ? [...old, newProduct] : [newProduct]);
-      queryClient.invalidateQueries({ queryKey: ['products'] });
-      
-      setShowAddProductModal(false);
-      alert('Product added successfully!');
-    } catch (error: any) {
-      console.error('Error adding product:', error);
-      alert(error.response?.data?.detail || 'Error adding product');
-    } finally {
-      setAddProductLoading(false);
-    }
-  }, [queryClient, setAddProductLoading, setShowAddProductModal]);
-
-  // Shipping address add handler
-  const handleAddShipping = useCallback(async (shippingData: any) => {
-    setAddShippingLoading(true);
-    try {
-      // Add shipping logic here
-      setShowShippingModal(false);
-      alert('Shipping address added successfully!');
-    } catch (error: any) {
-      console.error('Error adding shipping address:', error);
-      alert('Error adding shipping address');
-    } finally {
-      setAddShippingLoading(false);
-    }
-  }, [setAddShippingLoading, setShowShippingModal]);
-
-  // Effects
-  useEffect(() => {
-    if (mode === 'create' && nextVoucherNumber) {
-      setValue('voucher_number', nextVoucherNumber);
-    } else if (voucherData) {
-      reset(voucherData);
-    } else if (mode === 'create') {
-      reset(defaultValues);
-    }
-  }, [voucherData, mode, reset, nextVoucherNumber, setValue, defaultValues]);
-
-  useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'refreshMasterData') {
-        refreshMasterData();
-        localStorage.removeItem('refreshMasterData');
-      }
-    };
-    
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, [refreshMasterData]);
-
-  useEffect(() => {
-    if (mode === 'create' && isOrgContextReady) {
-      refetchNextNumber();
-    }
-  }, [mode, isOrgContextReady, refetchNextNumber]);
-
-  useEffect(() => {
-    console.log('Next Voucher Number:', nextVoucherNumber);
-    console.log('Is Next Number Loading:', isNextNumberLoading);
-    console.log('Is Org Context Ready:', isOrgContextReady);
-    console.log('Mode:', mode);
-  }, [nextVoucherNumber, isNextNumberLoading, isOrgContextReady, mode]);
-
-  // Loading state
-  const isLoading = isLoadingList || isFetching || !isOrgContextReady;
-
-  // Refetch voucher list when org context becomes ready
-  useEffect(() => {
-    if (isOrgContextReady) {
-      console.log('[useVoucherPage] Org context ready - refetching voucher list');
-      refetchVoucherList();
-    }
-  }, [isOrgContextReady, refetchVoucherList]);
-
-  // Refetch list after create/update - Enhanced for immediate refresh
-  useEffect(() => {
-    if (createMutation.isSuccess || updateMutation.isSuccess) {
-      // Immediate invalidation and refetch
-      queryClient.invalidateQueries({ queryKey: [config.voucherType] });
-      // Force immediate refetch
-      refetchVoucherList();
-      
-      // Additional immediate refresh after short delay to ensure backend has processed
-      setTimeout(() => {
-        refetchVoucherList();
-      }, 500);
-    }
-  }, [createMutation.isSuccess, updateMutation.isSuccess, queryClient, config.voucherType, refetchVoucherList]);
-
-  // Number to words utility
-  const getAmountInWords = useCallback((amount: number) => {
-    return numberToWords(amount);
-  }, []);
-
-  // Master data refresh functionality
-  const refreshMasterData = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ['vendors'] });
-    queryClient.invalidateQueries({ queryKey: ['customers'] });
-    queryClient.invalidateQueries({ queryKey: ['products'] });
-  }, [queryClient]);
-
-  // Customer add handler with auto-selection
-  const handleAddCustomer = useCallback(async (customerData: any) => {
-    setAddCustomerLoading(true);
-    try {
-      const response = await masterDataService.createCustomer(customerData);
-      const newCustomer = response;
-      
-      // Update query data immediately
-      queryClient.setQueryData(['customers'], (old: any) => old ? [...old, newCustomer] : [newCustomer]);
-      queryClient.invalidateQueries({ queryKey: ['customers'] });
-      
-      // Auto-select the new customer (conditional on entity type)
-      if (config.entityType === 'sales') {
-        setValue('customer_id', newCustomer.id);
-      }
-      
-      setShowAddCustomerModal(false);
-      alert('Customer added successfully!');
-    } catch (error: any) {
-      console.error('Error adding customer:', error);
-      let errorMsg = 'Error adding customer';
-      if (error.response?.data?.detail) {
-        const detail = error.response.data.detail;
-        if (Array.isArray(detail)) {
-          errorMsg = detail.map((err: any) => err.msg || err).join(', ');
-        } else if (typeof detail === 'string') {
-          errorMsg = detail;
-        }
-      }
-      alert(errorMsg);
-    } finally {
-      setAddCustomerLoading(false);
-    }
-  }, [queryClient, setValue, setAddCustomerLoading, setShowAddCustomerModal]);
-
-  // Vendor add handler with auto-selection
-  const handleAddVendor = useCallback(async (vendorData: any) => {
-    setAddVendorLoading(true);
-    try {
-      const response = await masterDataService.createVendor(vendorData);
-      const newVendor = response;
-      
-      // Update query data immediately
-      queryClient.setQueryData(['vendors'], (old: any) => old ? [...old, newVendor] : [newVendor]);
-      queryClient.invalidateQueries({ queryKey: ['vendors'] });
-      
-      // Auto-select the new vendor (conditional on entity type)  
-      if (config.entityType === 'purchase') {
-        setValue('vendor_id', newVendor.id);
-      }
-      
-      setShowAddVendorModal(false);
-      alert('Vendor added successfully!');
-    } catch (error: any) {
-      console.error('Error adding vendor:', error);
-      let errorMsg = 'Error adding vendor';
-      if (error.response?.data?.detail) {
-        const detail = error.response.data.detail;
-        if (Array.isArray(detail)) {
-          errorMsg = detail.map((err: any) => err.msg || err).join(', ');
-        } else if (typeof detail === 'string') {
-          errorMsg = detail;
-        }
-      }
-      alert(errorMsg);
-    } finally {
-      setAddVendorLoading(false);
-    }
-  }, [queryClient, setValue, setAddVendorLoading, setShowAddVendorModal]);
-
-  // Product add handler  
-  const handleAddProduct = useCallback(async (productData: any) => {
-    setAddProductLoading(true);
-    try {
-      const response = await masterDataService.createProduct(productData);
-      const newProduct = response;
       
       // Update query data immediately
       queryClient.setQueryData(['products'], (old: any) => old ? [...old, newProduct] : [newProduct]);

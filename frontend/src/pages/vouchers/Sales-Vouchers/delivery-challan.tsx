@@ -10,7 +10,7 @@ import VoucherContextMenu from '../../../components/VoucherContextMenu';
 import VoucherLayout from '../../../components/VoucherLayout';
 import VoucherHeaderActions from '../../../components/VoucherHeaderActions';
 import VoucherListModal from '../../../components/VoucherListModal';
-import VoucherReferenceDropdown from \'../../../components/VoucherReferenceDropdown\';
+import VoucherReferenceDropdown from '../../../components/VoucherReferenceDropdown';
 import BalanceDisplay from '../../../components/BalanceDisplay';
 import StockDisplay from '../../../components/StockDisplay';
 import ProductAutocomplete from '../../../components/ProductAutocomplete';
@@ -344,7 +344,7 @@ const DeliveryChallanPage: React.FC = () => {
         />
       </Box>
 
-      <form onSubmit={handleSubmit(onSubmit)}> style={voucherStyles.formContainer}>
+      <form onSubmit={handleSubmit(onSubmit)} style={voucherStyles.formContainer}>
         <Grid container spacing={1}>
           {/* Voucher Number */}
           <Grid size={6}>
@@ -366,9 +366,9 @@ const DeliveryChallanPage: React.FC = () => {
               fullWidth
               label="Date"
               type="date"
-              {...control.register(\'date\')}
-              disabled={mode === \'view\'}
-              InputLabelProps={{ shrink: true, style: { fontSize: 12, display: \'block\', visibility: \'visible\' } }}
+              {...control.register('date')}
+              disabled={mode === 'view'}
+              InputLabelProps={{ shrink: true, style: { fontSize: 12, display: 'block', visibility: 'visible' } }}
               inputProps={{ style: { fontSize: 14, textAlign: 'center' } }}
               size="small"
               sx={{ '& .MuiInputBase-root': { height: 27 } }}
@@ -602,7 +602,7 @@ const DeliveryChallanPage: React.FC = () => {
                   </Grid>
                   <Grid size={6}>
                     <Typography variant="h6" sx={{ textAlign: 'right', fontSize: 16, fontWeight: 'bold' }}>
-                      /* Total removed for GRN/Delivery Challan */
+                      {/* Total removed for GRN/Delivery Challan */}
                     </Typography>
                   </Grid>
                 </Grid>
