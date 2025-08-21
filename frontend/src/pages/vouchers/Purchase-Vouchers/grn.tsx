@@ -14,7 +14,7 @@ import BalanceDisplay from '../../../components/BalanceDisplay';
 import StockDisplay from '../../../components/StockDisplay';
 import ProductAutocomplete from '../../../components/ProductAutocomplete';
 import { useVoucherPage } from '../../../hooks/useVoucherPage';
-import { getVoucherConfig, numberToWords, GST_SLABS, parseRateField, formatRateField } from '../../../utils/voucherUtils';
+import { getVoucherConfig, numberToWords, GST_SLABS, parseRateField, formatRateField, getVoucherStyles } from '../../../utils/voucherUtils';
 import { getStock } from '../../../services/masterService';
 import { voucherService } from '../../../services/vouchersService';
 import api from '../../../lib/api';  // Import api for direct call
@@ -24,6 +24,7 @@ import { useQuery } from '@tanstack/react-query';
 const GoodsReceiptNotePage: React.FC = () => {
   const { isOrgContextReady } = useAuth();
   const config = getVoucherConfig('grn');
+  const voucherStyles = getVoucherStyles();
   const {
     // State
     mode,
