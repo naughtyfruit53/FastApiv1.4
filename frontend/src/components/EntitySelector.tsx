@@ -82,7 +82,7 @@ const EntitySelector: React.FC<EntitySelectorProps> = ({
     }
   };
 
-  const handleEntityCreated = (newEntity: any) => {
+  const handleEntityCreated = async (newEntity: any) => {
     setShowAddModal(false);
     if (onEntityCreated) {
       onEntityCreated(newEntity);
@@ -221,7 +221,7 @@ const EntitySelector: React.FC<EntitySelectorProps> = ({
         <AddCustomerModal
           open={showAddModal}
           onClose={() => setShowAddModal(false)}
-          onCustomerAdded={handleEntityCreated}
+          onAdd={handleEntityCreated}
         />
       )}
       
@@ -229,7 +229,7 @@ const EntitySelector: React.FC<EntitySelectorProps> = ({
         <AddVendorModal
           open={showAddModal}
           onClose={() => setShowAddModal(false)}
-          onVendorAdded={handleEntityCreated}
+          onAdd={handleEntityCreated}
         />
       )}
     </Box>

@@ -1,6 +1,6 @@
 // Receipt Voucher Page - Refactored using shared DRY logic
 import React from 'react';
-import { Box, Button, TextField, Typography, Grid, Alert, CircularProgress, Container, Autocomplete, createFilterOptions, InputAdornment, Tooltip, Modal, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
+import { Box, Button, TextField, Typography, Grid, Alert, CircularProgress, Container, Autocomplete, createFilterOptions, InputAdornment, Tooltip, Modal, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 import { Add, Visibility, Edit } from '@mui/icons-material';
 import { Controller } from 'react-hook-form';
 import AddVendorModal from '../../../components/AddVendorModal';
@@ -8,6 +8,8 @@ import AddCustomerModal from '../../../components/AddCustomerModal';
 import VoucherContextMenu from '../../../components/VoucherContextMenu';
 import VoucherHeaderActions from '../../../components/VoucherHeaderActions';
 import VoucherListModal from '../../../components/VoucherListModal';
+import VoucherLayout from '../../../components/VoucherLayout';
+import SearchableDropdown from '../../../components/SearchableDropdown';
 import { useVoucherPage } from '../../../hooks/useVoucherPage';
 import { getVoucherConfig, numberToWords, getVoucherStyles, parseRateField, formatRateField } from '../../../utils/voucherUtils';
 
@@ -92,6 +94,42 @@ const ReceiptVoucher: React.FC = () => {
       setValue(key, voucher[key]);
     });
   };
+
+  // Combined list of all parties (customers + vendors) for unified dropdown
+  const allParties = [
+    ...(customerList || []).map((customer: any) => ({
+      id: customer.id,
+      name: customer.name,
+      email: customer.email,
+      type: 'Customer',
+      value: customer.id,
+      label: `${customer.name} (Customer)`
+    })),
+    ...(vendorList || []).map((vendor: any) => ({
+      id: vendor.id,
+      name: vendor.name,
+      email: vendor.email,
+      type: 'Vendor',
+      value: vendor.id,
+      label: `${vendor.name} (Vendor)`
+    }))
+  ];
+
+  // Payment methods for receipt vouchers
+  const paymentMethods = [
+    'Cash',
+    'Bank Transfer',
+    'Cheque',
+    'Credit Card',
+    'Debit Card',
+    'Online Payment',
+    'UPI',
+    'Net Banking'
+  ];
+
+  // Get selected entity from form
+  const selectedEntity = watch('entity');
+  const isViewMode = mode === 'view';
 
   return (
     <Container maxWidth="xl" sx={{ py: 2 }}>
