@@ -219,12 +219,70 @@ export const VOUCHER_PDF_CONFIGS: Record<string, VoucherPdfConfig> = {
     showTaxDetails: true,
     entityType: 'customer'
   },
+  'debit-note': {
+    voucherType: 'debit-note',
+    voucherTitle: 'DEBIT NOTE',
+    showItems: true,
+    showTaxDetails: true,
+    entityType: 'vendor'
+  },
   'non-sales-credit-note': {
     voucherType: 'non-sales-credit-note',
     voucherTitle: 'NON-SALES CREDIT NOTE',
     showItems: true,
     showTaxDetails: true,
     entityType: 'customer'
+  },
+  
+  // Manufacturing Vouchers
+  'job-card': {
+    voucherType: 'job-card',
+    voucherTitle: 'JOB CARD',
+    showItems: true,
+    showTaxDetails: true,
+    entityType: 'vendor'
+  },
+  'production-order': {
+    voucherType: 'production-order',
+    voucherTitle: 'PRODUCTION ORDER',
+    showItems: true,
+    showTaxDetails: false
+  },
+  'work-order': {
+    voucherType: 'work-order',
+    voucherTitle: 'WORK ORDER',
+    showItems: true,
+    showTaxDetails: false
+  },
+  'material-receipt': {
+    voucherType: 'material-receipt',
+    voucherTitle: 'MATERIAL RECEIPT',
+    showItems: true,
+    showTaxDetails: false
+  },
+  'material-requisition': {
+    voucherType: 'material-requisition',
+    voucherTitle: 'MATERIAL REQUISITION',
+    showItems: true,
+    showTaxDetails: false
+  },
+  'finished-good-receipt': {
+    voucherType: 'finished-good-receipt',
+    voucherTitle: 'FINISHED GOODS RECEIPT',
+    showItems: true,
+    showTaxDetails: false
+  },
+  'manufacturing-journal': {
+    voucherType: 'manufacturing-journal',
+    voucherTitle: 'MANUFACTURING JOURNAL',
+    showItems: false,
+    showTaxDetails: false
+  },
+  'stock-journal': {
+    voucherType: 'stock-journal',
+    voucherTitle: 'STOCK JOURNAL',
+    showItems: true,
+    showTaxDetails: false
   }
 };
 
@@ -243,4 +301,62 @@ export const getVoucherPdfConfig = (voucherType: string): VoucherPdfConfig => {
     };
   }
   return config;
+};
+
+/**
+ * Standalone PDF generation function for individual vouchers
+ * Can be used in any voucher component without requiring useVoucherPage hook
+ */
+export const generateStandalonePDF = async (
+  voucherData: any, 
+  voucherType: string, 
+  entityData?: { vendor?: any; customer?: any; employee?: any }
+) => {
+  try {
+    console.log('[PDF] Generating standalone PDF for:', voucherType, voucherData);
+    
+    // Check authorization
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('You must be logged in to generate PDFs');
+      return;
+    }
+
+    // Get PDF configuration
+    const pdfConfig = getVoucherPdfConfig(voucherType);
+    
+    // Prepare PDF data with entity information
+    const pdfData: VoucherPdfData = {
+      voucher_number: voucherData.voucher_number || voucherData.job_number || 'Unknown',
+      date: voucherData.date || new Date().toISOString().split('T')[0],
+      reference: voucherData.reference || voucherData.po_number,
+      notes: voucherData.notes || voucherData.description,
+      total_amount: voucherData.total_amount || voucherData.total_cost || 0,
+      items: voucherData.items || voucherData.materials || [],
+      // Map entity information
+      vendor: entityData?.vendor,
+      customer: entityData?.customer,
+      // Additional voucher-specific fields
+      payment_method: voucherData.payment_method,
+      receipt_method: voucherData.receipt_method,
+      payment_terms: voucherData.payment_terms,
+      from_account: voucherData.from_account,
+      to_account: voucherData.to_account,
+      // Manufacturing-specific fields
+      job_type: voucherData.job_type,
+      job_description: voucherData.job_description,
+      expected_completion_date: voucherData.expected_completion_date,
+      actual_completion_date: voucherData.actual_completion_date,
+      materials_supplied_by: voucherData.materials_supplied_by,
+      quality_specifications: voucherData.quality_specifications
+    };
+
+    // Generate PDF
+    await generateVoucherPDF(pdfData, pdfConfig);
+    
+    console.log('[PDF] PDF generated successfully for:', voucherType);
+  } catch (error) {
+    console.error('[PDF] Error generating standalone PDF:', error);
+    alert('Failed to generate PDF. Please try again.');
+  }
 };
