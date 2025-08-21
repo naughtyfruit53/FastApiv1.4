@@ -122,7 +122,7 @@ const DebitNotePage: React.FC = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {sortedVouchers.slice(0, 5).map((voucher: any, index: number) => (
+                    {sortedVouchers.slice(0, 7).map((voucher: any, index: number) => (
                       <TableRow 
                         key={voucher.id}
                         onClick={() => handleVoucherClick(voucher)}

@@ -150,7 +150,7 @@ const ReceiptVoucher: React.FC = () => {
               <TableCell colSpan={5} align="center">No receipt vouchers available</TableCell>
             </TableRow>
           ) : (
-            sortedVouchers?.slice(0, 5).map((voucher: any) => (
+            sortedVouchers?.slice(0, 7).map((voucher: any) => (
               <TableRow 
                 key={voucher.id} 
                 hover

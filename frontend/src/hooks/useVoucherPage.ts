@@ -6,7 +6,7 @@ import { useRouter } from 'next/router';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { voucherService } from '../services/vouchersService';
-import { getVendors, getProducts, getCustomers } from '../services/masterService';
+import { getVendors, getProducts, getCustomers, getEmployees } from '../services/masterService';
 import { useAuth } from '../context/AuthContext';
 import { 
   calculateVoucherTotals, 
@@ -122,16 +122,23 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
 
   const itemsWatch = useWatch({ control, name: 'items' });
 
-  // Enhanced computed values with rate formatting
-  const { computedItems, totalAmount, totalSubtotal, totalGst } = useMemo(() => {
+  // Enhanced computed values with rate formatting and GST breakdown
+  const { computedItems, totalAmount, totalSubtotal, totalGst, totalCgst, totalSgst, totalIgst } = useMemo(() => {
     if (config.hasItems === false || !itemsWatch) {
       return {
         computedItems: [],
         totalAmount: watch('total_amount') || 0,
         totalSubtotal: 0,
         totalGst: 0,
+        totalCgst: 0,
+        totalSgst: 0,
+        totalIgst: 0,
       };
     }
+    
+    // Determine if this is an intrastate transaction
+    // For now, default to intrastate (true), but this should be determined based on customer/vendor state
+    const isIntrastate = true; // TODO: Implement state-based logic
     
     // Ensure all rates are properly formatted
     const formattedItems = itemsWatch.map((item: any) => ({
@@ -139,7 +146,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
       unit_price: enhancedRateUtils.parseRate(String(item.unit_price || 0))
     }));
     
-    return calculateVoucherTotals(formattedItems);
+    return calculateVoucherTotals(formattedItems, isIntrastate);
   }, [itemsWatch, config.hasItems, watch]);
 
   // Enhanced queries with pagination and sorting
@@ -180,6 +187,12 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     queryKey: ['customers'],
     queryFn: getCustomers,
     enabled: isOrgContextReady && (config.entityType === 'sales' || config.entityType === 'financial'),
+  });
+
+  const { data: employeeList } = useQuery({
+    queryKey: ['employees'],
+    queryFn: getEmployees,
+    enabled: isOrgContextReady && config.entityType === 'financial',
   });
 
   const { data: productList } = useQuery({
@@ -332,7 +345,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
   }, [voucherList]);
 
   const latestVouchers = useMemo(() => 
-    voucherListUtils.getLatestVouchers(sortedVouchers, 5), 
+    voucherListUtils.getLatestVouchers(sortedVouchers, 7), 
     [sortedVouchers]
   );
 
@@ -674,6 +687,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     voucherList,
     vendorList,
     customerList,
+    employeeList,
     productList,
     voucherData,
     nextVoucherNumber,
@@ -685,6 +699,9 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     totalAmount,
     totalSubtotal,
     totalGst,
+    totalCgst,
+    totalSgst,
+    totalIgst,
 
     // Mutations
     createMutation,

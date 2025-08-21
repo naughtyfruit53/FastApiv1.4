@@ -294,7 +294,7 @@ const PurchaseVoucherPage: React.FC = () => {
                 <TableCell colSpan={5} align="center">No purchase vouchers available</TableCell>
               </TableRow>
             ) : (
-              latestVouchers.slice(0, 5).map((voucher: any) => (
+              latestVouchers.slice(0, 7).map((voucher: any) => (
                 <TableRow 
                   key={voucher.id} 
                   hover 

@@ -30,6 +30,12 @@ export const getProducts = async ({ signal }: QueryFunctionContext) => {
   return response.data;
 };
 
+// Fetch all employees
+export const getEmployees = async ({ signal }: QueryFunctionContext) => {
+  const response = await api.get('/employees', { signal });
+  return response.data;
+};
+
 // Search customers for autocomplete/dropdown
 export const searchCustomers = async ({ queryKey, signal }: QueryFunctionContext) => {
   const [, searchTerm, limit] = queryKey;  // Expect queryKey = ['searchCustomers', searchTerm, limit]
@@ -108,6 +114,24 @@ export const createProduct = async (productData: {
   is_manufactured?: boolean;
 }) => {
   const response = await api.post('/products', productData);
+  return response.data;
+};
+
+// Create new employee
+export const createEmployee = async (employeeData: {
+  name: string;
+  employee_id?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+  department?: string;
+  designation?: string;
+  salary?: number;
+}) => {
+  const response = await api.post('/employees', employeeData);
   return response.data;
 };
 
