@@ -2,6 +2,46 @@
 
 export const GST_SLABS = [0, 5, 12, 18, 28];
 
+// State to GST state code mapping for GST calculations
+export const STATE_TO_CODE_MAP: { [key: string]: string } = {
+  'Andhra Pradesh': '37',
+  'Arunachal Pradesh': '12', 
+  'Assam': '18',
+  'Bihar': '10',
+  'Chhattisgarh': '22',
+  'Goa': '30',
+  'Gujarat': '24',
+  'Haryana': '06',
+  'Himachal Pradesh': '02',
+  'Jammu and Kashmir': '01',
+  'Jharkhand': '20',
+  'Karnataka': '29',
+  'Kerala': '32',
+  'Madhya Pradesh': '23',
+  'Maharashtra': '27',
+  'Manipur': '14',
+  'Meghalaya': '17',
+  'Mizoram': '15',
+  'Nagaland': '13',
+  'Odisha': '21',
+  'Punjab': '03',
+  'Rajasthan': '08',
+  'Sikkim': '11',
+  'Tamil Nadu': '33',
+  'Telangana': '36',
+  'Tripura': '16',
+  'Uttar Pradesh': '09',
+  'Uttarakhand': '05',
+  'West Bengal': '19',
+  'Andaman and Nicobar Islands': '35',
+  'Chandigarh': '04',
+  'Dadra and Nagar Haveli and Daman and Diu': '26',
+  'Lakshadweep': '31',
+  'Delhi': '07',
+  'Puducherry': '34',
+  'Ladakh': '38',
+};
+
 export const voucherTypes = {
   purchase: [
     { label: 'Purchase Order', slug: 'purchase-orders' },
@@ -74,41 +114,91 @@ export const numberToWords = (num: number): string => {
   return word ? word + ' only' : '';
 };
 
-// Common voucher item calculation utilities
-export const calculateItemTotals = (item: any) => {
+/**
+ * Enhanced GST calculation utilities with state-based split logic
+ * Supports both intrastate (CGST+SGST) and interstate (IGST) transactions
+ */
+
+// Helper function to determine if transaction is intrastate
+export const isIntrastateTransaction = (companyStateCode: string, customerVendorStateCode: string): boolean => {
+  return companyStateCode === customerVendorStateCode;
+};
+
+// Common voucher item calculation utilities with enhanced GST logic
+export const calculateItemTotals = (item: any, isIntrastate: boolean = true) => {
   const subtotal = (item.quantity || 0) * (item.unit_price || 0);
   const discountAmount = subtotal * ((item.discount_percentage || 0) / 100);
   const taxableAmount = subtotal - discountAmount;
   const gstAmount = taxableAmount * ((item.gst_rate || 0) / 100);
-  const cgstAmount = gstAmount / 2;
-  const sgstAmount = gstAmount / 2;
-  const igstAmount = 0; // Assuming intrastate transactions
+  
+  // GST split logic based on transaction type
+  let cgstAmount = 0;
+  let sgstAmount = 0; 
+  let igstAmount = 0;
+  
+  if (isIntrastate) {
+    // Same state: Split GST into CGST and SGST (half each)
+    cgstAmount = gstAmount / 2;
+    sgstAmount = gstAmount / 2;
+    igstAmount = 0;
+  } else {
+    // Different state: Use IGST (full GST rate)
+    cgstAmount = 0;
+    sgstAmount = 0;
+    igstAmount = gstAmount;
+  }
+  
   const totalAmount = taxableAmount + gstAmount;
 
   return {
     ...item,
-    discount_amount: discountAmount,
-    taxable_amount: taxableAmount,
-    cgst_amount: cgstAmount,
-    sgst_amount: sgstAmount,
-    igst_amount: igstAmount,
-    total_amount: totalAmount,
+    discount_amount: parseFloat(discountAmount.toFixed(2)),
+    taxable_amount: parseFloat(taxableAmount.toFixed(2)),
+    cgst_amount: parseFloat(cgstAmount.toFixed(2)),
+    sgst_amount: parseFloat(sgstAmount.toFixed(2)),
+    igst_amount: parseFloat(igstAmount.toFixed(2)),
+    total_amount: parseFloat(totalAmount.toFixed(2)),
   };
 };
 
-export const calculateVoucherTotals = (items: any[]) => {
-  const computedItems = items.map(calculateItemTotals);
+export const calculateVoucherTotals = (items: any[], isIntrastate: boolean = true) => {
+  const computedItems = items.map(item => calculateItemTotals(item, isIntrastate));
   
   const totalAmount = computedItems.reduce((sum, item) => sum + item.total_amount, 0);
   const totalSubtotal = computedItems.reduce((sum, item) => sum + (item.quantity || 0) * (item.unit_price || 0), 0);
   const totalGst = computedItems.reduce((sum, item) => sum + item.taxable_amount * ((item.gst_rate || 0) / 100), 0);
+  const totalCgst = computedItems.reduce((sum, item) => sum + item.cgst_amount, 0);
+  const totalSgst = computedItems.reduce((sum, item) => sum + item.sgst_amount, 0);
+  const totalIgst = computedItems.reduce((sum, item) => sum + item.igst_amount, 0);
   
   return {
     computedItems,
-    totalAmount,
-    totalSubtotal,
-    totalGst,
+    totalAmount: parseFloat(totalAmount.toFixed(2)),
+    totalSubtotal: parseFloat(totalSubtotal.toFixed(2)),
+    totalGst: parseFloat(totalGst.toFixed(2)),
+    totalCgst: parseFloat(totalCgst.toFixed(2)),
+    totalSgst: parseFloat(totalSgst.toFixed(2)),
+    totalIgst: parseFloat(totalIgst.toFixed(2)),
   };
+};
+
+/**
+ * Get GST breakdown labels based on transaction type
+ */
+export const getGstLabels = (isIntrastate: boolean) => {
+  if (isIntrastate) {
+    return {
+      tax1Label: 'CGST',
+      tax2Label: 'SGST',
+      showIgst: false
+    };
+  } else {
+    return {
+      tax1Label: 'IGST',
+      tax2Label: '',
+      showIgst: true
+    };
+  }
 };
 
 // Common default values for voucher forms
@@ -124,18 +214,18 @@ export const getDefaultVoucherValues = (type: 'purchase' | 'sales') => {
       hsn_code: '', 
       quantity: 0, 
       unit: '', 
-      unit_price: 0, 
-      original_unit_price: 0, 
+      unit_price: 0.00, 
+      original_unit_price: 0.00, 
       discount_percentage: 0, 
-      discount_amount: 0, 
-      taxable_amount: 0, 
+      discount_amount: 0.00, 
+      taxable_amount: 0.00, 
       gst_rate: 0, 
-      cgst_amount: 0, 
-      sgst_amount: 0, 
-      igst_amount: 0, 
-      total_amount: 0 
+      cgst_amount: 0.00, 
+      sgst_amount: 0.00, 
+      igst_amount: 0.00, 
+      total_amount: 0.00 
     }],
-    total_amount: 0,
+    total_amount: 0.00,
   };
 
   if (type === 'purchase') {
@@ -149,6 +239,22 @@ export const getDefaultVoucherValues = (type: 'purchase' | 'sales') => {
       customer_id: null as number | null,
     };
   }
+};
+
+/**
+ * Format number to 2 decimal places for rate fields
+ */
+export const formatRateField = (value: number | string): string => {
+  const numValue = typeof value === 'string' ? parseFloat(value) : value;
+  return isNaN(numValue) ? '0.00' : numValue.toFixed(2);
+};
+
+/**
+ * Parse rate field input to ensure 2 decimal places maximum
+ */
+export const parseRateField = (value: string): number => {
+  const parsed = parseFloat(value);
+  return isNaN(parsed) ? 0 : Math.round(parsed * 100) / 100;
 };
 
 /**
@@ -379,3 +485,82 @@ export const VOUCHER_CONFIGS = {
 export const getVoucherConfig = (voucherType: keyof typeof VOUCHER_CONFIGS) => {
   return VOUCHER_CONFIGS[voucherType];
 };
+
+/**
+ * Common styling utilities for voucher forms and tables
+ */
+export const getVoucherStyles = () => ({
+  // Center alignment for all text elements
+  centerText: {
+    textAlign: 'center' as const,
+  },
+  
+  // Center alignment for form fields
+  centerField: {
+    textAlign: 'center' as const,
+    '& .MuiInputBase-input': {
+      textAlign: 'center' as const,
+    },
+  },
+  
+  // Center alignment for table headers
+  centerHeader: {
+    textAlign: 'center' as const,
+    fontWeight: 'bold',
+  },
+  
+  // Center alignment for table cells
+  centerCell: {
+    textAlign: 'center' as const,
+  },
+  
+  // Container for voucher layout with proper alignment
+  voucherContainer: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    alignItems: 'center',
+    width: '100%',
+  },
+  
+  // Form container with center alignment
+  formContainer: {
+    width: '100%',
+    '& .MuiTextField-root': {
+      '& .MuiInputBase-input': {
+        textAlign: 'center' as const,
+      },
+    },
+    '& .MuiFormLabel-root': {
+      textAlign: 'center' as const,
+    },
+  },
+  
+  // Table with center-aligned content
+  centeredTable: {
+    '& .MuiTableCell-root': {
+      textAlign: 'center' as const,
+    },
+    '& .MuiTableCell-head': {
+      textAlign: 'center' as const,
+      fontWeight: 'bold',
+    },
+  },
+  
+  // Rate field styling with 2 decimal places
+  rateField: {
+    '& .MuiInputBase-input': {
+      textAlign: 'center' as const,
+    },
+    '& input[type=number]': {
+      '-moz-appearance': 'textfield',
+    },
+    '& input[type=number]::-webkit-outer-spin-button': {
+      '-webkit-appearance': 'none',
+      margin: 0,
+    },
+    '& input[type=number]::-webkit-inner-spin-button': {
+      '-webkit-appearance': 'none',
+      margin: 0,
+    },
+  },
+});
