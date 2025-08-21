@@ -57,7 +57,7 @@ export interface EntityOption {
   type: EntityType;
   label: string; // Formatted display label
   value: number; // For form compatibility
-  originalData: Entity; // Full entity data
+  originalData: Entity | null; // Full entity data, null for "Add New" options
 }
 
 export interface EntityConfig {
