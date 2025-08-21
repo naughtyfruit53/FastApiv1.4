@@ -632,7 +632,7 @@ export const voucherListUtils = {
   /**
    * Get latest vouchers for dashboard display
    */
-  getLatestVouchers: (vouchers: any[], count: number = 5) => {
+  getLatestVouchers: (vouchers: any[], count: number = 7) => {
     return voucherListUtils.sortLatestFirst(vouchers).slice(0, count);
   }
 };
@@ -668,20 +668,42 @@ export const getVoucherStyles = () => ({
     textAlign: 'center' as const,
   },
   
-  // Container for voucher layout with proper alignment
+  // Container for voucher layout with proper alignment (Full width, edge-to-edge)
   voucherContainer: {
     display: 'flex',
     flexDirection: 'column' as const,
     alignItems: 'center',
     width: '100%',
-    maxWidth: '1200px',
-    margin: '0 auto',
-    padding: '16px'
+    margin: 0,
+    padding: 0
   },
   
-  // Form container with center alignment
+  // Full-width edge-to-edge layout container
+  edgeToEdgeContainer: {
+    width: '100vw',
+    margin: 0,
+    padding: 0,
+    '& .MuiContainer-root': {
+      maxWidth: 'none !important',
+      padding: '0 !important',
+      margin: '0 !important',
+    },
+    '& .MuiBox-root': {
+      margin: '0 !important',
+    }
+  },
+  
+  // Index and form layout containers
+  indexContainer: {
+    width: '100%',
+    padding: '8px',
+    margin: 0,
+  },
+  
   formContainer: {
     width: '100%',
+    padding: '8px',
+    margin: 0,
     '& .MuiTextField-root': {
       '& .MuiInputBase-input': {
         textAlign: 'center' as const,

@@ -89,6 +89,9 @@ const SalesVoucherPage: React.FC = () => {
     totalAmount,
     totalSubtotal,
     totalGst,
+    totalCgst,
+    totalSgst,
+    totalIgst,
 
     // Mutations
     createMutation,
@@ -295,7 +298,7 @@ const SalesVoucherPage: React.FC = () => {
                 <TableCell colSpan={5} align="center">No sales vouchers available</TableCell>
               </TableRow>
             ) : (
-              latestVouchers.slice(0, 5).map((voucher: any) => (
+              latestVouchers.slice(0, 7).map((voucher: any) => (
                 <TableRow 
                   key={voucher.id} 
                   hover 
@@ -607,14 +610,28 @@ const SalesVoucherPage: React.FC = () => {
                   </Grid>
                   <Grid size={6}>
                     <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14 }}>
-                      GST:
+                      {totalIgst > 0 ? 'IGST:' : 'CGST:'}
                     </Typography>
                   </Grid>
                   <Grid size={6}>
                     <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14, fontWeight: 'bold' }}>
-                      ₹{totalGst.toLocaleString()}
+                      ₹{totalIgst > 0 ? totalIgst.toLocaleString() : totalCgst.toLocaleString()}
                     </Typography>
                   </Grid>
+                  {totalIgst === 0 && (
+                    <>
+                      <Grid size={6}>
+                        <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14 }}>
+                          SGST:
+                        </Typography>
+                      </Grid>
+                      <Grid size={6}>
+                        <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14, fontWeight: 'bold' }}>
+                          ₹{totalSgst.toLocaleString()}
+                        </Typography>
+                      </Grid>
+                    </>
+                  )}
                   <Grid size={6}>
                     <Typography variant="h6" sx={{ textAlign: 'right', fontSize: 16, fontWeight: 'bold' }}>
                       Total:

@@ -6,7 +6,7 @@ import { useRouter } from 'next/router';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { voucherService } from '../services/vouchersService';
-import { getVendors, getProducts, getCustomers } from '../services/masterService';
+import { getVendors, getProducts, getCustomers, getEmployees } from '../services/masterService';
 import { useAuth } from '../context/AuthContext';
 import { 
   calculateVoucherTotals, 
@@ -122,15 +122,45 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
 
   const itemsWatch = useWatch({ control, name: 'items' });
 
-  // Enhanced computed values with rate formatting
-  const { computedItems, totalAmount, totalSubtotal, totalGst } = useMemo(() => {
+  // Enhanced computed values with rate formatting and GST breakdown
+  const { computedItems, totalAmount, totalSubtotal, totalGst, totalCgst, totalSgst, totalIgst } = useMemo(() => {
     if (config.hasItems === false || !itemsWatch) {
       return {
         computedItems: [],
         totalAmount: watch('total_amount') || 0,
         totalSubtotal: 0,
         totalGst: 0,
+        totalCgst: 0,
+        totalSgst: 0,
+        totalIgst: 0,
       };
+    }
+    
+    // Determine if this is an intrastate transaction based on customer/vendor state
+    let isIntrastate = true; // Default to intrastate
+    
+    try {
+      // Get the selected entity (customer/vendor)
+      const selectedEntityId = watch('customer_id') || watch('vendor_id');
+      let selectedEntity = null;
+      
+      if (config.entityType === 'sales' && customerList && selectedEntityId) {
+        selectedEntity = customerList.find((c: any) => c.id === selectedEntityId);
+      } else if (config.entityType === 'purchase' && vendorList && selectedEntityId) {
+        selectedEntity = vendorList.find((v: any) => v.id === selectedEntityId);
+      }
+      
+      // If we have entity with state_code, check against company state
+      if (selectedEntity && selectedEntity.state_code) {
+        // For now, assuming company state code is available from auth context
+        // TODO: Get actual company state code from organization settings
+        const companyStateCode = '27'; // Default to Maharashtra for demo
+        isIntrastate = selectedEntity.state_code === companyStateCode;
+      }
+    } catch (error) {
+      console.warn('Error determining transaction state:', error);
+      // Fallback to intrastate if error occurs
+      isIntrastate = true;
     }
     
     // Ensure all rates are properly formatted
@@ -139,8 +169,8 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
       unit_price: enhancedRateUtils.parseRate(String(item.unit_price || 0))
     }));
     
-    return calculateVoucherTotals(formattedItems);
-  }, [itemsWatch, config.hasItems, watch]);
+    return calculateVoucherTotals(formattedItems, isIntrastate);
+  }, [itemsWatch, config.hasItems, config.entityType, watch, customerList, vendorList]);
 
   // Enhanced queries with pagination and sorting
   const { data: voucherList, isLoading: isLoadingList, refetch: refetchVoucherList } = useQuery({
@@ -180,6 +210,12 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     queryKey: ['customers'],
     queryFn: getCustomers,
     enabled: isOrgContextReady && (config.entityType === 'sales' || config.entityType === 'financial'),
+  });
+
+  const { data: employeeList } = useQuery({
+    queryKey: ['employees'],
+    queryFn: getEmployees,
+    enabled: isOrgContextReady && config.entityType === 'financial',
   });
 
   const { data: productList } = useQuery({
@@ -332,7 +368,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
   }, [voucherList]);
 
   const latestVouchers = useMemo(() => 
-    voucherListUtils.getLatestVouchers(sortedVouchers, 5), 
+    voucherListUtils.getLatestVouchers(sortedVouchers, 7), 
     [sortedVouchers]
   );
 
@@ -674,6 +710,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     voucherList,
     vendorList,
     customerList,
+    employeeList,
     productList,
     voucherData,
     nextVoucherNumber,
@@ -685,6 +722,9 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     totalAmount,
     totalSubtotal,
     totalGst,
+    totalCgst,
+    totalSgst,
+    totalIgst,
 
     // Mutations
     createMutation,

@@ -41,6 +41,7 @@ const PaymentVoucher: React.FC = () => {
     voucherList,
     vendorList,
     customerList,
+    employeeList,
     sortedVouchers,
 
     // Mutations
@@ -112,7 +113,7 @@ const PaymentVoucher: React.FC = () => {
     refreshMasterData();
   };
 
-  // Combined list of all parties (customers + vendors) for unified dropdown
+  // Combined list of all parties (customers + vendors + employees) for unified dropdown
   const allParties = [
     ...(customerList || []).map((customer: any) => ({
       id: customer.id,
@@ -129,6 +130,14 @@ const PaymentVoucher: React.FC = () => {
       type: 'Vendor',
       value: vendor.id,
       label: `${vendor.name} (Vendor)`
+    })),
+    ...(employeeList || []).map((employee: any) => ({
+      id: employee.id,
+      name: employee.name,
+      email: employee.email,
+      type: 'Employee',
+      value: employee.id,
+      label: `${employee.name} (Employee)`
     }))
   ];
 
@@ -151,7 +160,7 @@ const PaymentVoucher: React.FC = () => {
               <TableCell colSpan={5} align="center">No payment vouchers available</TableCell>
             </TableRow>
           ) : (
-            sortedVouchers?.slice(0, 5).map((voucher: any) => (
+            sortedVouchers?.slice(0, 7).map((voucher: any) => (
               <TableRow 
                 key={voucher.id} 
                 hover
