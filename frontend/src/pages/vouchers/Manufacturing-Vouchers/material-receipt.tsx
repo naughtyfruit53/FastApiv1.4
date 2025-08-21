@@ -36,13 +36,15 @@ import {
   Edit, 
   Delete, 
   Save,
-  Cancel
+  Cancel,
+  PictureAsPdf
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../lib/api';
 import { getProducts } from '../../../services/masterService';
 import VoucherContextMenu from '../../../components/VoucherContextMenu';
 import VoucherHeaderActions from '../../../components/VoucherHeaderActions';
+import { generateStandalonePDF } from '../../../utils/pdfUtils';
 
 interface MaterialReceiptItem {
   product_id: number;
@@ -286,6 +288,16 @@ export default function MaterialReceiptVoucher() {
     }
   };
 
+  // PDF Generation Function
+  const handleGeneratePDF = async (voucherData?: MaterialReceiptVoucher) => {
+    try {
+      const dataToUse = voucherData || watch();
+      await generateStandalonePDF(dataToUse, 'material-receipt');
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+    }
+  };
+
   if (isLoading) {
     return (
       <Container>
@@ -353,6 +365,7 @@ export default function MaterialReceiptVoucher() {
                             onView={() => handleView(voucher)}
                             onEdit={() => handleEdit(voucher)}
                             onDelete={() => handleDelete(voucher.id!)}
+                            onPrint={() => handleGeneratePDF(voucher)}
                             canEdit={voucher.status !== 'approved'}
                             canDelete={voucher.status !== 'approved'}
                           />
@@ -740,26 +753,39 @@ export default function MaterialReceiptVoucher() {
                 </Box>
 
                 {/* Action Buttons */}
-                {mode !== 'view' && (
-                  <Box mt={3} display="flex" gap={2}>
-                    <Button
-                      type="submit"
-                      variant="contained"
-                      color="primary"
-                      disabled={createMutation.isPending || updateMutation.isPending}
-                      startIcon={<Save />}
-                    >
-                      {mode === 'edit' ? 'Update' : 'Create'} Voucher
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      onClick={handleCancel}
-                      startIcon={<Cancel />}
-                    >
-                      Cancel
-                    </Button>
-                  </Box>
-                )}
+                <Box mt={3} display="flex" gap={2}>
+                  {mode !== 'view' && (
+                    <>
+                      <Button
+                        type="submit"
+                        variant="contained"
+                        color="primary"
+                        disabled={createMutation.isPending || updateMutation.isPending}
+                        startIcon={<Save />}
+                      >
+                        {mode === 'edit' ? 'Update' : 'Create'} Voucher
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        onClick={handleCancel}
+                        startIcon={<Cancel />}
+                      >
+                        Cancel
+                      </Button>
+                    </>
+                  )}
+                  
+                  {/* PDF Generation Button - available in all modes */}
+                  <Button
+                    variant="outlined"
+                    color="secondary"
+                    onClick={() => handleGeneratePDF()}
+                    startIcon={<PictureAsPdf />}
+                    disabled={!watch('voucher_number')}
+                  >
+                    Generate PDF
+                  </Button>
+                </Box>
               </form>
             </CardContent>
           </Card>

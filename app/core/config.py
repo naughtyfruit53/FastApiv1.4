@@ -13,7 +13,25 @@ class Settings(BaseSettings):
     # Security
     SECRET_KEY: str = "your-secret-key-here-change-in-production"
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 180
+    # JWT Token Expiry: minimum 120 minutes (2 hours), maximum 300 minutes (5 hours)
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 180  # Default 3 hours, within required range
+    
+    @field_validator("ACCESS_TOKEN_EXPIRE_MINUTES", mode="before")
+    @classmethod
+    def validate_token_expiry(cls, v: int) -> int:
+        """Validate JWT token expiry is within required range (120-300 minutes)"""
+        if not isinstance(v, int):
+            try:
+                v = int(v)
+            except (TypeError, ValueError):
+                raise ValueError("ACCESS_TOKEN_EXPIRE_MINUTES must be an integer")
+        
+        if v < 120:
+            raise ValueError("ACCESS_TOKEN_EXPIRE_MINUTES must be at least 120 minutes (2 hours)")
+        if v > 300:
+            raise ValueError("ACCESS_TOKEN_EXPIRE_MINUTES must not exceed 300 minutes (5 hours)")
+        
+        return v
     
     # Database (Supabase PostgreSQL)
     DATABASE_URL: Optional[str] = None

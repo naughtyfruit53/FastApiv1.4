@@ -133,6 +133,72 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [router]);
 
+  // -- Handle post-login redirect with state preservation --
+  const handlePostLoginRedirect = () => {
+    try {
+      // Check for return URL
+      const returnUrl = sessionStorage.getItem('returnUrlAfterLogin');
+      if (returnUrl) {
+        console.log('[AuthProvider] Redirecting to saved URL:', returnUrl);
+        sessionStorage.removeItem('returnUrlAfterLogin');
+        
+        // Use router.replace to avoid adding to history
+        router.replace(returnUrl);
+        
+        // Attempt to restore form data after a short delay
+        setTimeout(() => {
+          restoreFormData();
+        }, 500);
+        
+        return;
+      }
+      
+      // Default redirect to dashboard
+      console.log('[AuthProvider] No return URL found, redirecting to dashboard');
+      router.push('/dashboard');
+    } catch (error) {
+      console.error('[AuthProvider] Error during post-login redirect:', error);
+      // Fallback to dashboard
+      router.push('/dashboard');
+    }
+  };
+
+  // -- Attempt to restore form data after login --
+  const restoreFormData = () => {
+    try {
+      const savedFormData = sessionStorage.getItem('formDataBeforeExpiry');
+      if (savedFormData) {
+        const formData = JSON.parse(savedFormData);
+        console.log('[AuthProvider] Attempting to restore form data:', formData);
+        
+        // Attempt to restore form values
+        Object.entries(formData).forEach(([formKey, formValues]: [string, any]) => {
+          if (formValues && typeof formValues === 'object') {
+            Object.entries(formValues).forEach(([fieldName, fieldValue]) => {
+              const field = document.querySelector(`[name="${fieldName}"]`) as HTMLInputElement;
+              if (field && typeof fieldValue === 'string') {
+                field.value = fieldValue;
+                // Trigger input event to update React state
+                field.dispatchEvent(new Event('input', { bubbles: true }));
+              }
+            });
+          }
+        });
+        
+        // Clean up saved form data
+        sessionStorage.removeItem('formDataBeforeExpiry');
+        
+        // Show notification to user
+        toast.info('Form data has been restored from before session expiry.', {
+          position: "top-right",
+          autoClose: 5000,
+        });
+      }
+    } catch (error) {
+      console.warn('[AuthProvider] Could not restore form data:', error);
+    }
+  };
+
   // -- Force password reset if required --
   useEffect(() => {
     if (user && user.must_change_password && router.pathname !== '/password-reset') {
@@ -186,6 +252,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     resetAuthReady();
     markAuthReady();
     console.log('[AuthProvider] Auth ready state reset and marked');
+    
+    // Handle post-login redirect and form state restoration
+    handlePostLoginRedirect();
     
     // NOTE: No need to call fetchUser() here as we already have fresh user data from login response
     // This prevents duplicate /users/me API calls that can cause session instability
