@@ -136,9 +136,32 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
       };
     }
     
-    // Determine if this is an intrastate transaction
-    // For now, default to intrastate (true), but this should be determined based on customer/vendor state
-    const isIntrastate = true; // TODO: Implement state-based logic
+    // Determine if this is an intrastate transaction based on customer/vendor state
+    let isIntrastate = true; // Default to intrastate
+    
+    try {
+      // Get the selected entity (customer/vendor)
+      const selectedEntityId = watch('customer_id') || watch('vendor_id');
+      let selectedEntity = null;
+      
+      if (config.entityType === 'sales' && customerList && selectedEntityId) {
+        selectedEntity = customerList.find((c: any) => c.id === selectedEntityId);
+      } else if (config.entityType === 'purchase' && vendorList && selectedEntityId) {
+        selectedEntity = vendorList.find((v: any) => v.id === selectedEntityId);
+      }
+      
+      // If we have entity with state_code, check against company state
+      if (selectedEntity && selectedEntity.state_code) {
+        // For now, assuming company state code is available from auth context
+        // TODO: Get actual company state code from organization settings
+        const companyStateCode = '27'; // Default to Maharashtra for demo
+        isIntrastate = selectedEntity.state_code === companyStateCode;
+      }
+    } catch (error) {
+      console.warn('Error determining transaction state:', error);
+      // Fallback to intrastate if error occurs
+      isIntrastate = true;
+    }
     
     // Ensure all rates are properly formatted
     const formattedItems = itemsWatch.map((item: any) => ({
@@ -147,7 +170,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     }));
     
     return calculateVoucherTotals(formattedItems, isIntrastate);
-  }, [itemsWatch, config.hasItems, watch]);
+  }, [itemsWatch, config.hasItems, config.entityType, watch, customerList, vendorList]);
 
   // Enhanced queries with pagination and sorting
   const { data: voucherList, isLoading: isLoadingList, refetch: refetchVoucherList } = useQuery({
