@@ -1,5 +1,3 @@
-// @ts-nocheck
-// Manufacturing vouchers are on hold and not included in current scope
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -311,14 +309,14 @@ const ProductionOrder: React.FC = () => {
                             label={order.production_status} 
                             color={getStatusColor(order.production_status)}
                             size="small"
-                          />
+                          /> */}
                         </TableCell>
                         <TableCell>
                           <Chip 
                             label={order.priority} 
                             color={getPriorityColor(order.priority)}
                             size="small"
-                          />
+                          /> */}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -348,7 +346,7 @@ const ProductionOrder: React.FC = () => {
                     disabled
                     size="small"
                     sx={{ '& .MuiInputBase-root': { height: 27 } }}
-                  />
+                  /> */}
                 </Grid>
 
                 <Grid size={4}>
@@ -362,7 +360,7 @@ const ProductionOrder: React.FC = () => {
                     size="small"
                     InputLabelProps={{ shrink: true }}
                     sx={{ '& .MuiInputBase-root': { height: 27 } }}
-                  />
+                  /> */}
                 </Grid>
 
                 <Grid size={4}>
@@ -398,9 +396,9 @@ const ProductionOrder: React.FC = () => {
                         error={!!errors.bom_id}
                         size="small"
                         sx={{ '& .MuiInputBase-root': { height: 27 } }}
-                      />
+                      /> */}
                     )}
-                  />
+                  /> */}
                 </Grid>
 
                 <Grid size={3}>
@@ -414,7 +412,7 @@ const ProductionOrder: React.FC = () => {
                     size="small"
                     InputProps={{ inputProps: { step: 0.01 } }}
                     sx={{ '& .MuiInputBase-root': { height: 27 } }}
-                  />
+                  /> */}
                 </Grid>
 
                 <Grid size={3}>
@@ -446,7 +444,7 @@ const ProductionOrder: React.FC = () => {
                     size="small"
                     InputLabelProps={{ shrink: true }}
                     sx={{ '& .MuiInputBase-root': { height: 27 } }}
-                  />
+                  /> */}
                 </Grid>
 
                 <Grid size={6}>
@@ -459,7 +457,7 @@ const ProductionOrder: React.FC = () => {
                     size="small"
                     InputLabelProps={{ shrink: true }}
                     sx={{ '& .MuiInputBase-root': { height: 27 } }}
-                  />
+                  /> */}
                 </Grid>
 
                 {/* Location Information */}
@@ -471,7 +469,7 @@ const ProductionOrder: React.FC = () => {
                     disabled={mode === 'view'}
                     size="small"
                     sx={{ '& .MuiInputBase-root': { height: 27 } }}
-                  />
+                  /> */}
                 </Grid>
 
                 <Grid size={6}>
@@ -482,7 +480,7 @@ const ProductionOrder: React.FC = () => {
                     disabled={mode === 'view'}
                     size="small"
                     sx={{ '& .MuiInputBase-root': { height: 27 } }}
-                  />
+                  /> */}
                 </Grid>
 
                 <Grid size={12}>
@@ -494,7 +492,7 @@ const ProductionOrder: React.FC = () => {
                     rows={2}
                     disabled={mode === 'view'}
                     size="small"
-                  />
+                  /> */}
                 </Grid>
 
                 {/* BOM Details */}

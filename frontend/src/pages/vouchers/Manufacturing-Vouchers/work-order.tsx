@@ -1,5 +1,3 @@
-// @ts-nocheck
-// Manufacturing vouchers are on hold and not included in current scope
 import React from 'react';
 import { Typography, Container, Box, Button, Grid, Card, CardContent } from '@mui/material';
 import { Engineering, Inventory, Assignment, Build } from '@mui/icons-material';

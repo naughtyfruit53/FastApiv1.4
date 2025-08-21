@@ -663,12 +663,12 @@ const DeliveryChallanPage: React.FC = () => {
         indexContent={indexContent}
         formContent={formContent}
         onShowAll={() => setShowVoucherListModal(true)}
-        pagination={paginationData ? {
-          currentPage: currentPage,
-          totalPages: paginationData.totalPages,
-          onPageChange: handlePageChange,
-          totalItems: paginationData.totalItems
-        } : undefined}
+        // pagination={paginationData ? {
+        //   currentPage: currentPage,
+        //   totalPages: paginationData.totalPages,
+        //   onPageChange: handlePageChange,
+        //   totalItems: paginationData.totalItems
+        // } : undefined)
         centerAligned={true}
         modalContent={
           <VoucherListModal

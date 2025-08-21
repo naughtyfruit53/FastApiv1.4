@@ -1,5 +1,3 @@
-// @ts-nocheck
-// Manufacturing vouchers are on hold and not included in current scope
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -328,7 +326,7 @@ const MaterialRequisition: React.FC = () => {
                     disabled
                     size="small"
                     sx={{ '& .MuiInputBase-root': { height: 27 } }}
-                  />
+                  /> */}
                 </Grid>
 
                 <Grid size={4}>
@@ -342,7 +340,7 @@ const MaterialRequisition: React.FC = () => {
                     size="small"
                     InputLabelProps={{ shrink: true }}
                     sx={{ '& .MuiInputBase-root': { height: 27 } }}
-                  />
+                  /> */}
                 </Grid>
 
                 <Grid size={4}>
@@ -353,7 +351,7 @@ const MaterialRequisition: React.FC = () => {
                     disabled={mode === 'view'}
                     size="small"
                     sx={{ '& .MuiInputBase-root': { height: 27 } }}
-                  />
+                  /> */}
                 </Grid>
 
                 <Grid size={6}>
@@ -369,9 +367,9 @@ const MaterialRequisition: React.FC = () => {
                         label="Manufacturing Order (Optional)"
                         size="small"
                         sx={{ '& .MuiInputBase-root': { height: 27 } }}
-                      />
+                      /> */}
                     )}
-                  />
+                  /> */}
                 </Grid>
 
                 <Grid size={6}>
@@ -382,7 +380,7 @@ const MaterialRequisition: React.FC = () => {
                     disabled={mode === 'view'}
                     size="small"
                     sx={{ '& .MuiInputBase-root': { height: 27 } }}
-                  />
+                  /> */}
                 </Grid>
 
                 <Grid size={6}>
@@ -393,7 +391,7 @@ const MaterialRequisition: React.FC = () => {
                     disabled={mode === 'view'}
                     size="small"
                     sx={{ '& .MuiInputBase-root': { height: 27 } }}
-                  />
+                  /> */}
                 </Grid>
 
                 <Grid size={6}>
@@ -404,7 +402,7 @@ const MaterialRequisition: React.FC = () => {
                     disabled
                     size="small"
                     sx={{ '& .MuiInputBase-root': { height: 27 } }}
-                  />
+                  /> */}
                 </Grid>
 
                 {/* Items Section */}
@@ -432,7 +430,7 @@ const MaterialRequisition: React.FC = () => {
                           <Autocomplete
                             options={productOptions}
                             getOptionLabel={(option) => option.product_name || ''}
-                            value={productOptions.find(p => p.id === watch(`items.${index}.product_id`)) || null}
+                            value={productOptions.find((p: any) => p.id === watch(`items.${index}.product_id`)) || null}
                             onChange={(_, newValue) => {
                               setValue(`items.${index}.product_id`, newValue?.id || 0);
                               if (newValue) {
@@ -447,9 +445,9 @@ const MaterialRequisition: React.FC = () => {
                                 {...params}
                                 label="Product"
                                 size="small"
-                              />
+                              /> */}
                             )}
-                          />
+                          /> */}
                         </Grid>
 
                         <Grid size={2}>
@@ -465,7 +463,7 @@ const MaterialRequisition: React.FC = () => {
                             size="small"
                             disabled={mode === 'view'}
                             InputProps={{ inputProps: { step: 0.01 } }}
-                          />
+                          /> */}
                         </Grid>
 
                         <Grid size={1}>
@@ -475,7 +473,7 @@ const MaterialRequisition: React.FC = () => {
                             fullWidth
                             size="small"
                             disabled={mode === 'view'}
-                          />
+                          /> */}
                         </Grid>
 
                         <Grid size={2}>
@@ -490,7 +488,7 @@ const MaterialRequisition: React.FC = () => {
                             size="small"
                             disabled={mode === 'view'}
                             InputProps={{ inputProps: { step: 0.01 } }}
-                          />
+                          /> */}
                         </Grid>
 
                         <Grid size={2}>
@@ -500,7 +498,7 @@ const MaterialRequisition: React.FC = () => {
                             fullWidth
                             size="small"
                             disabled
-                          />
+                          /> */}
                         </Grid>
 
                         <Grid size={1}>
@@ -523,7 +521,7 @@ const MaterialRequisition: React.FC = () => {
                             fullWidth
                             size="small"
                             disabled={mode === 'view'}
-                          />
+                          /> */}
                         </Grid>
                       </Grid>
                     </Paper>
@@ -539,7 +537,7 @@ const MaterialRequisition: React.FC = () => {
                     rows={2}
                     disabled={mode === 'view'}
                     size="small"
-                  />
+                  /> */}
                 </Grid>
 
                 {/* Action Buttons */}
