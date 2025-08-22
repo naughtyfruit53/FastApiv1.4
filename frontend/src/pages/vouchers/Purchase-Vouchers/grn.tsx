@@ -133,28 +133,42 @@ const GoodsReceiptNotePage: React.FC = () => {
   const [selectedVoucherId, setSelectedVoucherId] = useState<number | null>(null);
 
   // Fetch purchase orders
-  const { data: purchaseOrders } = useQuery({
+  const { data: purchaseOrdersData, refetch: refetchPurchaseOrders } = useQuery({
     queryKey: ['purchase-orders'],
     queryFn: () => api.get('/purchase-orders').then(res => res.data),
     enabled: isOrgContextReady,
   });
 
   // Fetch purchase vouchers
-  const { data: purchaseVouchers } = useQuery({
+  const { data: purchaseVouchersData, refetch: refetchPurchaseVouchers } = useQuery({
     queryKey: ['purchase-vouchers'],
     queryFn: () => api.get('/purchase-vouchers').then(res => res.data),
     enabled: isOrgContextReady,
   });
 
-  // Voucher options based on type
+  // Fetch all GRNs to get used PO/PV IDs
+  const { data: grns } = useQuery({
+    queryKey: ['goods-receipt-notes'],
+    queryFn: () => api.get('/goods-receipt-notes').then(res => res.data),
+    enabled: isOrgContextReady,
+  });
+
+  // Compute used voucher IDs
+  const usedVoucherIds = useMemo(() => {
+    if (!grns) return new Set();
+    return new Set(grns.map(grn => grn.purchase_order_id));
+  }, [grns]);
+
+  // Filter voucher options to exclude used ones
   const voucherOptions = useMemo(() => {
+    let options = [];
     if (selectedVoucherType === 'purchase-order') {
-      return purchaseOrders || [];
+      options = purchaseOrdersData || [];
     } else if (selectedVoucherType === 'purchase-voucher') {
-      return purchaseVouchers || [];
+      options = purchaseVouchersData || [];
     }
-    return [];
-  }, [selectedVoucherType, purchaseOrders, purchaseVouchers]);
+    return options.filter(option => !usedVoucherIds.has(option.id));
+  }, [selectedVoucherType, purchaseOrdersData, purchaseVouchersData, usedVoucherIds]);
 
   // Fetch selected voucher details
   const { data: selectedVoucherData } = useQuery({
@@ -178,10 +192,10 @@ const GoodsReceiptNotePage: React.FC = () => {
         append({
           product_id: item.product_id,
           product_name: item.product?.name || item.product_name || '', 
-          order_qty: item.quantity,
-          received_qty: 0,
-          accepted_qty: 0,
-          rejected_qty: 0,
+          ordered_quantity: item.quantity,
+          received_quantity: 0,
+          accepted_quantity: 0,
+          rejected_quantity: 0,
           unit_price: item.unit_price, // Keep hidden
           unit: item.unit,
         });
@@ -199,39 +213,50 @@ const GoodsReceiptNotePage: React.FC = () => {
     try {
       if (config.hasItems !== false) {
         // Calculate totals if needed, but since no price shown, perhaps adjust
-        data.items = fields.map(field => ({
-          ...field,
-          total_cost: field.accepted_qty * field.unit_price, // Calculate hidden
+        data.total_amount = fields.reduce((sum: number, field: any) => sum + (field.accepted_quantity * field.unit_price), 0);
+        data.items = fields.map((field: any) => ({
+          product_id: field.product_id,
+          ordered_quantity: field.ordered_quantity,
+          received_quantity: field.received_quantity,
+          accepted_quantity: field.accepted_quantity,
+          rejected_quantity: field.rejected_quantity,
+          unit: field.unit,
+          unit_price: field.unit_price,
+          total_cost: field.accepted_quantity * field.unit_price,
         }));
-        data.total_amount = data.items.reduce((sum: number, item: any) => sum + item.total_cost, 0);
       }
+
+      data.purchase_order_id = selectedVoucherId;
+      data.grn_date = data.date + 'T00:00:00Z';
 
       let response;
       if (mode === 'create') {
         response = await api.post('/goods-receipt-notes', data);
+        // Refresh index immediately
+        await refreshMasterData();
+        // Fetch next voucher number immediately
+        const nextNumber = await voucherService.getNextVoucherNumber(config.nextNumberEndpoint);
+        setValue('voucher_number', nextNumber);
+        setValue('date', new Date().toISOString().split('T')[0]);
+        // Refetch PO/PV to update dropdowns
+        refetchPurchaseOrders();
+        refetchPurchaseVouchers();
         if (confirm('Voucher created successfully. Generate PDF?')) {
           handleGeneratePDF(response.data);
         }
-        // Reset form and prepare for next entry
+        // Reset form
         reset();
+        setSelectedVoucherType(null);
+        setSelectedVoucherId(null);
         setMode('create');
-        // Fetch next voucher number
-        try {
-          const nextNumber = await voucherService.getNextVoucherNumber(config.nextNumberEndpoint);
-          setValue('voucher_number', nextNumber);
-          setValue('date', new Date().toISOString().split('T')[0]);
-        } catch (err) {
-          console.error('Failed to fetch next voucher number:', err);
-        }
       } else if (mode === 'edit') {
         response = await api.put('/goods-receipt-notes/' + data.id, data);
+        // Refresh index immediately
+        await refreshMasterData();
         if (confirm('Voucher updated successfully. Generate PDF?')) {
           handleGeneratePDF(response.data);
         }
       }
-      
-      // Refresh voucher list to show latest at top
-      await refreshMasterData();
       
     } catch (error) {
       console.error('Error saving goods receipt note:', error);
@@ -243,9 +268,9 @@ const GoodsReceiptNotePage: React.FC = () => {
   const validateQuantities = () => {
     let valid = true;
     fields.forEach((field, index) => {
-      const received = watch(`items.${index}.received_qty`) || 0;
-      const accepted = watch(`items.${index}.accepted_qty`) || 0;
-      const rejected = watch(`items.${index}.rejected_qty`) || 0;
+      const received = watch(`items.${index}.received_quantity`) || 0;
+      const accepted = watch(`items.${index}.accepted_quantity`) || 0;
+      const rejected = watch(`items.${index}.rejected_quantity`) || 0;
       if (accepted + rejected > received) {
         alert(`For item ${index + 1}, accepted + rejected cannot exceed received quantity.`);
         valid = false;
@@ -276,9 +301,28 @@ const GoodsReceiptNotePage: React.FC = () => {
       const response = await api.get(`/goods-receipt-notes/${voucher.id}`);
       const fullVoucherData = response.data;
       
+      // Map items to match frontend field names
+      const mappedData = {
+        ...fullVoucherData,
+        date: fullVoucherData.grn_date ? fullVoucherData.grn_date.split('T')[0] : '',
+        items: fullVoucherData.items.map(item => ({
+          ...item,
+          ordered_quantity: item.ordered_quantity,
+          received_quantity: item.received_quantity,
+          accepted_quantity: item.accepted_quantity,
+          rejected_quantity: item.rejected_quantity,
+          product_name: item.product?.name,
+        })),
+        reference_voucher_type: 'purchase-order', // Placeholder; fetch or derive actual type if needed
+        reference_voucher_number: fullVoucherData.purchase_order?.voucher_number || fullVoucherData.purchase_order_id // Use voucher_number if loaded
+      };
+      
       // Load the complete voucher data into the form
       setMode('view');
-      reset(fullVoucherData);
+      reset(mappedData);
+      // Set voucher type and ID for view mode
+      setSelectedVoucherType('purchase-order');
+      setSelectedVoucherId(fullVoucherData.purchase_order_id);
     } catch (error) {
       console.error('Error fetching voucher details:', error);
       // Fallback to available data
@@ -292,8 +336,34 @@ const GoodsReceiptNotePage: React.FC = () => {
     try {
       const response = await api.get(`/goods-receipt-notes/${voucher.id}`);
       const fullVoucherData = response.data;
+      
+      // Map items to match frontend field names
+      const mappedData = {
+        ...fullVoucherData,
+        date: fullVoucherData.grn_date ? fullVoucherData.grn_date.split('T')[0] : '',
+        items: fullVoucherData.items.map(item => ({
+          ...item,
+          ordered_quantity: item.ordered_quantity,
+          received_quantity: item.received_quantity,
+          accepted_quantity: item.accepted_quantity,
+          rejected_quantity: item.rejected_quantity,
+          product_name: item.product?.name,
+        })),
+        reference_voucher_type: 'purchase-order', // Placeholder; fetch or derive actual type if needed
+        reference_voucher_number: fullVoucherData.purchase_order?.voucher_number || fullVoucherData.purchase_order_id // Use voucher_number if loaded
+      };
+      
       setMode('edit');
-      reset(fullVoucherData);
+      reset(mappedData);
+      // Set voucher type and ID for edit mode
+      setSelectedVoucherType('purchase-order');
+      setSelectedVoucherId(fullVoucherData.purchase_order_id);
+      // Force update form fields for quantities
+      mappedData.items.forEach((item, index) => {
+        setValue(`items.${index}.received_quantity`, item.received_quantity);
+        setValue(`items.${index}.accepted_quantity`, item.accepted_quantity);
+        setValue(`items.${index}.rejected_quantity`, item.rejected_quantity);
+      });
     } catch (error) {
       console.error('Error fetching voucher details:', error);
       handleEdit(voucher);
@@ -305,8 +375,28 @@ const GoodsReceiptNotePage: React.FC = () => {
     try {
       const response = await api.get(`/goods-receipt-notes/${voucher.id}`);
       const fullVoucherData = response.data;
+      
+      // Map items to match frontend field names
+      const mappedData = {
+        ...fullVoucherData,
+        date: fullVoucherData.grn_date ? fullVoucherData.grn_date.split('T')[0] : '',
+        items: fullVoucherData.items.map(item => ({
+          ...item,
+          ordered_quantity: item.ordered_quantity,
+          received_quantity: item.received_quantity,
+          accepted_quantity: item.accepted_quantity,
+          rejected_quantity: item.rejected_quantity,
+          product_name: item.product?.name,
+        })),
+        reference_voucher_type: 'purchase-order', // Placeholder; fetch or derive actual type if needed
+        reference_voucher_number: fullVoucherData.purchase_order?.voucher_number || fullVoucherData.purchase_order_id // Use voucher_number if loaded
+      };
+      
       setMode('view');
-      reset(fullVoucherData);
+      reset(mappedData);
+      // Set voucher type and ID for view mode
+      setSelectedVoucherType('purchase-order');
+      setSelectedVoucherId(fullVoucherData.purchase_order_id);
     } catch (error) {
       console.error('Error fetching voucher details:', error);
       handleView(voucher);
@@ -323,14 +413,13 @@ const GoodsReceiptNotePage: React.FC = () => {
               <TableCell align="center" sx={{ fontSize: 15, fontWeight: 'bold', p: 1 }}>Voucher No.</TableCell>
               <TableCell align="center" sx={{ fontSize: 15, fontWeight: 'bold', p: 1 }}>Date</TableCell>
               <TableCell align="center" sx={{ fontSize: 15, fontWeight: 'bold', p: 1 }}>Vendor</TableCell>
-              <TableCell align="center" sx={{ fontSize: 15, fontWeight: 'bold', p: 1 }}>Amount</TableCell>
               <TableCell align="right" sx={{ fontSize: 15, fontWeight: 'bold', p: 0, width: 40 }}></TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {latestVouchers.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} align="center">No goods receipt notes available</TableCell>
+                <TableCell colSpan={4} align="center">No goods receipt notes available</TableCell>
               </TableRow>
             ) : (
               latestVouchers.slice(0, 7).map((voucher: any) => (
@@ -347,7 +436,6 @@ const GoodsReceiptNotePage: React.FC = () => {
                     {voucher.date ? new Date(voucher.date).toLocaleDateString() : 'N/A'}
                   </TableCell>
                   <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>{vendorList?.find((v: any) => v.id === voucher.vendor_id)?.name || 'N/A'}</TableCell>
-                  <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>₹{voucher.total_amount?.toLocaleString() || '0'}</TableCell>
                   <TableCell align="right" sx={{ fontSize: 12, p: 0 }}>
                     <VoucherContextMenu
                       voucher={voucher}
@@ -373,7 +461,7 @@ const GoodsReceiptNotePage: React.FC = () => {
     <Box>
       {/* Header Actions */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h5" sx={{ fontSize: 20, fontWeight: 'bold', textAlign: 'center', flex: 1 }}>
+        <Typography variant="h5" sx={{ fontSize: 20, fontWeight: 'bold', textAlign: 'left', flex: 1, pl: 1 }}>
           {config.voucherTitle} - {mode === 'create' ? 'Create' : mode === 'edit' ? 'Edit' : 'View'}
         </Typography>
         <VoucherHeaderActions
@@ -555,7 +643,7 @@ const GoodsReceiptNotePage: React.FC = () => {
                         <TableCell sx={{ p: 1, textAlign: 'center' }}>
                           <TextField
                             type="number"
-                            value={watch(`items.${index}.order_qty`)}
+                            value={watch(`items.${index}.ordered_quantity`)}
                             disabled
                             size="small"
                             sx={{ width: 100 }}
@@ -572,7 +660,7 @@ const GoodsReceiptNotePage: React.FC = () => {
                         <TableCell sx={{ p: 1, textAlign: 'center' }}>
                           <TextField
                             type="number"
-                            {...control.register(`items.${index}.received_qty`, { valueAsNumber: true })}
+                            {...control.register(`items.${index}.received_quantity`, { valueAsNumber: true })}
                             disabled={mode === 'view'}
                             size="small"
                             sx={{ width: 100 }}
@@ -589,7 +677,7 @@ const GoodsReceiptNotePage: React.FC = () => {
                         <TableCell sx={{ p: 1, textAlign: 'center' }}>
                           <TextField
                             type="number"
-                            {...control.register(`items.${index}.accepted_qty`, { valueAsNumber: true })}
+                            {...control.register(`items.${index}.accepted_quantity`, { valueAsNumber: true })}
                             disabled={mode === 'view'}
                             size="small"
                             sx={{ width: 100 }}
@@ -606,7 +694,7 @@ const GoodsReceiptNotePage: React.FC = () => {
                         <TableCell sx={{ p: 1, textAlign: 'center' }}>
                           <TextField
                             type="number"
-                            {...control.register(`items.${index}.rejected_qty`, { valueAsNumber: true })}
+                            {...control.register(`items.${index}.rejected_quantity`, { valueAsNumber: true })}
                             disabled={mode === 'view'}
                             size="small"
                             sx={{ width: 100 }}

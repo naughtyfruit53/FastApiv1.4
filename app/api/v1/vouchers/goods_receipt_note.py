@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
-from app.models.base import User
+from app.models.base import User, Stock
 from app.models.vouchers import GoodsReceiptNote, GoodsReceiptNoteItem
 from app.schemas.vouchers import GRNCreate, GRNInDB, GRNUpdate
 from app.services.email_service import send_voucher_email
@@ -93,12 +93,33 @@ async def create_goods_receipt_note(
         db.add(db_invoice)
         db.flush()
         
+        total_amount = 0.0
+        
         for item_data in invoice.items:
             item = GoodsReceiptNoteItem(
-                goods_receipt_note_id=db_invoice.id,
+                grn_id=db_invoice.id,
                 **item_data.dict()
             )
             db.add(item)
+            
+            total_amount += item.accepted_quantity * item.unit_price
+            
+            # Update stock
+            stock = db.query(Stock).filter(
+                Stock.product_id == item.product_id,
+                Stock.organization_id == current_user.organization_id
+            ).first()
+            if not stock:
+                stock = Stock(
+                    product_id=item.product_id,
+                    organization_id=current_user.organization_id,
+                    quantity=0,
+                    unit=item.unit
+                )
+                db.add(stock)
+            stock.quantity += item.accepted_quantity
+        
+        db_invoice.total_amount = total_amount
         
         db.commit()
         db.refresh(db_invoice)
@@ -131,6 +152,7 @@ async def get_goods_receipt_note(
 ):
     invoice = db.query(GoodsReceiptNote).options(
         joinedload(GoodsReceiptNote.vendor),
+        joinedload(GoodsReceiptNote.purchase_order),
         joinedload(GoodsReceiptNote.items).joinedload(GoodsReceiptNoteItem.product)
     ).filter(
         GoodsReceiptNote.id == invoice_id,
@@ -166,13 +188,47 @@ async def update_goods_receipt_note(
             setattr(invoice, field, value)
         
         if invoice_update.items is not None:
-            db.query(GoodsReceiptNoteItem).filter(GoodsReceiptNoteItem.goods_receipt_note_id == invoice_id).delete()
+            old_items = db.query(GoodsReceiptNoteItem).filter(
+                GoodsReceiptNoteItem.grn_id == invoice_id
+            ).all()
+            
+            for old_item in old_items:
+                stock = db.query(Stock).filter(
+                    Stock.product_id == old_item.product_id,
+                    Stock.organization_id == current_user.organization_id
+                ).first()
+                if stock:
+                    stock.quantity -= old_item.accepted_quantity
+            
+            db.query(GoodsReceiptNoteItem).filter(GoodsReceiptNoteItem.grn_id == invoice_id).delete()
+            
+            total_amount = 0.0
+            
             for item_data in invoice_update.items:
                 item = GoodsReceiptNoteItem(
-                    goods_receipt_note_id=invoice_id,
+                    grn_id=invoice_id,
                     **item_data.dict()
                 )
                 db.add(item)
+                
+                total_amount += item.accepted_quantity * item.unit_price
+                
+                # Update stock
+                stock = db.query(Stock).filter(
+                    Stock.product_id == item.product_id,
+                    Stock.organization_id == current_user.organization_id
+                ).first()
+                if not stock:
+                    stock = Stock(
+                        product_id=item.product_id,
+                        organization_id=current_user.organization_id,
+                        quantity=0,
+                        unit=item.unit
+                    )
+                    db.add(stock)
+                stock.quantity += item.accepted_quantity
+            
+            invoice.total_amount = total_amount
         
         db.commit()
         db.refresh(invoice)
@@ -205,7 +261,19 @@ async def delete_goods_receipt_note(
                 detail="Goods receipt note not found"
             )
         
-        db.query(GoodsReceiptNoteItem).filter(GoodsReceiptNoteItem.goods_receipt_note_id == invoice_id).delete()
+        old_items = db.query(GoodsReceiptNoteItem).filter(
+            GoodsReceiptNoteItem.grn_id == invoice_id
+        ).all()
+        
+        for old_item in old_items:
+            stock = db.query(Stock).filter(
+                Stock.product_id == old_item.product_id,
+                Stock.organization_id == current_user.organization_id
+            ).first()
+            if stock:
+                stock.quantity -= old_item.accepted_quantity
+        
+        db.query(GoodsReceiptNoteItem).filter(GoodsReceiptNoteItem.grn_id == invoice_id).delete()
         
         db.delete(invoice)
         db.commit()

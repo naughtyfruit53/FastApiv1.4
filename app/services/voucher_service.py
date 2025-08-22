@@ -26,7 +26,7 @@ class VoucherNumberService:
         Generate a unique voucher number for the organization
         
         Format: {PREFIX}/{FISCAL_YEAR}/{SEQUENCE}
-        Example: SV/2526/00000001
+        Example: SV/2526/00001
         """
         current_year = datetime.now().year
         current_month = datetime.now().month
@@ -49,7 +49,7 @@ class VoucherNumberService:
             next_sequence = 1
         
         # Generate new voucher number
-        voucher_number = f"{prefix}/{fiscal_year}/{next_sequence:08d}"
+        voucher_number = f"{prefix}/{fiscal_year}/{next_sequence:05d}"
         
         # Ensure uniqueness (in case of race conditions)
         while db.query(model).filter(model.voucher_number == voucher_number).first():
