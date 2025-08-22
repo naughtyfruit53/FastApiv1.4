@@ -28,14 +28,14 @@ const GoodsReceiptNotePage: React.FC = () => {
     mode,
     setMode,
     isLoading,
-    showAddCustomerModal,
-    setShowAddCustomerModal,
+    showAddVendorModal,
+    setShowAddVendorModal,
     showAddProductModal,
     setShowAddProductModal,
     showShippingModal,
     setShowShippingModal,
-    addCustomerLoading,
-    setAddCustomerLoading,
+    addVendorLoading,
+    setAddVendorLoading,
     addProductLoading,
     setAddProductLoading,
     addShippingLoading,
@@ -77,7 +77,7 @@ const GoodsReceiptNotePage: React.FC = () => {
 
     // Data
     voucherList,
-    customerList: vendorList,
+    vendorList,
     productList,
     nextVoucherNumber,
     sortedVouchers,
@@ -119,9 +119,8 @@ const GoodsReceiptNotePage: React.FC = () => {
   const selectedVendorId = watch('vendor_id');
   const selectedVendor = vendorList?.find((v: any) => v.id === selectedVendorId);
   const vendorValue = useMemo(() => {
-    const name = watch('vendor_name') || selectedVendor?.name || '';
-    return selectedVendorId ? { id: selectedVendorId, name } : null;
-  }, [selectedVendorId, selectedVendor, watch]);
+    return selectedVendor || null;
+  }, [selectedVendor]);
 
   // Enhanced vendor options with "Add New"
   const enhancedVendorOptions = [
@@ -172,7 +171,6 @@ const GoodsReceiptNotePage: React.FC = () => {
   useEffect(() => {
     if (selectedVoucherData) {
       setValue('vendor_id', selectedVoucherData.vendor_id);
-      setValue('vendor_name', selectedVoucherData.vendor?.name || selectedVoucherData.vendor_name || '');
       // Clear existing items
       remove();
       // Append items from selected voucher
@@ -386,7 +384,7 @@ const GoodsReceiptNotePage: React.FC = () => {
         />
       </Box>
 
-      <form onSubmit={handleSubmit(handleFormSubmit)} style={voucherStyles.formContainer}>
+      <form onSubmit={handleSubmit(onSubmit)} style={voucherStyles.formContainer}>
         <Grid container spacing={0.5}>
           {/* Voucher Number */}
           <Grid size={6}>
@@ -466,34 +464,47 @@ const GoodsReceiptNotePage: React.FC = () => {
             />
           </Grid>
 
-          {/* Vendor - Increased width for better readability */}
+          {/* Vendor - Switch to TextField when voucher selected for auto-populate */}
           <Grid size={6}>
-            <Autocomplete
-              size="small"
-              options={enhancedVendorOptions}
-              getOptionLabel={(option: any) => option?.name || ''}
-              value={vendorValue}
-              onChange={(_, newValue) => {
-                if (newValue?.id === null) {
-                  setShowAddCustomerModal(true);
-                } else {
-                  setValue('vendor_id', newValue?.id || null);
-                }
-              }}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="Vendor"
-                  error={!!errors.vendor_id}
-                  helperText={errors.vendor_id ? 'Required' : ''}
-                  InputLabelProps={{ shrink: true, style: { fontSize: 12 } }}
-                  inputProps={{ ...params.inputProps, style: { fontSize: 14 } }}
-                  size="small"
-                  sx={{ '& .MuiInputBase-root': { height: 27 } }}
-                />
-              )}
-              disabled={mode === 'view' || !!selectedVoucherId} // Disable if voucher selected
-            />
+            {!!selectedVoucherId ? (
+              <TextField
+                fullWidth
+                label="Vendor"
+                value={selectedVoucherData?.vendor?.name || selectedVendor?.name || ''}
+                disabled
+                InputLabelProps={{ shrink: true, style: { fontSize: 12 } }}
+                inputProps={{ style: { fontSize: 14 } }}
+                size="small"
+                sx={{ '& .MuiInputBase-root': { height: 27 } }}
+              />
+            ) : (
+              <Autocomplete
+                size="small"
+                options={enhancedVendorOptions}
+                getOptionLabel={(option: any) => option?.name || ''}
+                value={vendorValue}
+                onChange={(_, newValue) => {
+                  if (newValue?.id === null) {
+                    setShowAddVendorModal(true);
+                  } else {
+                    setValue('vendor_id', newValue?.id || null);
+                  }
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Vendor"
+                    error={!!errors.vendor_id}
+                    helperText={errors.vendor_id ? 'Required' : ''}
+                    InputLabelProps={{ shrink: true, style: { fontSize: 12 } }}
+                    inputProps={{ ...params.inputProps, style: { fontSize: 14 } }}
+                    size="small"
+                    sx={{ '& .MuiInputBase-root': { height: 27 } }}
+                  />
+                )}
+                disabled={mode === 'view'}
+              />
+            )}
           </Grid>
 
           <Grid size={12}>
@@ -547,7 +558,7 @@ const GoodsReceiptNotePage: React.FC = () => {
                             value={watch(`items.${index}.order_qty`)}
                             disabled
                             size="small"
-                            sx={{ width: 80 }}
+                            sx={{ width: 100 }}
                             inputProps={{ style: { textAlign: 'center' } }}
                             InputProps={{
                               endAdornment: watch(`items.${index}.unit`) && (
@@ -564,7 +575,7 @@ const GoodsReceiptNotePage: React.FC = () => {
                             {...control.register(`items.${index}.received_qty`, { valueAsNumber: true })}
                             disabled={mode === 'view'}
                             size="small"
-                            sx={{ width: 80 }}
+                            sx={{ width: 100 }}
                             inputProps={{ style: { textAlign: 'center' } }}
                             InputProps={{
                               endAdornment: watch(`items.${index}.unit`) && (
@@ -581,7 +592,7 @@ const GoodsReceiptNotePage: React.FC = () => {
                             {...control.register(`items.${index}.accepted_qty`, { valueAsNumber: true })}
                             disabled={mode === 'view'}
                             size="small"
-                            sx={{ width: 80 }}
+                            sx={{ width: 100 }}
                             inputProps={{ style: { textAlign: 'center' } }}
                             InputProps={{
                               endAdornment: watch(`items.${index}.unit`) && (
@@ -598,7 +609,7 @@ const GoodsReceiptNotePage: React.FC = () => {
                             {...control.register(`items.${index}.rejected_qty`, { valueAsNumber: true })}
                             disabled={mode === 'view'}
                             size="small"
-                            sx={{ width: 80 }}
+                            sx={{ width: 100 }}
                             inputProps={{ style: { textAlign: 'center' } }}
                             InputProps={{
                               endAdornment: watch(`items.${index}.unit`) && (
@@ -684,11 +695,11 @@ const GoodsReceiptNotePage: React.FC = () => {
 
       {/* Modals */}
       <AddVendorModal 
-        open={showAddCustomerModal}
-        onClose={() => setShowAddCustomerModal(false)}
+        open={showAddVendorModal}
+        onClose={() => setShowAddVendorModal(false)}
         onVendorAdded={refreshMasterData}
-        loading={addCustomerLoading}
-        setLoading={setAddCustomerLoading}
+        loading={addVendorLoading}
+        setLoading={setAddVendorLoading}
       />
 
       <AddProductModal 
