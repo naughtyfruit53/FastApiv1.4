@@ -316,7 +316,7 @@ const PurchaseVoucherPage: React.FC = () => {
                       onView={() => handleViewWithData(voucher)}
                       onEdit={() => handleEditWithData(voucher)}
                       onDelete={() => handleDelete(voucher)}
-                      onPrint={() => handleGeneratePDF(voucher)}
+                      onPrint={() => handleGeneratePDF()}
                       showKebab={true}
                       onClose={() => {}}
                     />
@@ -380,7 +380,7 @@ const PurchaseVoucherPage: React.FC = () => {
           </Grid>
 
           {/* Vendor, Reference, Payment Terms in one row */}
-          <Grid size={4}>
+          <Grid size={6}>
             <Autocomplete
               size="small"
               options={enhancedVendorOptions}
@@ -409,7 +409,7 @@ const PurchaseVoucherPage: React.FC = () => {
             />
           </Grid>
 
-          <Grid size={4}>
+          <Grid size={3}>
             <VoucherReferenceDropdown
               voucherType="purchase-voucher"
               value={{
@@ -427,7 +427,7 @@ const PurchaseVoucherPage: React.FC = () => {
             />
           </Grid>
 
-          <Grid size={4}>
+          <Grid size={3}>
             <TextField
               fullWidth
               label="Payment Terms"
@@ -466,6 +466,7 @@ const PurchaseVoucherPage: React.FC = () => {
                 <TableHead>
                   <TableRow>
                     <TableCell sx={voucherStyles.productTableColumns.productName}>Product</TableCell>
+                    <TableCell sx={{ width: 80, textAlign: 'center', fontSize: '0.8rem' }}>Stock</TableCell>
                     <TableCell sx={voucherStyles.productTableColumns.quantity}>Qty</TableCell>
                     <TableCell sx={voucherStyles.productTableColumns.rate}>Rate</TableCell>
                     <TableCell sx={voucherStyles.productTableColumns.discount}>Disc%</TableCell>
@@ -495,6 +496,19 @@ const PurchaseVoucherPage: React.FC = () => {
                             disabled={mode === 'view'}
                             size="small"
                           />
+                        </TableCell>
+                        <TableCell sx={{ p: 1, textAlign: 'center' }}>
+                          {watch(`items.${index}.product_id`) ? (
+                            <StockDisplay 
+                              productId={watch(`items.${index}.product_id`)}
+                              disabled={false}
+                              showLabel={false}
+                            />
+                          ) : (
+                            <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: '0.7rem' }}>
+                              -
+                            </Typography>
+                          )}
                         </TableCell>
                         <TableCell sx={{ p: 1, textAlign: 'right' }}>
                           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
@@ -567,18 +581,6 @@ const PurchaseVoucherPage: React.FC = () => {
                             </IconButton>
                           </TableCell>
                         )}
-                      </TableRow>
-                      {/* Stock display below the row - only qty and unit */}
-                      <TableRow>
-                        <TableCell colSpan={mode !== 'view' ? 7 : 6} sx={{ py: 0.5, pl: 2, bgcolor: 'action.hover' }}>
-                          {stockLoading[index] ? (
-                            <CircularProgress size={12} />
-                          ) : watch(`items.${index}.product_id`) ? (
-                            <Typography variant="caption" color={getStockColor(watch(`items.${index}.current_stock`), watch(`items.${index}.reorder_level`))}>
-                              {watch(`items.${index}.current_stock`)} {watch(`items.${index}.unit`)}
-                            </Typography>
-                          ) : null}
-                        </TableCell>
                       </TableRow>
                     </React.Fragment>
                   ))}
@@ -686,12 +688,12 @@ const PurchaseVoucherPage: React.FC = () => {
         indexContent={indexContent}
         formContent={formContent}
         onShowAll={() => setShowVoucherListModal(true)}
-        pagination={paginationData ? {
-          currentPage: currentPage,
-          totalPages: paginationData.totalPages,
-          onPageChange: handlePageChange,
-          totalItems: paginationData.totalItems
-        } : undefined}
+        // pagination={paginationData ? {
+        //   currentPage: currentPage,
+        //   totalPages: paginationData.totalPages,
+        //   onPageChange: handlePageChange,
+        //   totalItems: paginationData.totalItems
+        // } : undefined}
         centerAligned={true}
         modalContent={
           <VoucherListModal

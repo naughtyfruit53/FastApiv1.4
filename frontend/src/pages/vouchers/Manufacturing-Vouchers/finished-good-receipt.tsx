@@ -81,7 +81,7 @@ const FinishedGoodsReceipt: React.FC = () => {
                       label={order.status.replace('_', ' ')} 
                       color={getStatusColor(order.status)}
                       size="small"
-                    />
+                    /> */}
                   </Box>
 
                   <Box sx={{ mb: 2 }}>
@@ -97,7 +97,7 @@ const FinishedGoodsReceipt: React.FC = () => {
                       variant="determinate" 
                       value={getCompletionPercentage(order.producedQty, order.plannedQty)}
                       sx={{ height: 8, borderRadius: 4 }}
-                    />
+                    /> */}
                   </Box>
 
                   <Grid container spacing={2}>

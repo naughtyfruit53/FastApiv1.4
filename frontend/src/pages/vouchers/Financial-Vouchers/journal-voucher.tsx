@@ -222,7 +222,7 @@ const JournalVoucher: React.FC = () => {
               fullWidth
               disabled={isViewMode}
               error={!!errors.debit_amount}
-              helperText={errors.debit_amount??.message as string}
+              helperText={errors.debit_amount?.message as string}
               sx={{
                 ...voucherStyles.rateField,
                 ...voucherStyles.centerField
@@ -254,7 +254,7 @@ const JournalVoucher: React.FC = () => {
               fullWidth
               disabled={isViewMode}
               error={!!errors.credit_amount}
-              helperText={errors.credit_amount??.message as string}
+              helperText={errors.credit_amount?.message as string}
               sx={{
                 ...voucherStyles.rateField,
                 ...voucherStyles.centerField
@@ -295,7 +295,7 @@ const JournalVoucher: React.FC = () => {
               fullWidth
               disabled={isViewMode}
               error={!!errors.description}
-              helperText={errors.description??.message as string}
+              helperText={errors.description?.message as string}
               placeholder="Enter transaction description..."
             />
           </Grid>

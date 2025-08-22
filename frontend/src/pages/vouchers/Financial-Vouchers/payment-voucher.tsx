@@ -189,7 +189,7 @@ const PaymentVoucher: React.FC = () => {
                     onView={() => handleView(voucher.id)}
                     onEdit={() => handleEdit(voucher.id)}
                     onDelete={() => handleDelete(voucher)}
-                    onPrint={() => handleGeneratePDF(voucher)}
+                    onPrint={() => handleGeneratePDF()}
                     showKebab={true}
                     onClose={() => {}}
                   />
@@ -259,7 +259,7 @@ const PaymentVoucher: React.FC = () => {
               }}
               inputProps={{ style: { textAlign: 'center' } }}
               error={!!errors.date}
-              helperText={errors.date?.message}
+              helperText={errors.date?.message as string}
             />
           </Grid>
 
@@ -288,7 +288,7 @@ const PaymentVoucher: React.FC = () => {
               fullWidth
               required
               error={!!errors.entity}
-              helperText={errors.entity?.message}
+              helperText={errors.entity?.message as string}
             />
           </Grid>
 
@@ -323,7 +323,7 @@ const PaymentVoucher: React.FC = () => {
                   {...params}
                   label="Reference"
                   error={!!errors.reference}
-                  helperText={errors.reference?.message}
+                  helperText={errors.reference?.message as string}
                 />
               )}
             />
@@ -341,7 +341,7 @@ const PaymentVoucher: React.FC = () => {
               fullWidth
               disabled={isViewMode}
               error={!!errors.total_amount}
-              helperText={errors.total_amount?.message}
+              helperText={errors.total_amount?.message as string}
               sx={{
                 ...voucherStyles.rateField,
                 ...voucherStyles.centerField
@@ -368,7 +368,7 @@ const PaymentVoucher: React.FC = () => {
               fullWidth
               disabled={isViewMode}
               error={!!errors.notes}
-              helperText={errors.notes?.message}
+              helperText={errors.notes?.message as string}
             />
           </Grid>
 

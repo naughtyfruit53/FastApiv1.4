@@ -9,9 +9,10 @@ import { getProductStock } from '../services/stockService';
 interface StockDisplayProps {
   productId: number | null;
   disabled?: boolean;
+  showLabel?: boolean; // New prop to control whether to show "Current Stock:" label
 }
 
-const StockDisplay: React.FC<StockDisplayProps> = ({ productId, disabled = false }) => {
+const StockDisplay: React.FC<StockDisplayProps> = ({ productId, disabled = false, showLabel = true }) => {
   const { data: stockData, isLoading, isError } = useQuery({
     queryKey: ['productStock', productId],
     queryFn: getProductStock,
@@ -41,7 +42,7 @@ const StockDisplay: React.FC<StockDisplayProps> = ({ productId, disabled = false
           display: 'block'
         }}
       >
-        Current Stock: {stockQuantity} {unit}
+        {showLabel ? `Current Stock: ${stockQuantity} ${unit}` : `${stockQuantity} ${unit}`}
       </Typography>
     </Box>
   );

@@ -80,8 +80,8 @@ const ReceiptVoucher: React.FC = () => {
 
   // Combined name options for autocomplete
   const allNameOptions = [
-    ...(vendorList || []).map(v => ({ ...v, type: 'Vendor' })),
-    ...(customerList || []).map(c => ({ ...c, type: 'Customer' }))
+    ...(vendorList || []).map((v: any) => ({ ...v, type: 'Vendor' })),
+    ...(customerList || []).map((c: any) => ({ ...c, type: 'Customer' }))
   ];
 
   const nameFilter = createFilterOptions();
@@ -177,7 +177,7 @@ const ReceiptVoucher: React.FC = () => {
                     onView={() => handleView(voucher.id)}
                     onEdit={() => handleEdit(voucher.id)}
                     onDelete={() => handleDelete(voucher)}
-                    onPrint={() => handleGeneratePDF(voucher)}
+                    onPrint={() => handleGeneratePDF()}
                     showKebab={true}
                     onClose={() => {}}
                   />
@@ -247,7 +247,7 @@ const ReceiptVoucher: React.FC = () => {
               }}
               inputProps={{ style: { textAlign: 'center' } }}
               error={!!errors.date}
-              helperText={errors.date?.message}
+              helperText={errors.date?.message as string}
             />
           </Grid>
 
@@ -276,7 +276,7 @@ const ReceiptVoucher: React.FC = () => {
               fullWidth
               required
               error={!!errors.entity}
-              helperText={errors.entity?.message}
+              helperText={errors.entity?.message as string}
             />
           </Grid>
 
@@ -306,7 +306,7 @@ const ReceiptVoucher: React.FC = () => {
               fullWidth
               disabled={isViewMode}
               error={!!errors.reference}
-              helperText={errors.reference?.message}
+              helperText={errors.reference?.message as string}
             />
           </Grid>
 
@@ -322,7 +322,7 @@ const ReceiptVoucher: React.FC = () => {
               fullWidth
               disabled={isViewMode}
               error={!!errors.total_amount}
-              helperText={errors.total_amount?.message}
+              helperText={errors.total_amount?.message as string}
               sx={{
                 ...voucherStyles.rateField,
                 ...voucherStyles.centerField
@@ -349,7 +349,7 @@ const ReceiptVoucher: React.FC = () => {
               fullWidth
               disabled={isViewMode}
               error={!!errors.notes}
-              helperText={errors.notes?.message}
+              helperText={errors.notes?.message as string}
             />
           </Grid>
 

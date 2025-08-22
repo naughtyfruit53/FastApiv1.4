@@ -316,481 +316,481 @@ export default function MaterialReceiptVoucher() {
 
       <Grid container spacing={3}>
         {/* Voucher List - Left Side */}
-        <Grid size={12} md={5}>
+        <Grid size={{ xs: 12, md: 5 }}>
           <Card>
             <CardContent>
               <Box display="flex" justifyContent="between" alignItems="center" mb={2}>
                 <Typography variant="h6">Recent Vouchers</Typography>
-                <VoucherHeaderActions 
-                  onRefresh={() => queryClient.invalidateQueries({ queryKey: ['material-receipt-vouchers'] })}
-                />
-              </Box>
-              
-              <TableContainer component={Paper}>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Voucher No.</TableCell>
-                      <TableCell>Date</TableCell>
-                      <TableCell>Source Type</TableCell>
-                      <TableCell>Amount</TableCell>
-                      <TableCell>Status</TableCell>
-                      <TableCell align="center">Actions</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {latestVouchers.map((voucher, index) => (
-                      <TableRow key={voucher.id}>
-                        <TableCell>{voucher.voucher_number}</TableCell>
-                        <TableCell>{new Date(voucher.date).toLocaleDateString()}</TableCell>
-                        <TableCell>
-                          <Chip 
-                            label={voucher.source_type} 
-                            size="small"
-                            color={voucher.source_type === 'return' ? 'warning' : 'default'}
-                          />
-                        </TableCell>
-                        <TableCell>₹{voucher.total_amount?.toFixed(2)}</TableCell>
-                        <TableCell>
-                          <Chip 
-                            label={voucher.status} 
-                            color={voucher.status === 'approved' ? 'success' : 'default'}
-                            size="small"
-                          />
-                        </TableCell>
-                        <TableCell align="center">
-                          <VoucherContextMenu
-                            voucher={voucher}
-                            voucherType="Material Receipt"
-                            onView={() => handleView(voucher)}
-                            onEdit={() => handleEdit(voucher)}
-                            onDelete={() => handleDelete(voucher.id!)}
-                            onPrint={() => handleGeneratePDF(voucher)}
-                            canEdit={voucher.status !== 'approved'}
-                            canDelete={voucher.status !== 'approved'}
-                          />
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Voucher Form - Right Side */}
-        <Grid size={12} md={7}>
-          <Card>
-            <CardContent>
-              <Box display="flex" justifyContent="between" alignItems="center" mb={2}>
-                <Typography variant="h6">
-                  {mode === 'create' && 'Create Material Receipt Voucher'}
-                  {mode === 'edit' && 'Edit Material Receipt Voucher'}
-                  {mode === 'view' && 'View Material Receipt Voucher'}
-                </Typography>
-                {mode !== 'create' && (
-                  <Button 
-                    variant="outlined" 
-                    onClick={handleCancel}
-                    startIcon={<Cancel />}
-                  >
-                    Cancel
-                  </Button>
-                )}
-              </Box>
-
-              <form onSubmit={handleSubmit(onSubmit)}>
-                {/* Basic Details */}
-                <Grid container spacing={2} mb={3}>
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <TextField
-                      label="Voucher Number"
-                      {...control.register('voucher_number')}
-                      fullWidth
-                      disabled
-                      value={watch('voucher_number')}
-                    />
-                  </Grid>
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <TextField
-                      label="Date"
-                      type="date"
-                      {...control.register('date')}
-                      fullWidth
-                      InputLabelProps={{ shrink: true }}
-                      disabled={mode === 'view'}
-                    />
-                  </Grid>
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <FormControl fullWidth>
-                      <InputLabel>Source Type</InputLabel>
-                      <Select
-                        value={watch('source_type')}
-                        onChange={(e) => setValue('source_type', e.target.value)}
-                        disabled={mode === 'view'}
-                      >
-                        {sourceTypeOptions.map((option) => (
-                          <MenuItem key={option.value} value={option.value}>
-                            {option.label}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <TextField
-                      label="Source Reference"
-                      {...control.register('source_reference')}
-                      fullWidth
-                      disabled={mode === 'view'}
-                    />
-                  </Grid>
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <Autocomplete
-                      options={manufacturingOrderOptions}
-                      getOptionLabel={(option) => option.voucher_number || ''}
-                      value={manufacturingOrderOptions.find(mo => mo.id === watch('manufacturing_order_id')) || null}
-                      onChange={(_, newValue) => setValue('manufacturing_order_id', newValue?.id || undefined)}
-                      renderInput={(params) => (
-                        <TextField {...params} label="Manufacturing Order (Optional)" />
-                      )}
-                      disabled={mode === 'view'}
-                    />
-                  </Grid>
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <TextField
-                      label="Receipt Time"
-                      type="datetime-local"
-                      {...control.register('receipt_time')}
-                      fullWidth
-                      InputLabelProps={{ shrink: true }}
-                      disabled={mode === 'view'}
-                    />
-                  </Grid>
-                </Grid>
-
-                {/* Receipt Details */}
-                <Typography variant="h6" gutterBottom>Receipt Details</Typography>
-                <Grid container spacing={2} mb={3}>
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <TextField
-                      label="Received From Department"
-                      {...control.register('received_from_department')}
-                      fullWidth
-                      disabled={mode === 'view'}
-                    />
-                  </Grid>
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <TextField
-                      label="Received From Employee"
-                      {...control.register('received_from_employee')}
-                      fullWidth
-                      disabled={mode === 'view'}
-                    />
-                  </Grid>
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <TextField
-                      label="Received By Employee"
-                      {...control.register('received_by_employee')}
-                      fullWidth
-                      disabled={mode === 'view'}
-                    />
-                  </Grid>
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <TextField
-                      label="Condition on Receipt"
-                      {...control.register('condition_on_receipt')}
-                      fullWidth
-                      disabled={mode === 'view'}
-                    />
-                  </Grid>
-                </Grid>
-
-                {/* Inspection Details */}
-                <Typography variant="h6" gutterBottom>Inspection Details</Typography>
-                <Grid container spacing={2} mb={3}>
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <FormControlLabel
-                      control={
-                        <Checkbox
-                          checked={watch('inspection_required')}
-                          onChange={(e) => setValue('inspection_required', e.target.checked)}
-                          disabled={mode === 'view'}
-                        />
-                      }
-                      label="Inspection Required"
-                    />
-                  </Grid>
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <FormControl fullWidth>
-                      <InputLabel>Inspection Status</InputLabel>
-                      <Select
-                        value={watch('inspection_status')}
-                        onChange={(e) => setValue('inspection_status', e.target.value)}
-                        disabled={mode === 'view'}
-                      >
-                        {inspectionStatusOptions.map((option) => (
-                          <MenuItem key={option.value} value={option.value}>
-                            {option.label}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <TextField
-                      label="Inspector Name"
-                      {...control.register('inspector_name')}
-                      fullWidth
-                      disabled={mode === 'view'}
-                    />
-                  </Grid>
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <TextField
-                      label="Inspection Date"
-                      type="datetime-local"
-                      {...control.register('inspection_date')}
-                      fullWidth
-                      InputLabelProps={{ shrink: true }}
-                      disabled={mode === 'view'}
-                    />
-                  </Grid>
-                  <Grid size={12}>
-                    <TextField
-                      label="Inspection Remarks"
-                      {...control.register('inspection_remarks')}
-                      fullWidth
-                      multiline
-                      rows={2}
-                      disabled={mode === 'view'}
-                    />
-                  </Grid>
-                </Grid>
-
-                {/* Items */}
-                <Typography variant="h6" gutterBottom>Material Items</Typography>
-                {mode !== 'view' && (
-                  <Box mb={2}>
-                    <Button
-                      variant="outlined"
-                      onClick={addItem}
-                      startIcon={<Add />}
-                    >
-                      Add Item
-                    </Button>
-                  </Box>
-                )}
-
-                <TableContainer component={Paper} sx={{ mb: 3 }}>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Product</TableCell>
-                        <TableCell>Qty</TableCell>
-                        <TableCell>Unit</TableCell>
-                        <TableCell>Rate</TableCell>
-                        <TableCell>Received</TableCell>
-                        <TableCell>Accepted</TableCell>
-                        <TableCell>Rejected</TableCell>
-                        <TableCell>Batch</TableCell>
-                        <TableCell>Quality</TableCell>
-                        <TableCell>Amount</TableCell>
-                        {mode !== 'view' && <TableCell>Actions</TableCell>}
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {itemFields.map((field, index) => (
-                        <TableRow key={field.id}>
-                          <TableCell>
-                            <Autocomplete
-                              options={productOptions}
-                              getOptionLabel={(option) => option.name || ''}
-                              value={productOptions.find(p => p.id === watch(`items.${index}.product_id`)) || null}
-                              onChange={(_, newValue) => {
-                                setValue(`items.${index}.product_id`, newValue?.id || 0);
-                                setValue(`items.${index}.unit`, newValue?.unit || '');
-                                setValue(`items.${index}.unit_price`, newValue?.price || 0);
-                                updateItemTotal(index);
-                              }}
-                              renderInput={(params) => (
-                                <TextField {...params} size="small" />
-                              )}
-                              disabled={mode === 'view'}
-                              sx={{ minWidth: 150 }}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <TextField
-                              type="number"
-                              size="small"
-                              value={watch(`items.${index}.quantity`)}
-                              onChange={(e) => {
-                                setValue(`items.${index}.quantity`, parseFloat(e.target.value) || 0);
-                                updateItemTotal(index);
-                              }}
-                              disabled={mode === 'view'}
-                              sx={{ width: 80 }}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <TextField
-                              size="small"
-                              value={watch(`items.${index}.unit`)}
-                              onChange={(e) => setValue(`items.${index}.unit`, e.target.value)}
-                              disabled={mode === 'view'}
-                              sx={{ width: 70 }}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <TextField
-                              type="number"
-                              size="small"
-                              value={watch(`items.${index}.unit_price`)}
-                              onChange={(e) => {
-                                setValue(`items.${index}.unit_price`, parseFloat(e.target.value) || 0);
-                                updateItemTotal(index);
-                              }}
-                              disabled={mode === 'view'}
-                              sx={{ width: 80 }}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <TextField
-                              type="number"
-                              size="small"
-                              value={watch(`items.${index}.received_quantity`)}
-                              onChange={(e) => setValue(`items.${index}.received_quantity`, parseFloat(e.target.value) || 0)}
-                              disabled={mode === 'view'}
-                              sx={{ width: 80 }}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <TextField
-                              type="number"
-                              size="small"
-                              value={watch(`items.${index}.accepted_quantity`)}
-                              onChange={(e) => setValue(`items.${index}.accepted_quantity`, parseFloat(e.target.value) || 0)}
-                              disabled={mode === 'view'}
-                              sx={{ width: 80 }}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <TextField
-                              type="number"
-                              size="small"
-                              value={watch(`items.${index}.rejected_quantity`)}
-                              onChange={(e) => setValue(`items.${index}.rejected_quantity`, parseFloat(e.target.value) || 0)}
-                              disabled={mode === 'view'}
-                              sx={{ width: 80 }}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <TextField
-                              size="small"
-                              value={watch(`items.${index}.batch_number`)}
-                              onChange={(e) => setValue(`items.${index}.batch_number`, e.target.value)}
-                              disabled={mode === 'view'}
-                              sx={{ width: 100 }}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Select
-                              size="small"
-                              value={watch(`items.${index}.quality_status`) || ''}
-                              onChange={(e) => setValue(`items.${index}.quality_status`, e.target.value)}
-                              disabled={mode === 'view'}
-                              sx={{ width: 100 }}
-                            >
-                              {qualityStatusOptions.map((option) => (
-                                <MenuItem key={option.value} value={option.value}>
-                                  {option.label}
-                                </MenuItem>
-                              ))}
-                            </Select>
-                          </TableCell>
-                          <TableCell>
-                            <Typography variant="body2">
-                              ₹{(watch(`items.${index}.total_amount`) || 0).toFixed(2)}
-                            </Typography>
-                          </TableCell>
-                          {mode !== 'view' && (
-                            <TableCell>
-                              <IconButton
-                                onClick={() => removeItem(index)}
-                                size="small"
-                                color="error"
-                              >
-                                <Remove />
-                              </IconButton>
-                            </TableCell>
-                          )}
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-
-                {/* Notes */}
-                <Grid container spacing={2} mb={3}>
-                  <Grid size={12}>
-                    <TextField
-                      label="Notes"
-                      {...control.register('notes')}
-                      fullWidth
-                      multiline
-                      rows={3}
-                      disabled={mode === 'view'}
-                    />
-                  </Grid>
-                </Grid>
-
-                {/* Total Amount */}
-                <Box display="flex" justifyContent="flex-end" mb={3}>
-                  <Typography variant="h6">
-                    Total Amount: ₹{(watch('total_amount') || 0).toFixed(2)}
-                  </Typography>
-                </Box>
-
-                {/* Action Buttons */}
-                <Box mt={3} display="flex" gap={2}>
-                  {mode !== 'view' && (
-                    <>
-                      <Button
-                        type="submit"
-                        variant="contained"
-                        color="primary"
-                        disabled={createMutation.isPending || updateMutation.isPending}
-                        startIcon={<Save />}
-                      >
-                        {mode === 'edit' ? 'Update' : 'Create'} Voucher
-                      </Button>
-                      <Button
-                        variant="outlined"
-                        onClick={handleCancel}
-                        startIcon={<Cancel />}
-                      >
-                        Cancel
-                      </Button>
-                    </>
-                  )}
-                  
-                  {/* PDF Generation Button - available in all modes */}
-                  <Button
-                    variant="outlined"
-                    color="secondary"
-                    onClick={() => handleGeneratePDF()}
-                    startIcon={<PictureAsPdf />}
-                    disabled={!watch('voucher_number')}
-                  >
-                    Generate PDF
-                  </Button>
-                </Box>
-              </form>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-    </Container>
-  );
-}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}
+                {/* VoucherHeaderActions commented out */}

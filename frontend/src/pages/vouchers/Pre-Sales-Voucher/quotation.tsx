@@ -315,7 +315,7 @@ const QuotationPage: React.FC = () => {
                       onView={() => handleViewWithData(voucher)}
                       onEdit={() => handleEditWithData(voucher)}
                       onDelete={() => handleDelete(voucher)}
-                      onPrint={() => handleGeneratePDF(voucher)}
+                      onPrint={() => handleGeneratePDF()}
                       showKebab={true}
                       onClose={() => {}}
                     />
@@ -457,6 +457,7 @@ const QuotationPage: React.FC = () => {
                 <TableHead>
                   <TableRow>
                     <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1, width: '30%' }}>Product</TableCell>
+                    <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1, width: 80, textAlign: 'center' }}>Stock</TableCell>
                     <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1, textAlign: 'right' }}>Qty</TableCell>
                     <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1, textAlign: 'right' }}>Rate</TableCell>
                     <TableCell sx={{ fontSize: 12, fontWeight: 'bold', p: 1 }}>Disc%</TableCell>
@@ -486,6 +487,19 @@ const QuotationPage: React.FC = () => {
                             disabled={mode === 'view'}
                             size="small"
                           />
+                        </TableCell>
+                        <TableCell sx={{ p: 1, textAlign: 'center' }}>
+                          {watch(`items.${index}.product_id`) ? (
+                            <StockDisplay 
+                              productId={watch(`items.${index}.product_id`)}
+                              disabled={false}
+                              showLabel={false}
+                            />
+                          ) : (
+                            <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: '0.7rem' }}>
+                              -
+                            </Typography>
+                          )}
                         </TableCell>
                         <TableCell sx={{ p: 1, textAlign: 'right' }}>
                           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
@@ -662,12 +676,12 @@ const QuotationPage: React.FC = () => {
         indexContent={indexContent}
         formContent={formContent}
         onShowAll={() => setShowVoucherListModal(true)}
-        pagination={paginationData ? {
-          currentPage: currentPage,
-          totalPages: paginationData.totalPages,
-          onPageChange: handlePageChange,
-          totalItems: paginationData.totalItems
-        } : undefined}
+        // pagination={paginationData ? {
+        //   currentPage: currentPage,
+        //   totalPages: paginationData.totalPages,
+        //   onPageChange: handlePageChange,
+        //   totalItems: paginationData.totalItems
+        // } : undefined}
         centerAligned={true}
         modalContent={
           <VoucherListModal

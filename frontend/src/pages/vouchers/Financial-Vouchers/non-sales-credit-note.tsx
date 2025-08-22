@@ -166,7 +166,7 @@ const NonSalesCreditNote: React.FC = () => {
                     onView={() => handleView(voucher.id)}
                     onEdit={() => handleEdit(voucher.id)}
                     onDelete={() => handleDelete(voucher)}
-                    onPrint={() => handleGeneratePDF(voucher)}
+                    onPrint={() => handleGeneratePDF()}
                     showKebab={true}
                     onClose={() => {}}
                   />
@@ -236,7 +236,7 @@ const NonSalesCreditNote: React.FC = () => {
               }}
               inputProps={{ style: { textAlign: 'center' } }}
               error={!!errors.date}
-              helperText={errors.date?.message}
+              helperText={errors.date?.message as string}
             />
           </Grid>
 
@@ -265,7 +265,7 @@ const NonSalesCreditNote: React.FC = () => {
               fullWidth
               required
               error={!!errors.entity}
-              helperText={errors.entity?.message}
+              helperText={errors.entity?.message as string}
             />
           </Grid>
 
@@ -295,7 +295,7 @@ const NonSalesCreditNote: React.FC = () => {
               fullWidth
               disabled={isViewMode}
               error={!!errors.reference_number}
-              helperText={errors.reference_number?.message}
+              helperText={errors.reference_number?.message as string}
               placeholder="Enter reference invoice/bill number..."
             />
           </Grid>
@@ -312,7 +312,7 @@ const NonSalesCreditNote: React.FC = () => {
               fullWidth
               disabled={isViewMode}
               error={!!errors.total_amount}
-              helperText={errors.total_amount?.message}
+              helperText={errors.total_amount?.message as string}
               sx={{
                 ...voucherStyles.rateField,
                 ...voucherStyles.centerField
@@ -339,7 +339,7 @@ const NonSalesCreditNote: React.FC = () => {
               fullWidth
               disabled={isViewMode}
               error={!!errors.description}
-              helperText={errors.description?.message}
+              helperText={errors.description?.message as string}
               placeholder="Enter detailed description of the credit note..."
             />
           </Grid>
