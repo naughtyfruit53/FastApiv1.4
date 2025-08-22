@@ -547,7 +547,7 @@ const GoodsReceiptNotePage: React.FC = () => {
                             value={watch(`items.${index}.order_qty`)}
                             disabled
                             size="small"
-                            sx={{ width: 100 }}
+                            sx={{ width: 80 }}
                             inputProps={{ style: { textAlign: 'center' } }}
                             InputProps={{
                               endAdornment: watch(`items.${index}.unit`) && (
@@ -564,7 +564,7 @@ const GoodsReceiptNotePage: React.FC = () => {
                             {...control.register(`items.${index}.received_qty`, { valueAsNumber: true })}
                             disabled={mode === 'view'}
                             size="small"
-                            sx={{ width: 100 }}
+                            sx={{ width: 80 }}
                             inputProps={{ style: { textAlign: 'center' } }}
                             InputProps={{
                               endAdornment: watch(`items.${index}.unit`) && (
@@ -581,7 +581,7 @@ const GoodsReceiptNotePage: React.FC = () => {
                             {...control.register(`items.${index}.accepted_qty`, { valueAsNumber: true })}
                             disabled={mode === 'view'}
                             size="small"
-                            sx={{ width: 100 }}
+                            sx={{ width: 80 }}
                             inputProps={{ style: { textAlign: 'center' } }}
                             InputProps={{
                               endAdornment: watch(`items.${index}.unit`) && (
@@ -598,7 +598,7 @@ const GoodsReceiptNotePage: React.FC = () => {
                             {...control.register(`items.${index}.rejected_qty`, { valueAsNumber: true })}
                             disabled={mode === 'view'}
                             size="small"
-                            sx={{ width: 100 }}
+                            sx={{ width: 80 }}
                             inputProps={{ style: { textAlign: 'center' } }}
                             InputProps={{
                               endAdornment: watch(`items.${index}.unit`) && (
