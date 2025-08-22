@@ -849,7 +849,7 @@ export const getVoucherStyles = () => ({
   // GRN specific column widths (different from standard vouchers)
   grnTableColumns: {
     productName: {
-      width: '40%',
+      width: '30%',
       minWidth: '200px',
       fontSize: 12,
       fontWeight: 'bold',
@@ -857,7 +857,7 @@ export const getVoucherStyles = () => ({
       textAlign: 'center' as const
     },
     orderQty: {
-      width: '15%',
+      width: '17.5%',
       minWidth: '80px',
       fontSize: 12,
       fontWeight: 'bold',
@@ -865,7 +865,7 @@ export const getVoucherStyles = () => ({
       textAlign: 'center' as const
     },
     receivedQty: {
-      width: '15%',
+      width: '17.5%',
       minWidth: '80px',
       fontSize: 12,
       fontWeight: 'bold',
@@ -873,7 +873,7 @@ export const getVoucherStyles = () => ({
       textAlign: 'center' as const
     },
     acceptedQty: {
-      width: '15%',
+      width: '17.5%',
       minWidth: '80px',
       fontSize: 12,
       fontWeight: 'bold',
@@ -881,7 +881,7 @@ export const getVoucherStyles = () => ({
       textAlign: 'center' as const
     },
     rejectedQty: {
-      width: '15%',
+      width: '17.5%',
       minWidth: '80px',
       fontSize: 12,
       fontWeight: 'bold',
@@ -901,7 +901,7 @@ export const getVoucherStyles = () => ({
       borderSpacing: 0
     },
     '& .MuiTableCell-root': {
-      padding: '4px 8px',
+      padding: '4px 4px',
       borderRight: '1px solid #f0f0f0',
       '&:last-child': {
         borderRight: 'none'

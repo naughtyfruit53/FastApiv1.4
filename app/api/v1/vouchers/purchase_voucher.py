@@ -92,6 +92,7 @@ async def get_reference_documents_for_purchase_voucher(
                 "date": doc.date.isoformat() if doc.date else None,
                 "total_amount": doc.total_amount,
                 "vendor_id": doc.vendor_id,
+                "vendor_name": doc.vendor.name if doc.vendor else '',
                 "items": [
                     {
                         "product_id": item.product_id,
@@ -120,6 +121,7 @@ async def get_reference_documents_for_purchase_voucher(
                 "date": doc.date.isoformat() if doc.date else None,
                 "total_amount": doc.total_amount,
                 "vendor_id": doc.vendor_id,
+                "vendor_name": doc.vendor.name if doc.vendor else '',
                 "items": [
                     {
                         "product_id": item.product_id,

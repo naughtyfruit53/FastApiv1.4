@@ -118,6 +118,10 @@ const GoodsReceiptNotePage: React.FC = () => {
   // Goods Receipt Note specific state
   const selectedVendorId = watch('vendor_id');
   const selectedVendor = vendorList?.find((v: any) => v.id === selectedVendorId);
+  const vendorValue = useMemo(() => {
+    const name = watch('vendor_name') || selectedVendor?.name || '';
+    return selectedVendorId ? { id: selectedVendorId, name } : null;
+  }, [selectedVendorId, selectedVendor, watch]);
 
   // Enhanced vendor options with "Add New"
   const enhancedVendorOptions = [
@@ -168,13 +172,14 @@ const GoodsReceiptNotePage: React.FC = () => {
   useEffect(() => {
     if (selectedVoucherData) {
       setValue('vendor_id', selectedVoucherData.vendor_id);
+      setValue('vendor_name', selectedVoucherData.vendor?.name || selectedVoucherData.vendor_name || '');
       // Clear existing items
       remove();
       // Append items from selected voucher
       selectedVoucherData.items.forEach((item: any) => {
         append({
           product_id: item.product_id,
-          product_name: item.product?.name || '', 
+          product_name: item.product?.name || item.product_name || '', 
           order_qty: item.quantity,
           received_qty: 0,
           accepted_qty: 0,
@@ -467,7 +472,7 @@ const GoodsReceiptNotePage: React.FC = () => {
               size="small"
               options={enhancedVendorOptions}
               getOptionLabel={(option: any) => option?.name || ''}
-              value={selectedVendor || null}
+              value={vendorValue}
               onChange={(_, newValue) => {
                 if (newValue?.id === null) {
                   setShowAddCustomerModal(true);
@@ -542,7 +547,7 @@ const GoodsReceiptNotePage: React.FC = () => {
                             value={watch(`items.${index}.order_qty`)}
                             disabled
                             size="small"
-                            sx={{ width: 80 }}
+                            sx={{ width: 100 }}
                             inputProps={{ style: { textAlign: 'center' } }}
                             InputProps={{
                               endAdornment: watch(`items.${index}.unit`) && (
@@ -559,7 +564,7 @@ const GoodsReceiptNotePage: React.FC = () => {
                             {...control.register(`items.${index}.received_qty`, { valueAsNumber: true })}
                             disabled={mode === 'view'}
                             size="small"
-                            sx={{ width: 80 }}
+                            sx={{ width: 100 }}
                             inputProps={{ style: { textAlign: 'center' } }}
                             InputProps={{
                               endAdornment: watch(`items.${index}.unit`) && (
@@ -576,7 +581,7 @@ const GoodsReceiptNotePage: React.FC = () => {
                             {...control.register(`items.${index}.accepted_qty`, { valueAsNumber: true })}
                             disabled={mode === 'view'}
                             size="small"
-                            sx={{ width: 80 }}
+                            sx={{ width: 100 }}
                             inputProps={{ style: { textAlign: 'center' } }}
                             InputProps={{
                               endAdornment: watch(`items.${index}.unit`) && (
@@ -593,7 +598,7 @@ const GoodsReceiptNotePage: React.FC = () => {
                             {...control.register(`items.${index}.rejected_qty`, { valueAsNumber: true })}
                             disabled={mode === 'view'}
                             size="small"
-                            sx={{ width: 80 }}
+                            sx={{ width: 100 }}
                             inputProps={{ style: { textAlign: 'center' } }}
                             InputProps={{
                               endAdornment: watch(`items.${index}.unit`) && (

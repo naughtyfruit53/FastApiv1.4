@@ -50,6 +50,13 @@ class ProductMinimal(BaseModel):
     class Config:
         from_attributes = True
 
+class VendorMinimal(BaseModel):
+    id: int
+    name: str
+
+    class Config:
+        from_attributes = True
+
 # Purchase Voucher
 class PurchaseVoucherItemCreate(VoucherItemWithTax):
     pass
@@ -104,6 +111,7 @@ class PurchaseVoucherInDB(VoucherInDBBase):
     lr_rr_number: Optional[str]
     e_way_bill_number: Optional[str]
     items: List[PurchaseVoucherItemInDB]
+    vendor: Optional[VendorMinimal] = None
 
 # Sales Voucher
 class SalesVoucherItemCreate(VoucherItemWithTax):
@@ -193,6 +201,7 @@ class PurchaseOrderInDB(VoucherInDBBase):
     payment_terms: Optional[str]
     terms_conditions: Optional[str]
     items: List[PurchaseOrderItemInDB]
+    vendor: Optional[VendorMinimal] = None
 
 class PurchaseOrderAutoPopulateResponse(BaseModel):
     vendor_id: int
@@ -298,6 +307,7 @@ class GRNInDB(VoucherInDBBase):
     vehicle_number: Optional[str]
     lr_rr_number: Optional[str]
     items: List[GRNItemInDB]
+    vendor: Optional[VendorMinimal] = None
 
 class GRNAutoPopulateResponse(BaseModel):
     vendor_id: int
