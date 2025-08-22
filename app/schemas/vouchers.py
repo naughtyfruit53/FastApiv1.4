@@ -57,6 +57,13 @@ class VendorMinimal(BaseModel):
     class Config:
         from_attributes = True
 
+class PurchaseOrderMinimal(BaseModel):
+    id: int
+    voucher_number: str
+
+    class Config:
+        from_attributes = True
+
 # Purchase Voucher
 class PurchaseVoucherItemCreate(VoucherItemWithTax):
     pass
@@ -308,6 +315,7 @@ class GRNInDB(VoucherInDBBase):
     lr_rr_number: Optional[str]
     items: List[GRNItemInDB]
     vendor: Optional[VendorMinimal] = None
+    purchase_order: Optional[PurchaseOrderMinimal] = None
 
 class GRNAutoPopulateResponse(BaseModel):
     vendor_id: int

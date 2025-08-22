@@ -2,7 +2,7 @@
 // Goods Receipt Note Page - Refactored using shared DRY logic
 import React, { useMemo, useState, useEffect } from 'react';
 import { Box, Button, TextField, Typography, Grid, IconButton, CircularProgress, Container, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Autocomplete, InputAdornment, Tooltip, Modal, Alert, Chip, Fab } from '@mui/material';
-import { Add, Remove, Visibility, Edit, CloudUpload, CheckCircle, Description } from '@mui/icons-material';
+import { Add, Remove, Visibility, Edit, CloudUpload, CheckCircle, Description, PictureAsPdf as PdfIcon } from '@mui/icons-material';
 import AddVendorModal from '../../../components/AddVendorModal';
 import AddProductModal from '../../../components/AddProductModal';
 import AddShippingAddressModal from '../../../components/AddShippingAddressModal';
@@ -79,6 +79,7 @@ const GoodsReceiptNotePage: React.FC = () => {
     voucherList,
     vendorList,
     productList,
+    voucherData,
     nextVoucherNumber,
     sortedVouchers,
     latestVouchers,
@@ -295,17 +296,18 @@ const GoodsReceiptNotePage: React.FC = () => {
     }
   }, [mode, nextVoucherNumber, isLoading, setValue, config.nextNumberEndpoint]);
 
+  // Handle voucher click for modal
   const handleVoucherClick = async (voucher: any) => {
-    try {
-      // Fetch complete voucher data including items
-      const response = await api.get(`/goods-receipt-notes/${voucher.id}`);
-      const fullVoucherData = response.data;
-      
-      // Map items to match frontend field names
+    handleView(voucher.id);
+  };
+
+  // Use hook's handleEdit and handleView, mapping handled in effect below
+  useEffect(() => {
+    if (voucherData && (mode === 'view' || mode === 'edit')) {
       const mappedData = {
-        ...fullVoucherData,
-        date: fullVoucherData.grn_date ? fullVoucherData.grn_date.split('T')[0] : '',
-        items: fullVoucherData.items.map(item => ({
+        ...voucherData,
+        date: voucherData.grn_date ? voucherData.grn_date.split('T')[0] : '',
+        items: voucherData.items.map(item => ({
           ...item,
           ordered_quantity: item.ordered_quantity,
           received_quantity: item.received_quantity,
@@ -313,95 +315,23 @@ const GoodsReceiptNotePage: React.FC = () => {
           rejected_quantity: item.rejected_quantity,
           product_name: item.product?.name,
         })),
-        reference_voucher_type: 'purchase-order', // Placeholder; fetch or derive actual type if needed
-        reference_voucher_number: fullVoucherData.purchase_order?.voucher_number || fullVoucherData.purchase_order_id // Use voucher_number if loaded
+        reference_voucher_type: 'purchase-order',
+        reference_voucher_number: voucherData.purchase_order?.voucher_number || voucherData.purchase_order_id
       };
       
-      // Load the complete voucher data into the form
-      setMode('view');
       reset(mappedData);
-      // Set voucher type and ID for view mode
       setSelectedVoucherType('purchase-order');
-      setSelectedVoucherId(fullVoucherData.purchase_order_id);
-    } catch (error) {
-      console.error('Error fetching voucher details:', error);
-      // Fallback to available data
-      setMode('view');
-      reset(voucher);
+      setSelectedVoucherId(voucherData.purchase_order_id);
+      
+      if (mode === 'edit') {
+        mappedData.items.forEach((item, index) => {
+          setValue(`items.${index}.received_quantity`, item.received_quantity);
+          setValue(`items.${index}.accepted_quantity`, item.accepted_quantity);
+          setValue(`items.${index}.rejected_quantity`, item.rejected_quantity);
+        });
+      }
     }
-  };
-  
-  // Enhanced handleEdit to fetch complete data
-  const handleEditWithData = async (voucher: any) => {
-    try {
-      const response = await api.get(`/goods-receipt-notes/${voucher.id}`);
-      const fullVoucherData = response.data;
-      
-      // Map items to match frontend field names
-      const mappedData = {
-        ...fullVoucherData,
-        date: fullVoucherData.grn_date ? fullVoucherData.grn_date.split('T')[0] : '',
-        items: fullVoucherData.items.map(item => ({
-          ...item,
-          ordered_quantity: item.ordered_quantity,
-          received_quantity: item.received_quantity,
-          accepted_quantity: item.accepted_quantity,
-          rejected_quantity: item.rejected_quantity,
-          product_name: item.product?.name,
-        })),
-        reference_voucher_type: 'purchase-order', // Placeholder; fetch or derive actual type if needed
-        reference_voucher_number: fullVoucherData.purchase_order?.voucher_number || fullVoucherData.purchase_order_id // Use voucher_number if loaded
-      };
-      
-      setMode('edit');
-      reset(mappedData);
-      // Set voucher type and ID for edit mode
-      setSelectedVoucherType('purchase-order');
-      setSelectedVoucherId(fullVoucherData.purchase_order_id);
-      // Force update form fields for quantities
-      mappedData.items.forEach((item, index) => {
-        setValue(`items.${index}.received_quantity`, item.received_quantity);
-        setValue(`items.${index}.accepted_quantity`, item.accepted_quantity);
-        setValue(`items.${index}.rejected_quantity`, item.rejected_quantity);
-      });
-    } catch (error) {
-      console.error('Error fetching voucher details:', error);
-      handleEdit(voucher);
-    }
-  };
-  
-  // Enhanced handleView to fetch complete data
-  const handleViewWithData = async (voucher: any) => {
-    try {
-      const response = await api.get(`/goods-receipt-notes/${voucher.id}`);
-      const fullVoucherData = response.data;
-      
-      // Map items to match frontend field names
-      const mappedData = {
-        ...fullVoucherData,
-        date: fullVoucherData.grn_date ? fullVoucherData.grn_date.split('T')[0] : '',
-        items: fullVoucherData.items.map(item => ({
-          ...item,
-          ordered_quantity: item.ordered_quantity,
-          received_quantity: item.received_quantity,
-          accepted_quantity: item.accepted_quantity,
-          rejected_quantity: item.rejected_quantity,
-          product_name: item.product?.name,
-        })),
-        reference_voucher_type: 'purchase-order', // Placeholder; fetch or derive actual type if needed
-        reference_voucher_number: fullVoucherData.purchase_order?.voucher_number || fullVoucherData.purchase_order_id // Use voucher_number if loaded
-      };
-      
-      setMode('view');
-      reset(mappedData);
-      // Set voucher type and ID for view mode
-      setSelectedVoucherType('purchase-order');
-      setSelectedVoucherId(fullVoucherData.purchase_order_id);
-    } catch (error) {
-      console.error('Error fetching voucher details:', error);
-      handleView(voucher);
-    }
-  };
+  }, [voucherData, mode, reset, setValue]);
 
   const indexContent = (
     <>
@@ -429,7 +359,7 @@ const GoodsReceiptNotePage: React.FC = () => {
                   onContextMenu={(e) => { e.preventDefault(); handleContextMenu(e, voucher); }}
                   sx={{ cursor: 'pointer' }}
                 >
-                  <TableCell align="center" sx={{ fontSize: 12, p: 1 }} onClick={() => handleViewWithData(voucher)}>
+                  <TableCell align="center" sx={{ fontSize: 12, p: 1 }} onClick={() => handleView(voucher.id)}>
                     {voucher.voucher_number}
                   </TableCell>
                   <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>
@@ -440,8 +370,8 @@ const GoodsReceiptNotePage: React.FC = () => {
                     <VoucherContextMenu
                       voucher={voucher}
                       voucherType="Goods Receipt Note"
-                      onView={() => handleViewWithData(voucher)}
-                      onEdit={() => handleEditWithData(voucher)}
+                      onView={() => handleView(voucher.id)}
+                      onEdit={() => handleEdit(voucher.id)}
                       onDelete={() => handleDelete(voucher)}
                       onPrint={() => handleGeneratePDF()}
                       showKebab={true}
@@ -505,51 +435,77 @@ const GoodsReceiptNotePage: React.FC = () => {
 
           {/* Voucher Type */}
           <Grid size={3}>
-            <Autocomplete
-              size="small"
-              options={[{value: 'purchase-order', label: 'Purchase Order'}, {value: 'purchase-voucher', label: 'Purchase Voucher'}]}
-              getOptionLabel={(option: any) => option.label}
-              value={selectedVoucherType ? {value: selectedVoucherType, label: selectedVoucherType === 'purchase-order' ? 'Purchase Order' : 'Purchase Voucher'} : null}
-              onChange={(_, newValue) => {
-                setSelectedVoucherType(newValue?.value || null);
-                setSelectedVoucherId(null);
-              }}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="Voucher Type"
-                  InputLabelProps={{ shrink: true, style: { fontSize: 12 } }}
-                  inputProps={{ ...params.inputProps, style: { fontSize: 14 } }}
-                  size="small"
-                  sx={{ '& .MuiInputBase-root': { height: 27 } }}
-                />
-              )}
-              disabled={mode === 'view'}
-            />
+            {mode === 'view' ? (
+              <TextField
+                fullWidth
+                label="Voucher Type"
+                value={selectedVoucherType === 'purchase-order' ? 'Purchase Order' : 'Purchase Voucher'}
+                disabled
+                InputLabelProps={{ shrink: true, style: { fontSize: 12 } }}
+                inputProps={{ style: { fontSize: 14 } }}
+                size="small"
+                sx={{ '& .MuiInputBase-root': { height: 27 } }}
+              />
+            ) : (
+              <Autocomplete
+                size="small"
+                options={[{value: 'purchase-order', label: 'Purchase Order'}, {value: 'purchase-voucher', label: 'Purchase Voucher'}]}
+                getOptionLabel={(option: any) => option.label}
+                value={selectedVoucherType ? {value: selectedVoucherType, label: selectedVoucherType === 'purchase-order' ? 'Purchase Order' : 'Purchase Voucher'} : null}
+                onChange={(_, newValue) => {
+                  setSelectedVoucherType(newValue?.value || null);
+                  setSelectedVoucherId(null);
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Voucher Type"
+                    InputLabelProps={{ shrink: true, style: { fontSize: 12 } }}
+                    inputProps={{ ...params.inputProps, style: { fontSize: 14 } }}
+                    size="small"
+                    sx={{ '& .MuiInputBase-root': { height: 27 } }}
+                  />
+                )}
+                disabled={mode === 'view'}
+              />
+            )}
           </Grid>
 
           {/* Voucher Number */}
           <Grid size={3}>
-            <Autocomplete
-              size="small"
-              options={voucherOptions}
-              getOptionLabel={(option: any) => option.voucher_number}
-              value={voucherOptions.find((v: any) => v.id === selectedVoucherId) || null}
-              onChange={(_, newValue) => {
-                setSelectedVoucherId(newValue?.id || null);
-              }}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="Voucher Number"
-                  InputLabelProps={{ shrink: true, style: { fontSize: 12 } }}
-                  inputProps={{ ...params.inputProps, style: { fontSize: 14 } }}
-                  size="small"
-                  sx={{ '& .MuiInputBase-root': { height: 27 } }}
-                />
-              )}
-              disabled={mode === 'view' || !selectedVoucherType}
-            />
+            {mode === 'view' ? (
+              <TextField
+                fullWidth
+                label="Reference Voucher Number"
+                value={watch('reference_voucher_number') || ''}
+                disabled
+                InputLabelProps={{ shrink: true, style: { fontSize: 12 } }}
+                inputProps={{ style: { fontSize: 14 } }}
+                size="small"
+                sx={{ '& .MuiInputBase-root': { height: 27 } }}
+              />
+            ) : (
+              <Autocomplete
+                size="small"
+                options={voucherOptions}
+                getOptionLabel={(option: any) => option.voucher_number}
+                value={voucherOptions.find((v: any) => v.id === selectedVoucherId) || null}
+                onChange={(_, newValue) => {
+                  setSelectedVoucherId(newValue?.id || null);
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Reference Voucher Number"
+                    InputLabelProps={{ shrink: true, style: { fontSize: 12 } }}
+                    inputProps={{ ...params.inputProps, style: { fontSize: 14 } }}
+                    size="small"
+                    sx={{ '& .MuiInputBase-root': { height: 27 } }}
+                  />
+                )}
+                disabled={mode === 'view' || !selectedVoucherType}
+              />
+            )}
           </Grid>
 
           {/* Vendor - Switch to TextField when voucher selected for auto-populate */}
@@ -719,22 +675,6 @@ const GoodsReceiptNotePage: React.FC = () => {
 
           {/* GRN does not have totals section - removed as per requirements */}
 
-          {/* Action buttons */}
-          <Grid size={12}>
-            <Box sx={{ mt: 2, display: 'flex', gap: 1, justifyContent: 'center' }}>
-              {mode !== 'view' && (
-                <Button 
-                  type="submit" 
-                  variant="contained" 
-                  color="success" 
-                  disabled={createMutation.isPending || updateMutation.isPending}
-                  sx={{ fontSize: 12 }}
-                >
-                  Save
-                </Button>
-              )}
-            </Box>
-          </Grid>
         </Grid>
       </form>
     </Box>
@@ -772,8 +712,8 @@ const GoodsReceiptNotePage: React.FC = () => {
             voucherType="Goods Receipt Notes"
             vouchers={sortedVouchers || []}
             onVoucherClick={handleVoucherClick}
-            onEdit={handleEditWithData}
-            onView={handleViewWithData}
+            onEdit={handleEdit}
+            onView={handleView}
             onDelete={handleDelete}
             onGeneratePDF={handleGeneratePDF}
             customerList={vendorList}
@@ -808,8 +748,8 @@ const GoodsReceiptNotePage: React.FC = () => {
       <VoucherContextMenu
         contextMenu={contextMenu}
         onClose={handleCloseContextMenu}
-        onEdit={handleEditWithData}
-        onView={handleViewWithData}
+        onEdit={handleEdit}
+        onView={handleView}
         onDelete={handleDelete}
         onPrint={handleGeneratePDF}
       />

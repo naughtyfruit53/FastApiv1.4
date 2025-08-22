@@ -1,7 +1,9 @@
+// frontend/src/components/VoucherHeaderActions.tsx
 'use client';
 
 import React from 'react';
-import { Box, Typography } from '@mui/material';
+import { Box, Button } from '@mui/material';
+import { Add as AddIcon, Edit as EditIcon, PictureAsPdf as PdfIcon } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 
 interface VoucherHeaderActionsProps {
@@ -9,6 +11,7 @@ interface VoucherHeaderActionsProps {
   voucherType: string; // e.g., 'Purchase Order', 'Sales Voucher', etc.
   voucherRoute: string; // The base route for this voucher type
   currentId?: number; // Current voucher ID (for edit route)
+  onGeneratePDF?: () => void;
   // Additional props for compatibility
   onModeChange?: (mode: 'create' | 'edit' | 'view') => void;
   onModalOpen?: () => void;
@@ -23,6 +26,7 @@ const VoucherHeaderActions: React.FC<VoucherHeaderActionsProps> = ({
   voucherType,
   voucherRoute,
   currentId,
+  onGeneratePDF,
   // Additional props for compatibility (ignored for now)
   onModeChange,
   onModalOpen,
@@ -43,58 +47,56 @@ const VoucherHeaderActions: React.FC<VoucherHeaderActionsProps> = ({
     router.push(`${voucherRoute}?mode=create`);
   };
 
-  const actionStyle = {
-    color: '#001f3f',
-    fontSize: '15px',
-    fontWeight: 'normal',
-    textDecoration: 'underline',
-    cursor: 'pointer',
-    marginLeft: '20px',
-    '&:hover': {
-      textDecoration: 'none',
-    },
-  };
-
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0 }}>
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
       {mode === 'view' && (
         <>
-          <Typography 
-            sx={{
-              ...actionStyle,
-              color: '#FFD700', // Yellow for EDIT
-              textTransform: 'uppercase',
-              fontWeight: 'bold',
-            }}
-            onClick={handleEdit}
-          >
-            EDIT {voucherType.toLowerCase()}
-          </Typography>
-          <Typography 
-            sx={{
-              ...actionStyle,
-              color: '#28a745', // Green for CREATE
-              textTransform: 'uppercase',
-              fontWeight: 'bold',
-            }}
+          <Button 
+            variant="contained" 
+            color="success" 
+            startIcon={<AddIcon />}
             onClick={handleCreate}
+            sx={{ fontSize: 12, textTransform: 'uppercase' }}
           >
-            CREATE {voucherType.toLowerCase()}
-          </Typography>
+            Create {voucherType.toLowerCase()}
+          </Button>
+          <Button 
+            variant="contained" 
+            color="primary" 
+            startIcon={<EditIcon />}
+            onClick={handleEdit}
+            sx={{ fontSize: 12, textTransform: 'uppercase' }}
+          >
+            Edit {voucherType.toLowerCase()}
+          </Button>
         </>
       )}
       {mode === 'edit' && (
-        <Typography 
-          sx={{
-            ...actionStyle,
-            color: '#28a745', // Green for CREATE
-            textTransform: 'uppercase',
-            fontWeight: 'bold',
-          }}
+        <Button 
+          variant="contained" 
+          color="success" 
+          startIcon={<AddIcon />}
           onClick={handleCreate}
+          sx={{ fontSize: 12, textTransform: 'uppercase' }}
         >
-          CREATE {voucherType.toLowerCase()}
-        </Typography>
+          Create {voucherType.toLowerCase()}
+        </Button>
+      )}
+      {(mode === 'view' || mode === 'edit') && onGeneratePDF && (
+        <Button 
+          variant="contained" 
+          color="secondary" 
+          startIcon={<PdfIcon />}
+          onClick={onGeneratePDF}
+          sx={{ fontSize: 12, textTransform: 'uppercase' }}
+        >
+          Generate PDF
+        </Button>
+      )}
+      {mode !== 'view' && (
+        <Button form="voucherForm" type="submit" variant="contained" color="success" sx={{ fontSize: 12 }}>
+          Save
+        </Button>
       )}
     </Box>
   );
