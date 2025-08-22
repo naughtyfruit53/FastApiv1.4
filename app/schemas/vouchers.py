@@ -44,6 +44,12 @@ class VoucherInDBBase(VoucherBase):
     class Config:
         from_attributes = True
 
+class ProductMinimal(BaseModel):
+    name: str
+
+    class Config:
+        from_attributes = True
+
 # Purchase Voucher
 class PurchaseVoucherItemCreate(VoucherItemWithTax):
     pass
@@ -51,6 +57,7 @@ class PurchaseVoucherItemCreate(VoucherItemWithTax):
 class PurchaseVoucherItemInDB(PurchaseVoucherItemCreate):
     id: int
     purchase_voucher_id: int
+    product: Optional[ProductMinimal] = None
 
 class PurchaseVoucherCreate(VoucherBase):
     vendor_id: int
@@ -161,6 +168,7 @@ class PurchaseOrderItemInDB(PurchaseOrderItemCreate):
     purchase_order_id: int
     delivered_quantity: float = 0.0
     pending_quantity: float
+    product: Optional[ProductMinimal] = None
 
 class PurchaseOrderCreate(VoucherBase):
     vendor_id: int
@@ -253,6 +261,7 @@ class GRNItemCreate(BaseModel):
 class GRNItemInDB(GRNItemCreate):
     id: int
     grn_id: int
+    product: Optional[ProductMinimal] = None
 
 class GRNCreate(VoucherBase):
     purchase_order_id: int

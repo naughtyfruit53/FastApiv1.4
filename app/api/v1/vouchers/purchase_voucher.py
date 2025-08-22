@@ -6,7 +6,7 @@ from typing import List, Optional
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
 from app.models.base import User
-from app.models.vouchers import PurchaseVoucher
+from app.models.vouchers import PurchaseVoucher, PurchaseOrder, GoodsReceiptNote, PurchaseOrderItem, GoodsReceiptNoteItem
 from app.schemas.vouchers import PurchaseVoucherCreate, PurchaseVoucherInDB, PurchaseVoucherUpdate
 from app.services.email_service import send_voucher_email
 from app.services.voucher_service import VoucherNumberService
@@ -76,10 +76,12 @@ async def get_reference_documents_for_purchase_voucher(
     current_user: User = Depends(get_current_active_user)
 ):
     """Get available reference documents of a specific type for purchase vouchers"""
-    from app.models.vouchers import PurchaseOrder, GoodsReceiptNote
     
     if ref_type == "purchase-order":
-        documents = db.query(PurchaseOrder).filter(
+        documents = db.query(PurchaseOrder).options(
+            joinedload(PurchaseOrder.vendor),
+            joinedload(PurchaseOrder.items).joinedload(PurchaseOrderItem.product)
+        ).filter(
             PurchaseOrder.organization_id == current_user.organization_id
         ).order_by(PurchaseOrder.created_at.desc()).limit(50).all()
         
@@ -93,7 +95,7 @@ async def get_reference_documents_for_purchase_voucher(
                 "items": [
                     {
                         "product_id": item.product_id,
-                        "product_name": item.product_name,
+                        "product_name": item.product.name if item.product else '',
                         "quantity": item.quantity,
                         "unit_price": item.unit_price,
                         "unit": item.unit,
@@ -104,7 +106,10 @@ async def get_reference_documents_for_purchase_voucher(
         ]
     
     elif ref_type == "grn":
-        documents = db.query(GoodsReceiptNote).filter(
+        documents = db.query(GoodsReceiptNote).options(
+            joinedload(GoodsReceiptNote.vendor),
+            joinedload(GoodsReceiptNote.items).joinedload(GoodsReceiptNoteItem.product)
+        ).filter(
             GoodsReceiptNote.organization_id == current_user.organization_id
         ).order_by(GoodsReceiptNote.created_at.desc()).limit(50).all()
         
@@ -118,7 +123,7 @@ async def get_reference_documents_for_purchase_voucher(
                 "items": [
                     {
                         "product_id": item.product_id,
-                        "product_name": item.product_name,
+                        "product_name": item.product.name if item.product else '',
                         "quantity": item.quantity,
                         "unit_price": item.unit_price,
                         "unit": item.unit,
@@ -203,7 +208,10 @@ async def get_purchase_voucher(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    invoice = db.query(PurchaseVoucher).options(joinedload(PurchaseVoucher.vendor)).filter(
+    invoice = db.query(PurchaseVoucher).options(
+        joinedload(PurchaseVoucher.vendor),
+        joinedload(PurchaseVoucher.items).joinedload(PurchaseVoucherItem.product)
+    ).filter(
         PurchaseVoucher.id == invoice_id,
         PurchaseVoucher.organization_id == current_user.organization_id
     ).first()

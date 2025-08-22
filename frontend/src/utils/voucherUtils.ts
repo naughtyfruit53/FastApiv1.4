@@ -250,7 +250,7 @@ export const formatRateField = (value: number | string): string => {
 };
 
 /**
- * Parse rate field input to ensure 2 decimal places maximum
+ * Parse rate field input to ensure 2 decimal places
  */
 export const parseRateField = (value: string): number => {
   const parsed = parseFloat(value);
@@ -599,7 +599,7 @@ export const enhancedRateUtils = {
 };
 
 /**
- * Enhanced voucher list utilities with standardized pagination and sorting
+ * Enhanced voucher list utilities with minimal pagination and sorting
  */
 export const voucherListUtils = {
   /**
@@ -638,7 +638,7 @@ export const voucherListUtils = {
 };
 
 /**
- * Common styling utilities for voucher forms and tables with enhanced center alignment
+ * Common styling utilities for voucher forms and tables with minimal gaps
  */
 export const getVoucherStyles = () => ({
   // Center alignment for all text elements
@@ -668,7 +668,7 @@ export const getVoucherStyles = () => ({
     textAlign: 'center' as const,
   },
   
-  // Container for voucher layout with proper alignment (Full width, edge-to-edge)
+  // Container for voucher layout with minimal padding
   voucherContainer: {
     display: 'flex',
     flexDirection: 'column' as const,
@@ -849,15 +849,15 @@ export const getVoucherStyles = () => ({
   // GRN specific column widths (different from standard vouchers)
   grnTableColumns: {
     productName: {
-      width: '30%',
-      minWidth: '180px',
+      width: '40%',
+      minWidth: '200px',
       fontSize: 12,
       fontWeight: 'bold',
       padding: '4px 8px',
       textAlign: 'center' as const
     },
     orderQty: {
-      width: '12%',
+      width: '15%',
       minWidth: '80px',
       fontSize: 12,
       fontWeight: 'bold',
@@ -865,7 +865,7 @@ export const getVoucherStyles = () => ({
       textAlign: 'center' as const
     },
     receivedQty: {
-      width: '12%',
+      width: '15%',
       minWidth: '80px',
       fontSize: 12,
       fontWeight: 'bold',
@@ -873,7 +873,7 @@ export const getVoucherStyles = () => ({
       textAlign: 'center' as const
     },
     acceptedQty: {
-      width: '12%',
+      width: '15%',
       minWidth: '80px',
       fontSize: 12,
       fontWeight: 'bold',
@@ -881,21 +881,13 @@ export const getVoucherStyles = () => ({
       textAlign: 'center' as const
     },
     rejectedQty: {
-      width: '12%',
+      width: '15%',
       minWidth: '80px',
       fontSize: 12,
       fontWeight: 'bold',
       padding: '4px 8px',
       textAlign: 'center' as const
     },
-    action: {
-      width: '10%',
-      minWidth: '70px',
-      fontSize: 12,
-      fontWeight: 'bold',
-      padding: '4px 8px',
-      textAlign: 'center' as const
-    }
   },
 
   // Enhanced table container with minimal gaps

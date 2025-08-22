@@ -11,11 +11,9 @@ import VoucherLayout from '../../../components/VoucherLayout';
 import VoucherHeaderActions from '../../../components/VoucherHeaderActions';
 import VoucherListModal from '../../../components/VoucherListModal';
 import BalanceDisplay from '../../../components/BalanceDisplay';
-import StockDisplay from '../../../components/StockDisplay';
 import ProductAutocomplete from '../../../components/ProductAutocomplete';
 import { useVoucherPage } from '../../../hooks/useVoucherPage';
 import { getVoucherConfig, numberToWords, GST_SLABS, parseRateField, formatRateField, getVoucherStyles } from '../../../utils/voucherUtils';
-import { getStock } from '../../../services/masterService';
 import { voucherService } from '../../../services/vouchersService';
 import api from '../../../lib/api';  // Import api for direct call
 import { useAuth } from '../../../context/AuthContext';
@@ -127,9 +125,6 @@ const GoodsReceiptNotePage: React.FC = () => {
     { id: null, name: 'Add New Vendor...' }
   ];
 
-  // Stock data state for items
-  const [stockLoading, setStockLoading] = useState<{[key: number]: boolean}>({});
-
   // GRN specific states
   const [selectedVoucherType, setSelectedVoucherType] = useState<'purchase-voucher' | 'purchase-order' | null>(null);
   const [selectedVoucherId, setSelectedVoucherId] = useState<number | null>(null);
@@ -179,7 +174,7 @@ const GoodsReceiptNotePage: React.FC = () => {
       selectedVoucherData.items.forEach((item: any) => {
         append({
           product_id: item.product_id,
-          product_name: item.product_name || '', // Assuming product has name
+          product_name: item.product?.name || '', 
           order_qty: item.quantity,
           received_qty: 0,
           accepted_qty: 0,
@@ -262,43 +257,6 @@ const GoodsReceiptNotePage: React.FC = () => {
       _handleSubmitForm(data);
     }
   };
-
-  // Function to get stock color
-  const getStockColor = (stock: number, reorder: number) => {
-    if (stock === 0) return 'error.main';
-    if (stock <= reorder) return 'warning.main';
-    return 'success.main';
-  };
-
-  // Memoize all selected products
-  const selectedProducts = useMemo(() => {
-    return fields.map((_, index) => {
-      const productId = watch(`items.${index}.product_id`);
-      return productList?.find((p: any) => p.id === productId) || null;
-    });
-  }, [fields.length, productList, watch]);
-
-  // Effect to fetch stock when product changes
-  useEffect(() => {
-    fields.forEach((_, index) => {
-      const productId = watch(`items.${index}.product_id`);
-      if (productId) {
-        setStockLoading(prev => ({ ...prev, [index]: true }));
-        getStock({ queryKey: ['', { product_id: productId }] }).then(res => {
-          console.log('Stock Response for product ' + productId + ':', res);
-          const stockData = res[0] || { quantity: 0 };
-          setValue(`items.${index}.current_stock`, stockData.quantity);
-          setStockLoading(prev => ({ ...prev, [index]: false }));
-        }).catch(err => {
-          console.error('Failed to fetch stock:', err);
-          setStockLoading(prev => ({ ...prev, [index]: false }));
-        });
-      } else {
-        setValue(`items.${index}.current_stock`, 0);
-        setStockLoading(prev => ({ ...prev, [index]: false }));
-      }
-    });
-  }, [fields, watch, setValue]);
 
   // Manual fetch for voucher number if not loaded
   useEffect(() => {
@@ -559,7 +517,6 @@ const GoodsReceiptNotePage: React.FC = () => {
                 <TableHead>
                   <TableRow>
                     <TableCell sx={voucherStyles.grnTableColumns.productName}>Product</TableCell>
-                    <TableCell sx={{ ...voucherStyles.grnTableColumns.orderQty, width: '100px' }}>Available Stock</TableCell>
                     <TableCell sx={voucherStyles.grnTableColumns.orderQty}>Order Qty</TableCell>
                     <TableCell sx={voucherStyles.grnTableColumns.receivedQty}>Received Qty</TableCell>
                     <TableCell sx={voucherStyles.grnTableColumns.acceptedQty}>Accepted Qty</TableCell>
@@ -573,17 +530,10 @@ const GoodsReceiptNotePage: React.FC = () => {
                         <TableCell sx={{ p: 1, textAlign: 'center' }}>
                           <TextField
                             fullWidth
-                            value={selectedProducts[index]?.name || ''}
+                            value={watch(`items.${index}.product_name`) || ''}
                             disabled
                             size="small"
                             inputProps={{ style: { textAlign: 'center' } }}
-                          />
-                        </TableCell>
-                        <TableCell sx={{ p: 1, textAlign: 'center' }}>
-                          <StockDisplay 
-                            productId={watch(`items.${index}.product_id`)}
-                            showLabel={true}
-                            compact={true}
                           />
                         </TableCell>
                         <TableCell sx={{ p: 1, textAlign: 'center' }}>
@@ -606,9 +556,11 @@ const GoodsReceiptNotePage: React.FC = () => {
                         <TableCell sx={{ p: 1, textAlign: 'center' }}>
                           <TextField
                             type="number"
-                            inputProps={{ style: { textAlign: 'center' } }}
+                            {...control.register(`items.${index}.received_qty`, { valueAsNumber: true })}
+                            disabled={mode === 'view'}
                             size="small"
                             sx={{ width: 80 }}
+                            inputProps={{ style: { textAlign: 'center' } }}
                             InputProps={{
                               endAdornment: watch(`items.${index}.unit`) && (
                                 <span style={{ fontSize: '12px', color: '#666' }}>

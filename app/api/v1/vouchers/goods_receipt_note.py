@@ -130,7 +130,10 @@ async def get_goods_receipt_note(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    invoice = db.query(GoodsReceiptNote).options(joinedload(GoodsReceiptNote.vendor)).filter(
+    invoice = db.query(GoodsReceiptNote).options(
+        joinedload(GoodsReceiptNote.vendor),
+        joinedload(GoodsReceiptNote.items).joinedload(GoodsReceiptNoteItem.product)
+    ).filter(
         GoodsReceiptNote.id == invoice_id,
         GoodsReceiptNote.organization_id == current_user.organization_id
     ).first()
