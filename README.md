@@ -54,6 +54,7 @@ The TRITIQ ERP platform includes a comprehensive Role-Based Access Control (RBAC
 - 📅 **Appointment Scheduling**: Booking system with permission controls
 - 🎧 **Customer Service**: Support operations with access levels
 - 📋 **Work Orders**: Service tracking with role restrictions
+- 🚚 **Material Dispatch**: Dispatch order and installation job management with integrated workflow
 - 📊 **Service Reports**: Analytics with export permissions
 - ⚙️ **CRM Administration**: System configuration access control
 
@@ -72,9 +73,30 @@ The TRITIQ ERP platform includes a comprehensive Role-Based Access Control (RBAC
 - 🛠️ **Service Catalog**: Hierarchical service categories and items with flexible pricing
 - 📅 **Appointment Scheduling**: Advanced booking system with technician availability
 - 👨‍🔧 **Workforce Management**: Technician profiles, skills, and schedule management
+- 🚚 **Material Dispatch System**: Complete dispatch order management with installation scheduling workflow
 - 📱 **Mobile Workforce App**: Progressive Web App for field technicians
 - 🏪 **Customer Portal**: Self-service booking and service history access
 - 🔗 **ERP Integration**: Seamless integration with existing financial vouchers
+
+#### Material Dispatch Workflow
+The Material Dispatch System provides end-to-end material dispatch and installation management:
+
+1. **Dispatch Order Creation**: Create orders with multiple items, customer details, and delivery information
+2. **Status Progression**: Track orders through pending → in_transit → delivered workflow
+3. **Delivery Challan Integration**: Automatic prompt for installation scheduling after delivery completion
+4. **Installation Job Management**: Schedule, assign technicians, and track installation progress
+5. **RBAC Integration**: Full role-based access control for dispatch and installation operations
+
+**Key Features**:
+- ✅ Auto-generated order and job numbers with fiscal year support
+- ✅ Multi-item dispatch with product tracking and serial/batch numbers
+- ✅ Installation scheduling with technician assignment
+- ✅ Status-based automatic date/time tracking
+- ✅ Customer feedback and rating system
+- ✅ Integration with existing delivery challan workflow
+
+📖 **[Complete Dispatch API Documentation](./docs/DISPATCH_API_DOCUMENTATION.md)**
+📖 **[Material Dispatch System Documentation](./MATERIAL_DISPATCH_DOCUMENTATION.md)**
 - 🔔 **Notification/Engagement Module**: Multi-channel customer communication system ✅ **IMPLEMENTED**
 
 #### Notification/Engagement Features ✅ **COMPLETED**

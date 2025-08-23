@@ -7,7 +7,7 @@ Dispatch service for managing dispatch orders and installation jobs
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 
 from app.models.base import DispatchOrder, DispatchItem, InstallationJob, User
@@ -146,9 +146,9 @@ class DispatchService:
         
         # Update specific date fields based on status
         if status == "in_transit" and not dispatch_order.dispatch_date:
-            dispatch_order.dispatch_date = datetime.utcnow()
+            dispatch_order.dispatch_date = datetime.now(timezone.utc)
         elif status == "delivered" and not dispatch_order.actual_delivery_date:
-            dispatch_order.actual_delivery_date = datetime.utcnow()
+            dispatch_order.actual_delivery_date = datetime.now(timezone.utc)
         
         # Update any additional fields
         for key, value in kwargs.items():
@@ -256,9 +256,9 @@ class InstallationJobService:
         
         # Update specific timestamp fields based on status
         if status == "in_progress" and not job.actual_start_time:
-            job.actual_start_time = datetime.utcnow()
+            job.actual_start_time = datetime.now(timezone.utc)
         elif status == "completed" and not job.actual_end_time:
-            job.actual_end_time = datetime.utcnow()
+            job.actual_end_time = datetime.now(timezone.utc)
         
         # Update any additional fields
         for key, value in kwargs.items():

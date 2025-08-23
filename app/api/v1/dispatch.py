@@ -19,6 +19,10 @@ from app.schemas.dispatch import (
     InstallationSchedulePromptResponse
 )
 from app.services.dispatch_service import DispatchService, InstallationJobService
+from app.core.rbac_dependencies import (
+    require_dispatch_create, require_dispatch_read, require_dispatch_update, require_dispatch_delete,
+    require_installation_create, require_installation_read, require_installation_update, require_installation_delete
+)
 import logging
 
 logger = logging.getLogger(__name__)
@@ -31,7 +35,7 @@ router = APIRouter()
 async def create_dispatch_order(
     order_data: DispatchOrderCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_dispatch_create)
 ):
     """Create a new dispatch order"""
     logger.info(f"User {current_user.id} creating dispatch order for customer {order_data.customer_id}")
@@ -66,7 +70,7 @@ async def get_dispatch_orders(
     limit: int = Query(100, ge=1, le=100, description="Number of records to return"),
     filter_params: DispatchOrderFilter = Depends(),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_dispatch_read)
 ):
     """Get dispatch orders for the organization"""
     logger.info(f"User {current_user.id} requesting dispatch orders")
@@ -100,7 +104,7 @@ async def get_dispatch_orders(
 async def get_dispatch_order(
     order_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_dispatch_read)
 ):
     """Get a specific dispatch order"""
     dispatch_order = db.query(DispatchOrder).filter(
@@ -122,7 +126,7 @@ async def update_dispatch_order(
     order_id: int,
     order_update: DispatchOrderUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_dispatch_update)
 ):
     """Update a dispatch order"""
     dispatch_order = db.query(DispatchOrder).filter(
@@ -170,7 +174,7 @@ async def update_dispatch_order(
 async def delete_dispatch_order(
     order_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_dispatch_delete)
 ):
     """Delete a dispatch order (only if in pending status)"""
     dispatch_order = db.query(DispatchOrder).filter(
@@ -208,7 +212,7 @@ async def delete_dispatch_order(
 async def create_installation_job(
     job_data: InstallationJobCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_installation_create)
 ):
     """Create a new installation job"""
     logger.info(f"User {current_user.id} creating installation job for dispatch order {job_data.dispatch_order_id}")
@@ -252,7 +256,7 @@ async def get_installation_jobs(
     limit: int = Query(100, ge=1, le=100, description="Number of records to return"),
     filter_params: InstallationJobFilter = Depends(),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_installation_read)
 ):
     """Get installation jobs for the organization"""
     logger.info(f"User {current_user.id} requesting installation jobs")
@@ -290,7 +294,7 @@ async def get_installation_jobs(
 async def get_installation_job(
     job_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_installation_read)
 ):
     """Get a specific installation job"""
     installation_job = db.query(InstallationJob).filter(
@@ -312,7 +316,7 @@ async def update_installation_job(
     job_id: int,
     job_update: InstallationJobUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_installation_update)
 ):
     """Update an installation job"""
     installation_job = db.query(InstallationJob).filter(
@@ -372,7 +376,7 @@ async def update_installation_job(
 async def delete_installation_job(
     job_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_installation_delete)
 ):
     """Delete an installation job (only if in scheduled status)"""
     installation_job = db.query(InstallationJob).filter(
@@ -410,7 +414,7 @@ async def delete_installation_job(
 async def handle_installation_schedule_prompt(
     response_data: InstallationSchedulePromptResponse,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_installation_create)
 ):
     """Handle the installation schedule prompt response after delivery challan/service voucher creation"""
     logger.info(f"User {current_user.id} responding to installation schedule prompt")
