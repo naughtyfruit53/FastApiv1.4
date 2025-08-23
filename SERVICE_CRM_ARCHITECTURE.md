@@ -369,6 +369,27 @@ GET    /api/v1/organizations/{org_id}/tickets/analytics
 GET    /api/v1/organizations/{org_id}/tickets/metrics
 ```
 
+#### Material Dispatch APIs
+```
+# Dispatch Order CRUD operations
+GET    /api/v1/dispatch/orders
+POST   /api/v1/dispatch/orders
+GET    /api/v1/dispatch/orders/{order_id}
+PUT    /api/v1/dispatch/orders/{order_id}
+DELETE /api/v1/dispatch/orders/{order_id}
+
+# Installation Job CRUD operations
+GET    /api/v1/dispatch/installation-jobs
+POST   /api/v1/dispatch/installation-jobs
+GET    /api/v1/dispatch/installation-jobs/{job_id}
+PUT    /api/v1/dispatch/installation-jobs/{job_id}
+DELETE /api/v1/dispatch/installation-jobs/{job_id}
+
+# Installation Schedule Prompt (triggered from delivery challan/service voucher)
+POST   /api/v1/dispatch/installation-schedule-prompt
+  # Creates installation job from delivery challan workflow
+```
+
 ## 🚀 Implementation Roadmap
 
 ### Phase 1: Foundation (PRs 1-3)
