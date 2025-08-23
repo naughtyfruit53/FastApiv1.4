@@ -1427,3 +1427,140 @@ class CompletionRecord(Base):
         Index('idx_completion_record_follow_up', 'follow_up_required', 'follow_up_date'),
         Index('idx_completion_record_feedback_sent', 'feedback_request_sent'),
     )
+
+
+class CustomerFeedback(Base):
+    """
+    Model for capturing structured customer feedback and survey responses.
+    Extends beyond basic completion feedback to provide detailed customer satisfaction tracking.
+    """
+    __tablename__ = "customer_feedback"
+    
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    
+    # Multi-tenant field
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
+    
+    # Job and customer references
+    installation_job_id: Mapped[int] = mapped_column(Integer, ForeignKey("installation_jobs.id"), nullable=False)
+    customer_id: Mapped[int] = mapped_column(Integer, ForeignKey("customers.id"), nullable=False)
+    completion_record_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("completion_records.id"), nullable=True)
+    
+    # Feedback details
+    overall_rating: Mapped[int] = mapped_column(Integer, nullable=False)  # 1-5 scale
+    service_quality_rating: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)  # 1-5 scale
+    technician_rating: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)  # 1-5 scale
+    timeliness_rating: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)  # 1-5 scale
+    communication_rating: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)  # 1-5 scale
+    
+    # Text feedback
+    feedback_comments: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    improvement_suggestions: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    
+    # Survey questions (JSON field for flexible survey forms)
+    survey_responses: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # JSON string
+    
+    # Recommendation and satisfaction
+    would_recommend: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
+    satisfaction_level: Mapped[Optional[str]] = mapped_column(String, nullable=True)  # 'very_satisfied', 'satisfied', 'neutral', 'dissatisfied', 'very_dissatisfied'
+    
+    # Follow-up preferences
+    follow_up_preferred: Mapped[bool] = mapped_column(Boolean, default=False)
+    preferred_contact_method: Mapped[Optional[str]] = mapped_column(String, nullable=True)  # 'email', 'phone', 'sms'
+    
+    # Status tracking
+    feedback_status: Mapped[str] = mapped_column(String, nullable=False, default="submitted")  # 'submitted', 'reviewed', 'responded', 'closed'
+    reviewed_by_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)
+    reviewed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    response_notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    
+    # Metadata
+    submitted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    organization: Mapped["Organization"] = relationship("Organization")
+    installation_job: Mapped["InstallationJob"] = relationship("InstallationJob")
+    customer: Mapped["Customer"] = relationship("Customer")
+    completion_record: Mapped[Optional["CompletionRecord"]] = relationship("CompletionRecord")
+    reviewed_by: Mapped[Optional["User"]] = relationship("User", foreign_keys=[reviewed_by_id])
+    
+    __table_args__ = (
+        Index('idx_customer_feedback_org_job', 'organization_id', 'installation_job_id'),
+        Index('idx_customer_feedback_customer', 'customer_id'),
+        Index('idx_customer_feedback_completion', 'completion_record_id'),
+        Index('idx_customer_feedback_status', 'feedback_status'),
+        Index('idx_customer_feedback_rating', 'overall_rating'),
+        Index('idx_customer_feedback_submitted', 'submitted_at'),
+    )
+
+
+class ServiceClosure(Base):
+    """
+    Model for tracking service ticket closure workflow.
+    Manages the formal closure process including manager approval and final status.
+    """
+    __tablename__ = "service_closures"
+    
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    
+    # Multi-tenant field
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
+    
+    # Service references
+    installation_job_id: Mapped[int] = mapped_column(Integer, ForeignKey("installation_jobs.id"), nullable=False, unique=True)
+    completion_record_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("completion_records.id"), nullable=True)
+    customer_feedback_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("customer_feedback.id"), nullable=True)
+    
+    # Closure workflow
+    closure_status: Mapped[str] = mapped_column(String, nullable=False, default="pending")  # 'pending', 'approved', 'closed', 'reopened'
+    closure_reason: Mapped[Optional[str]] = mapped_column(String, nullable=True)  # 'completed', 'cancelled', 'customer_request', 'no_show'
+    closure_notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    
+    # Manager approval workflow
+    requires_manager_approval: Mapped[bool] = mapped_column(Boolean, default=True)
+    approved_by_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)
+    approved_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    approval_notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    
+    # Final closure
+    closed_by_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)
+    closed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    final_closure_notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    
+    # Customer satisfaction requirements
+    feedback_received: Mapped[bool] = mapped_column(Boolean, default=False)
+    minimum_rating_met: Mapped[bool] = mapped_column(Boolean, default=False)
+    escalation_required: Mapped[bool] = mapped_column(Boolean, default=False)
+    escalation_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    
+    # Reopening tracking
+    reopened_count: Mapped[int] = mapped_column(Integer, default=0)
+    last_reopened_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_reopened_by_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)
+    reopening_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    organization: Mapped["Organization"] = relationship("Organization")
+    installation_job: Mapped["InstallationJob"] = relationship("InstallationJob")
+    completion_record: Mapped[Optional["CompletionRecord"]] = relationship("CompletionRecord")
+    customer_feedback: Mapped[Optional["CustomerFeedback"]] = relationship("CustomerFeedback")
+    approved_by: Mapped[Optional["User"]] = relationship("User", foreign_keys=[approved_by_id])
+    closed_by: Mapped[Optional["User"]] = relationship("User", foreign_keys=[closed_by_id])
+    last_reopened_by: Mapped[Optional["User"]] = relationship("User", foreign_keys=[last_reopened_by_id])
+    
+    __table_args__ = (
+        Index('idx_service_closure_org_job', 'organization_id', 'installation_job_id'),
+        Index('idx_service_closure_status', 'closure_status'),
+        Index('idx_service_closure_completion', 'completion_record_id'),
+        Index('idx_service_closure_feedback', 'customer_feedback_id'),
+        Index('idx_service_closure_approved_by', 'approved_by_id'),
+        Index('idx_service_closure_closed_by', 'closed_by_id'),
+        Index('idx_service_closure_approval_required', 'requires_manager_approval'),
+        Index('idx_service_closure_feedback_received', 'feedback_received'),
+        Index('idx_service_closure_escalation', 'escalation_required'),
+    )

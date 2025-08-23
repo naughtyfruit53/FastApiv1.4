@@ -66,6 +66,9 @@ from app.api.v1 import sla as v1_sla
 # Add import for dispatch management
 from app.api.v1 import dispatch as v1_dispatch
 
+# Add import for feedback and service closure workflow
+from app.api.v1 import feedback as v1_feedback
+
 # Create FastAPI app
 app = FastAPI(
     title=config_settings.PROJECT_NAME,
@@ -256,6 +259,10 @@ logger.info("SLA router included successfully at prefix: /api/v1/sla")
 # Include dispatch router
 app.include_router(v1_dispatch.router, prefix="/api/v1/dispatch", tags=["dispatch"])
 logger.info("Dispatch router included successfully at prefix: /api/v1/dispatch")
+
+# Include feedback and service closure router
+app.include_router(v1_feedback.router, prefix="/api/v1/feedback", tags=["feedback-closure"])
+logger.info("Feedback and service closure router included successfully at prefix: /api/v1/feedback")
 
 # Include dynamic path routers LAST
 app.include_router(v1_bom.router, prefix="/api/v1", tags=["bom"])  # Dynamic /{bom_id}
