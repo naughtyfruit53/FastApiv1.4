@@ -147,6 +147,11 @@ def _get_fallback_permissions(service_permission: str) -> List[str]:
         "service_closure_update": [Permission.MANAGE_USERS],
         "service_closure_approve": [Permission.MANAGE_USERS, Permission.MANAGE_ORGANIZATIONS],  # Manager only
         "service_closure_close": [Permission.MANAGE_USERS, Permission.MANAGE_ORGANIZATIONS],    # Manager only
+        
+        # Analytics permissions
+        "analytics_read": [Permission.VIEW_USERS, Permission.VIEW_AUDIT_LOGS],
+        "analytics_manage": [Permission.MANAGE_USERS, Permission.MANAGE_ORGANIZATIONS],  # Manager only
+        "analytics_export": [Permission.VIEW_AUDIT_LOGS, Permission.MANAGE_USERS]
     }
     
     return fallback_map.get(service_permission, [])
@@ -413,6 +418,24 @@ class AssignedTechnicianDependency:
 # Instantiate the dependencies
 require_technician_completion = TechnicianCompletionDependency()
 require_assigned_technician = AssignedTechnicianDependency()
+
+
+# Customer feedback dependencies
+require_customer_feedback_submit = RBACDependency("customer_feedback_submit")
+require_customer_feedback_read = RBACDependency("customer_feedback_read")
+require_customer_feedback_update = RBACDependency("customer_feedback_update")
+
+# Service closure dependencies
+require_service_closure_create = RBACDependency("service_closure_create")
+require_service_closure_read = RBACDependency("service_closure_read")
+require_service_closure_update = RBACDependency("service_closure_update")
+require_service_closure_approve = RBACDependency("service_closure_approve")
+require_service_closure_close = RBACDependency("service_closure_close")
+
+# Analytics dependencies
+require_analytics_read = RBACDependency("analytics_read")
+require_analytics_manage = RBACDependency("analytics_manage")  # Manager only
+require_analytics_export = RBACDependency("analytics_export")
 
 
 # Helper function for direct permission checking (used in services)

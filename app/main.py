@@ -264,6 +264,11 @@ logger.info("Dispatch router included successfully at prefix: /api/v1/dispatch")
 app.include_router(v1_feedback.router, prefix="/api/v1/feedback", tags=["feedback-closure"])
 logger.info("Feedback and service closure router included successfully at prefix: /api/v1/feedback")
 
+# Include service analytics router
+from app.api.v1 import service_analytics as v1_service_analytics
+app.include_router(v1_service_analytics.router, prefix="/api/v1/service-analytics", tags=["service-analytics"])
+logger.info("Service Analytics router included successfully at prefix: /api/v1/service-analytics")
+
 # Include dynamic path routers LAST
 app.include_router(v1_bom.router, prefix="/api/v1", tags=["bom"])  # Dynamic /{bom_id}
 logger.info("BOM router included successfully at prefix: /api/v1")
