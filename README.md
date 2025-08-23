@@ -36,6 +36,34 @@ A modern, scalable FastAPI-based backend with Next.js Turbopack frontend for the
 - 🔍 **Audit Logging**: Comprehensive security and operation auditing
 - 📱 **Responsive UI**: Modern Material-UI interface
 
+### 🆕 Service CRM Integration (Planned)
+
+The TRITIQ ERP platform is being extended to support service-oriented businesses with comprehensive Customer Relationship Management (CRM) capabilities:
+
+#### Service Management Features
+- 🛠️ **Service Catalog**: Hierarchical service categories and items with flexible pricing
+- 📅 **Appointment Scheduling**: Advanced booking system with technician availability
+- 👨‍🔧 **Workforce Management**: Technician profiles, skills, and schedule management
+- 📱 **Mobile Workforce App**: Progressive Web App for field technicians
+- 🏪 **Customer Portal**: Self-service booking and service history access
+- 🔗 **ERP Integration**: Seamless integration with existing financial vouchers
+
+#### Technical Architecture
+- **Database Extensions**: 15+ new tables extending existing multi-tenant schema
+- **API Layer**: 50+ new endpoints with role-based access for different user types
+- **Mobile Strategy**: PWA-first approach with Capacitor for app store distribution
+- **Authentication**: Extended JWT system supporting customers, technicians, and API integrations
+- **Real-time Updates**: WebSocket integration for live scheduling updates
+
+#### Implementation Strategy
+- **Phase-based Rollout**: 5 phases over 18-20 weeks
+- **Backward Compatibility**: Zero disruption to existing ERP functionality  
+- **Progressive Enhancement**: Features can be enabled per organization
+- **Security First**: Comprehensive data privacy and compliance framework
+
+📖 **[View Complete Service CRM Architecture](./SERVICE_CRM_ARCHITECTURE.md)**  
+📖 **[Architecture Decision Records](./docs/adr/)**
+
 ## 🚀 Quick Start
 
 ### Prerequisites
