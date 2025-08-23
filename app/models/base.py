@@ -1270,6 +1270,10 @@ class InstallationJob(Base):
     created_by: Mapped[Optional["User"]] = relationship("User", foreign_keys=[created_by_id])
     updated_by: Mapped[Optional["User"]] = relationship("User", foreign_keys=[updated_by_id])
     
+    # New relationships for tasks and completion
+    tasks: Mapped[List["InstallationTask"]] = relationship("InstallationTask", back_populates="installation_job", cascade="all, delete-orphan", order_by="InstallationTask.sequence_order")
+    completion_record: Mapped[Optional["CompletionRecord"]] = relationship("CompletionRecord", back_populates="installation_job", uselist=False, cascade="all, delete-orphan")
+    
     __table_args__ = (
         # Unique job number per organization
         UniqueConstraint('organization_id', 'job_number', name='uq_installation_job_org_number'),
@@ -1280,4 +1284,146 @@ class InstallationJob(Base):
         Index('idx_installation_job_scheduled_date', 'scheduled_date'),
         Index('idx_installation_job_priority', 'priority'),
         Index('idx_installation_job_created_at', 'created_at'),
+    )
+
+
+class InstallationTask(Base):
+    """
+    Model for individual tasks within an installation job.
+    Allows breaking down installation jobs into manageable tasks.
+    """
+    __tablename__ = "installation_tasks"
+    
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    
+    # Multi-tenant field
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
+    
+    # Installation job reference
+    installation_job_id: Mapped[int] = mapped_column(Integer, ForeignKey("installation_jobs.id"), nullable=False)
+    
+    # Task details
+    task_number: Mapped[str] = mapped_column(String, nullable=False, index=True)  # Auto-generated task number
+    title: Mapped[str] = mapped_column(String, nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    
+    # Task status and priority
+    status: Mapped[str] = mapped_column(String, nullable=False, default="pending")  # 'pending', 'in_progress', 'completed', 'cancelled', 'blocked'
+    priority: Mapped[str] = mapped_column(String, nullable=False, default="medium")  # 'low', 'medium', 'high', 'urgent'
+    
+    # Scheduling
+    estimated_duration_minutes: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    sequence_order: Mapped[int] = mapped_column(Integer, nullable=False, default=1)  # Task order within job
+    
+    # Assignment
+    assigned_technician_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)
+    
+    # Task timing
+    started_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    
+    # Task notes
+    work_notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    completion_notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    
+    # Dependencies
+    depends_on_task_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("installation_tasks.id"), nullable=True)
+    
+    # User tracking
+    created_by_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)
+    updated_by_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)
+    
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    organization: Mapped["Organization"] = relationship("Organization")
+    installation_job: Mapped["InstallationJob"] = relationship("InstallationJob", back_populates="tasks")
+    assigned_technician: Mapped[Optional["User"]] = relationship("User", foreign_keys=[assigned_technician_id])
+    depends_on_task: Mapped[Optional["InstallationTask"]] = relationship("InstallationTask", remote_side=[id])
+    created_by: Mapped[Optional["User"]] = relationship("User", foreign_keys=[created_by_id])
+    updated_by: Mapped[Optional["User"]] = relationship("User", foreign_keys=[updated_by_id])
+    
+    __table_args__ = (
+        # Unique task number per organization
+        UniqueConstraint('organization_id', 'task_number', name='uq_installation_task_org_number'),
+        Index('idx_installation_task_org_job', 'organization_id', 'installation_job_id'),
+        Index('idx_installation_task_status', 'status'),
+        Index('idx_installation_task_technician', 'assigned_technician_id'),
+        Index('idx_installation_task_sequence', 'installation_job_id', 'sequence_order'),
+        Index('idx_installation_task_created_at', 'created_at'),
+    )
+
+
+class CompletionRecord(Base):
+    """
+    Model for tracking detailed completion records for installation jobs.
+    Provides comprehensive tracking of completion process and customer feedback.
+    """
+    __tablename__ = "completion_records"
+    
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    
+    # Multi-tenant field
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
+    
+    # Installation job reference
+    installation_job_id: Mapped[int] = mapped_column(Integer, ForeignKey("installation_jobs.id"), nullable=False, unique=True)
+    
+    # Completion details
+    completion_status: Mapped[str] = mapped_column(String, nullable=False, default="pending")  # 'pending', 'partial', 'completed', 'failed'
+    completed_by_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)  # Must be assigned technician
+    
+    # Timing
+    completion_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    actual_start_time: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    actual_end_time: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    total_duration_minutes: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)  # Auto-calculated
+    
+    # Work performed
+    work_performed: Mapped[str] = mapped_column(Text, nullable=False)  # Required completion notes
+    issues_encountered: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    resolution_notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    
+    # Materials and parts
+    materials_used: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # JSON array of materials
+    parts_replaced: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # JSON array of parts
+    
+    # Quality and verification
+    quality_check_passed: Mapped[bool] = mapped_column(Boolean, default=False)
+    verification_notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    photos_attached: Mapped[bool] = mapped_column(Boolean, default=False)
+    
+    # Customer interaction
+    customer_present: Mapped[bool] = mapped_column(Boolean, default=True)
+    customer_signature_received: Mapped[bool] = mapped_column(Boolean, default=False)
+    customer_feedback_notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    customer_rating: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)  # 1-5 rating
+    
+    # Follow-up requirements
+    follow_up_required: Mapped[bool] = mapped_column(Boolean, default=False)
+    follow_up_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    follow_up_notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    
+    # Customer feedback workflow trigger
+    feedback_request_sent: Mapped[bool] = mapped_column(Boolean, default=False)
+    feedback_request_sent_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    organization: Mapped["Organization"] = relationship("Organization")
+    installation_job: Mapped["InstallationJob"] = relationship("InstallationJob", back_populates="completion_record")
+    completed_by: Mapped["User"] = relationship("User", foreign_keys=[completed_by_id])
+    
+    __table_args__ = (
+        Index('idx_completion_record_org_job', 'organization_id', 'installation_job_id'),
+        Index('idx_completion_record_status', 'completion_status'),
+        Index('idx_completion_record_completed_by', 'completed_by_id'),
+        Index('idx_completion_record_completion_date', 'completion_date'),
+        Index('idx_completion_record_follow_up', 'follow_up_required', 'follow_up_date'),
+        Index('idx_completion_record_feedback_sent', 'feedback_request_sent'),
     )
