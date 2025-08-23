@@ -35,6 +35,7 @@ A modern, scalable FastAPI-based backend with Next.js Turbopack frontend for the
 - 📈 **Ledger Reporting**: Complete and outstanding ledger reports
 - 🔍 **Audit Logging**: Comprehensive security and operation auditing
 - 📱 **Responsive UI**: Modern Material-UI interface
+- 🔔 **Notification System**: Multi-channel notifications (email, SMS, push, in-app)
 
 ### 🆕 Service CRM Integration (Planned)
 
@@ -47,6 +48,15 @@ The TRITIQ ERP platform is being extended to support service-oriented businesses
 - 📱 **Mobile Workforce App**: Progressive Web App for field technicians
 - 🏪 **Customer Portal**: Self-service booking and service history access
 - 🔗 **ERP Integration**: Seamless integration with existing financial vouchers
+- 🔔 **Notification/Engagement Module**: Multi-channel customer communication system ✅ **IMPLEMENTED**
+
+#### Notification/Engagement Features ✅ **COMPLETED**
+- **Multi-Channel Support**: Email, SMS, push notifications, and in-app messaging
+- **Template Management**: Reusable templates with variable substitution
+- **Automated Triggers**: Event-based notifications for customer interactions
+- **Bulk Messaging**: Send notifications to customer segments or individual recipients
+- **Analytics & Tracking**: Delivery status, open rates, and performance metrics
+- **React Components**: Complete UI for template management and notification sending
 
 #### Technical Architecture
 - **Database Extensions**: 15+ new tables extending existing multi-tenant schema
@@ -63,6 +73,7 @@ The TRITIQ ERP platform is being extended to support service-oriented businesses
 
 📖 **[View Complete Service CRM Architecture](./SERVICE_CRM_ARCHITECTURE.md)**  
 📖 **[Architecture Decision Records](./docs/adr/)**
+📖 **[Notification System Documentation](./docs/notifications.md)** ✅
 
 ## 🚀 Quick Start
 

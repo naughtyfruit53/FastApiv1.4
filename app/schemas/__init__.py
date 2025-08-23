@@ -59,7 +59,22 @@ from .base import (
     PaymentTermInDB,
     BulkImportResponse,
     BulkImportError,
-    DetailedBulkImportResponse
+    DetailedBulkImportResponse,
+    NotificationTemplateBase,
+    NotificationTemplateCreate,
+    NotificationTemplateUpdate,
+    NotificationTemplateInDB,
+    NotificationLogBase,
+    NotificationLogCreate,
+    NotificationLogInDB,
+    NotificationPreferenceBase,
+    NotificationPreferenceCreate,
+    NotificationPreferenceUpdate,
+    NotificationPreferenceInDB,
+    BulkNotificationRequest,
+    NotificationSendRequest,
+    NotificationSendResponse,
+    BulkNotificationResponse
 )
 
 from .company import (
@@ -152,6 +167,21 @@ __all__ = [
     "BulkImportResponse",
     "BulkImportError",
     "DetailedBulkImportResponse",
+    "NotificationTemplateBase",
+    "NotificationTemplateCreate",
+    "NotificationTemplateUpdate",
+    "NotificationTemplateInDB",
+    "NotificationLogBase",
+    "NotificationLogCreate",
+    "NotificationLogInDB",
+    "NotificationPreferenceBase",
+    "NotificationPreferenceCreate",
+    "NotificationPreferenceUpdate",
+    "NotificationPreferenceInDB",
+    "BulkNotificationRequest",
+    "NotificationSendRequest",
+    "NotificationSendResponse",
+    "BulkNotificationResponse",
     
     # Company schemas
     "CompanyBase",

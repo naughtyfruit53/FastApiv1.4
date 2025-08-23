@@ -720,3 +720,133 @@ class ExcelImportValidationResponse(BaseModel):
     validation_warnings: List[str] = []
     preview_data: List[Dict[str, Any]] = []  # First few rows for preview
     total_rows: int = 0
+
+# Notification Schemas for Service CRM
+class NotificationTemplateBase(BaseModel):
+    name: str
+    description: Optional[str] = None
+    template_type: str  # appointment_reminder, service_completion, follow_up, marketing
+    channel: str  # email, sms, push, in_app
+    subject: Optional[str] = None
+    body: str
+    html_body: Optional[str] = None
+    trigger_event: Optional[str] = None
+    trigger_conditions: Optional[Dict[str, Any]] = None
+    variables: Optional[List[str]] = None
+    is_active: bool = True
+
+class NotificationTemplateCreate(NotificationTemplateBase):
+    pass
+
+class NotificationTemplateUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    template_type: Optional[str] = None
+    channel: Optional[str] = None
+    subject: Optional[str] = None
+    body: Optional[str] = None
+    html_body: Optional[str] = None
+    trigger_event: Optional[str] = None
+    trigger_conditions: Optional[Dict[str, Any]] = None
+    variables: Optional[List[str]] = None
+    is_active: Optional[bool] = None
+
+class NotificationTemplateInDB(NotificationTemplateBase):
+    id: int
+    organization_id: int
+    created_by: Optional[int] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    
+    class Config:
+        from_attributes = True
+
+class NotificationLogBase(BaseModel):
+    recipient_type: str  # customer, user, segment
+    recipient_id: Optional[int] = None
+    recipient_identifier: str  # email, phone, device_token
+    channel: str  # email, sms, push, in_app
+    subject: Optional[str] = None
+    content: str
+    trigger_event: Optional[str] = None
+    context_data: Optional[Dict[str, Any]] = None
+
+class NotificationLogCreate(NotificationLogBase):
+    template_id: Optional[int] = None
+
+class NotificationLogInDB(NotificationLogBase):
+    id: int
+    organization_id: int
+    template_id: Optional[int] = None
+    status: str = "pending"  # pending, sent, delivered, failed, bounced
+    sent_at: Optional[datetime] = None
+    delivered_at: Optional[datetime] = None
+    opened_at: Optional[datetime] = None
+    clicked_at: Optional[datetime] = None
+    error_message: Optional[str] = None
+    retry_count: int = 0
+    max_retries: int = 3
+    created_by: Optional[int] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    
+    class Config:
+        from_attributes = True
+
+class NotificationPreferenceBase(BaseModel):
+    subject_type: str  # user, customer
+    subject_id: int
+    notification_type: str  # appointment_reminder, service_completion, marketing, etc.
+    channel: str  # email, sms, push, in_app
+    is_enabled: bool = True
+    settings: Optional[Dict[str, Any]] = None
+
+class NotificationPreferenceCreate(NotificationPreferenceBase):
+    pass
+
+class NotificationPreferenceUpdate(BaseModel):
+    notification_type: Optional[str] = None
+    channel: Optional[str] = None
+    is_enabled: Optional[bool] = None
+    settings: Optional[Dict[str, Any]] = None
+
+class NotificationPreferenceInDB(NotificationPreferenceBase):
+    id: int
+    organization_id: int
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    
+    class Config:
+        from_attributes = True
+
+# Bulk notification request schemas
+class BulkNotificationRequest(BaseModel):
+    template_id: Optional[int] = None
+    subject: Optional[str] = None
+    content: str
+    channel: str
+    recipient_type: str  # customers, segment, users
+    recipient_ids: Optional[List[int]] = None  # specific customer/user IDs
+    segment_name: Optional[str] = None  # for segment-based notifications
+    variables: Optional[Dict[str, Any]] = None  # template variables
+    
+class NotificationSendRequest(BaseModel):
+    template_id: Optional[int] = None
+    recipient_type: str  # customer, user
+    recipient_id: int
+    channel: str
+    variables: Optional[Dict[str, Any]] = None
+    override_content: Optional[str] = None
+    override_subject: Optional[str] = None
+
+class NotificationSendResponse(BaseModel):
+    notification_id: int
+    status: str
+    message: str
+    
+class BulkNotificationResponse(BaseModel):
+    total_recipients: int
+    successful_sends: int
+    failed_sends: int
+    notification_ids: List[int]
+    errors: List[str] = []
