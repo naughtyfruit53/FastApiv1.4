@@ -512,6 +512,52 @@ class CustomerFileResponse(CustomerFileBase):
     class Config:
         from_attributes = True
 
+# Customer Interaction Schemas
+class CustomerInteractionBase(BaseModel):
+    customer_id: int
+    date: datetime
+    type: str
+    notes: Optional[str] = None
+
+class CustomerInteractionCreate(CustomerInteractionBase):
+    pass
+
+class CustomerInteractionUpdate(BaseModel):
+    customer_id: Optional[int] = None
+    date: Optional[datetime] = None
+    type: Optional[str] = None
+    notes: Optional[str] = None
+
+class CustomerInteractionInDB(CustomerInteractionBase):
+    id: int
+    organization_id: int
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    
+    class Config:
+        from_attributes = True
+
+# Customer Segment Schemas
+class CustomerSegmentBase(BaseModel):
+    name: str
+    description: Optional[str] = None
+
+class CustomerSegmentCreate(CustomerSegmentBase):
+    pass
+
+class CustomerSegmentUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+
+class CustomerSegmentInDB(CustomerSegmentBase):
+    id: int
+    organization_id: int
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    
+    class Config:
+        from_attributes = True
+
 # Vendor File Schemas
 class VendorFileBase(BaseModel):
     filename: str

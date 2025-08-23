@@ -270,12 +270,68 @@ class Customer(Base):
     # Relationships
     organization: Mapped["Organization"] = relationship("Organization", back_populates="customers")
     files: Mapped[List["CustomerFile"]] = relationship("CustomerFile", back_populates="customer")
+    interactions: Mapped[List["CustomerInteraction"]] = relationship("CustomerInteraction", back_populates="customer")
     
     __table_args__ = (
         # Unique customer name per organization
         UniqueConstraint('organization_id', 'name', name='uq_customer_org_name'),
         Index('idx_customer_org_name', 'organization_id', 'name'),
         Index('idx_customer_org_active', 'organization_id', 'is_active'),
+    )
+
+class CustomerInteraction(Base):
+    __tablename__ = "customer_interactions"
+    
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    
+    # Multi-tenant field
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
+    
+    # Customer reference
+    customer_id: Mapped[int] = mapped_column(Integer, ForeignKey("customers.id"), nullable=False, index=True)
+    
+    # Interaction details
+    date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    type: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    organization: Mapped["Organization"] = relationship("Organization")
+    customer: Mapped["Customer"] = relationship("Customer", back_populates="interactions")
+    
+    __table_args__ = (
+        Index('idx_customer_interaction_org_customer', 'organization_id', 'customer_id'),
+        Index('idx_customer_interaction_org_date', 'organization_id', 'date'),
+        Index('idx_customer_interaction_org_type', 'organization_id', 'type'),
+    )
+
+class CustomerSegment(Base):
+    __tablename__ = "customer_segments"
+    
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    
+    # Multi-tenant field
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
+    
+    # Segment details
+    name: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    organization: Mapped["Organization"] = relationship("Organization")
+    
+    __table_args__ = (
+        # Unique segment name per organization
+        UniqueConstraint('organization_id', 'name', name='uq_customer_segment_org_name'),
+        Index('idx_customer_segment_org_name', 'organization_id', 'name'),
     )
 
 class Product(Base):
