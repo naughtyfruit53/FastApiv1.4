@@ -1102,3 +1102,182 @@ class SLATracking(Base):
         Index('idx_sla_tracking_response_deadline', 'response_deadline'),
         Index('idx_sla_tracking_resolution_deadline', 'resolution_deadline'),
     )
+
+
+class DispatchOrder(Base):
+    """
+    Model for material dispatch orders in the Service CRM.
+    Links to customers and tracks dispatch status.
+    Supports multi-tenant architecture with organization-level isolation.
+    """
+    __tablename__ = "dispatch_orders"
+    
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    
+    # Multi-tenant field
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
+    
+    # Order identification
+    order_number: Mapped[str] = mapped_column(String, nullable=False, index=True)  # Auto-generated unique order number
+    
+    # Customer and order details
+    customer_id: Mapped[int] = mapped_column(Integer, ForeignKey("customers.id"), nullable=False)
+    ticket_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("tickets.id"), nullable=True)  # Optional link to support ticket
+    
+    # Dispatch details
+    status: Mapped[str] = mapped_column(String, nullable=False, default="pending")  # 'pending', 'in_transit', 'delivered', 'cancelled'
+    dispatch_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    expected_delivery_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    actual_delivery_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    
+    # Address details
+    delivery_address: Mapped[str] = mapped_column(Text, nullable=False)
+    delivery_contact_person: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    delivery_contact_number: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    
+    # Notes and tracking
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    tracking_number: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    courier_name: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    
+    # User tracking
+    created_by_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)
+    updated_by_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)
+    
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    organization: Mapped["Organization"] = relationship("Organization")
+    customer: Mapped["Customer"] = relationship("Customer")
+    ticket: Mapped[Optional["Ticket"]] = relationship("Ticket")
+    created_by: Mapped[Optional["User"]] = relationship("User", foreign_keys=[created_by_id])
+    updated_by: Mapped[Optional["User"]] = relationship("User", foreign_keys=[updated_by_id])
+    items: Mapped[List["DispatchItem"]] = relationship("DispatchItem", back_populates="dispatch_order", cascade="all, delete-orphan")
+    installation_jobs: Mapped[List["InstallationJob"]] = relationship("InstallationJob", back_populates="dispatch_order", cascade="all, delete-orphan")
+    
+    __table_args__ = (
+        # Unique order number per organization
+        UniqueConstraint('organization_id', 'order_number', name='uq_dispatch_order_org_number'),
+        Index('idx_dispatch_order_org_status', 'organization_id', 'status'),
+        Index('idx_dispatch_order_org_customer', 'organization_id', 'customer_id'),
+        Index('idx_dispatch_order_org_ticket', 'organization_id', 'ticket_id'),
+        Index('idx_dispatch_order_dispatch_date', 'dispatch_date'),
+        Index('idx_dispatch_order_delivery_date', 'expected_delivery_date'),
+        Index('idx_dispatch_order_created_at', 'created_at'),
+    )
+
+
+class DispatchItem(Base):
+    """
+    Model for individual items in a dispatch order.
+    Links to products and tracks quantities dispatched.
+    """
+    __tablename__ = "dispatch_items"
+    
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    
+    # Dispatch order reference
+    dispatch_order_id: Mapped[int] = mapped_column(Integer, ForeignKey("dispatch_orders.id"), nullable=False)
+    
+    # Product details
+    product_id: Mapped[int] = mapped_column(Integer, ForeignKey("products.id"), nullable=False)
+    quantity: Mapped[float] = mapped_column(Float, nullable=False)
+    unit: Mapped[str] = mapped_column(String, nullable=False)
+    
+    # Item details
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    serial_numbers: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # JSON array of serial numbers
+    batch_numbers: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # JSON array of batch numbers
+    
+    # Status tracking
+    status: Mapped[str] = mapped_column(String, nullable=False, default="pending")  # 'pending', 'packed', 'dispatched', 'delivered'
+    
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    dispatch_order: Mapped["DispatchOrder"] = relationship("DispatchOrder", back_populates="items")
+    product: Mapped["Product"] = relationship("Product")
+    
+    __table_args__ = (
+        Index('idx_dispatch_item_order', 'dispatch_order_id'),
+        Index('idx_dispatch_item_product', 'product_id'),
+        Index('idx_dispatch_item_status', 'status'),
+    )
+
+
+class InstallationJob(Base):
+    """
+    Model for installation jobs created from dispatch orders.
+    Tracks installation scheduling and completion.
+    """
+    __tablename__ = "installation_jobs"
+    
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    
+    # Multi-tenant field
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
+    
+    # Job identification
+    job_number: Mapped[str] = mapped_column(String, nullable=False, index=True)  # Auto-generated unique job number
+    
+    # References
+    dispatch_order_id: Mapped[int] = mapped_column(Integer, ForeignKey("dispatch_orders.id"), nullable=False)
+    customer_id: Mapped[int] = mapped_column(Integer, ForeignKey("customers.id"), nullable=False)
+    ticket_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("tickets.id"), nullable=True)  # Optional link to support ticket
+    
+    # Installation details
+    status: Mapped[str] = mapped_column(String, nullable=False, default="scheduled")  # 'scheduled', 'in_progress', 'completed', 'cancelled', 'rescheduled'
+    priority: Mapped[str] = mapped_column(String, nullable=False, default="medium")  # 'low', 'medium', 'high', 'urgent'
+    
+    # Scheduling
+    scheduled_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    estimated_duration_hours: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    actual_start_time: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    actual_end_time: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    
+    # Assignment
+    assigned_technician_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)
+    
+    # Installation details
+    installation_address: Mapped[str] = mapped_column(Text, nullable=False)
+    contact_person: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    contact_number: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    
+    # Notes and feedback
+    installation_notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    completion_notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    customer_feedback: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    customer_rating: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)  # 1-5 rating
+    
+    # User tracking
+    created_by_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)
+    updated_by_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)
+    
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    organization: Mapped["Organization"] = relationship("Organization")
+    dispatch_order: Mapped["DispatchOrder"] = relationship("DispatchOrder", back_populates="installation_jobs")
+    customer: Mapped["Customer"] = relationship("Customer")
+    ticket: Mapped[Optional["Ticket"]] = relationship("Ticket")
+    assigned_technician: Mapped[Optional["User"]] = relationship("User", foreign_keys=[assigned_technician_id])
+    created_by: Mapped[Optional["User"]] = relationship("User", foreign_keys=[created_by_id])
+    updated_by: Mapped[Optional["User"]] = relationship("User", foreign_keys=[updated_by_id])
+    
+    __table_args__ = (
+        # Unique job number per organization
+        UniqueConstraint('organization_id', 'job_number', name='uq_installation_job_org_number'),
+        Index('idx_installation_job_org_status', 'organization_id', 'status'),
+        Index('idx_installation_job_org_customer', 'organization_id', 'customer_id'),
+        Index('idx_installation_job_org_technician', 'organization_id', 'assigned_technician_id'),
+        Index('idx_installation_job_dispatch_order', 'dispatch_order_id'),
+        Index('idx_installation_job_scheduled_date', 'scheduled_date'),
+        Index('idx_installation_job_priority', 'priority'),
+        Index('idx_installation_job_created_at', 'created_at'),
+    )

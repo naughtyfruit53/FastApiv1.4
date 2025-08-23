@@ -63,6 +63,9 @@ from app.api.v1 import company_branding as v1_company_branding
 # Add import for SLA management
 from app.api.v1 import sla as v1_sla
 
+# Add import for dispatch management
+from app.api.v1 import dispatch as v1_dispatch
+
 # Create FastAPI app
 app = FastAPI(
     title=config_settings.PROJECT_NAME,
@@ -249,6 +252,10 @@ logger.info("Stock router included successfully at prefix: /api/v1/stock")
 # Include SLA router
 app.include_router(v1_sla.router, prefix="/api/v1/sla", tags=["sla"])
 logger.info("SLA router included successfully at prefix: /api/v1/sla")
+
+# Include dispatch router
+app.include_router(v1_dispatch.router, prefix="/api/v1/dispatch", tags=["dispatch"])
+logger.info("Dispatch router included successfully at prefix: /api/v1/dispatch")
 
 # Include dynamic path routers LAST
 app.include_router(v1_bom.router, prefix="/api/v1", tags=["bom"])  # Dynamic /{bom_id}
