@@ -8,7 +8,7 @@ from app.core.config import settings as config_settings
 from app.core.database import create_tables, SessionLocal
 from app.core.tenant import TenantMiddleware
 from app.core.seed_super_admin import seed_super_admin
-from app.api import users, companies, vendors, customers, products, reports, platform, settings, pincode
+from app.api import users, companies, vendors, customers, products, reports, platform, settings, pincode, customer_analytics
 from app.api.v1 import stock as v1_stock
 from app.api.v1.vouchers import router as v1_vouchers_router  # Updated import
 from app.api.routes import admin
@@ -221,6 +221,10 @@ app.include_router(settings.router, prefix="/api/v1/settings", tags=["settings"]
 logger.info("Settings router included successfully at prefix: /api/v1/settings")
 app.include_router(pincode.router, prefix="/api/v1/pincode", tags=["pincode"])
 logger.info("Pincode router included successfully at prefix: /api/v1/pincode")
+
+# Customer Analytics API
+app.include_router(customer_analytics.router, prefix="/api/v1/analytics", tags=["customer-analytics"])
+logger.info("Customer Analytics router included successfully at prefix: /api/v1/analytics")
 
 # Include static path routers BEFORE dynamic ones to prevent conflicts
 app.include_router(v1_stock.router, prefix="/api/v1/stock", tags=["stock"])  # Static /stock paths
