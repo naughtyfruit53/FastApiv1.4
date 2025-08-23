@@ -112,6 +112,18 @@ def _get_fallback_permissions(service_permission: str) -> List[str]:
         "sla_update": [Permission.MANAGE_USERS],
         "sla_delete": [Permission.DELETE_USERS],
         "sla_escalate": [Permission.MANAGE_USERS],
+        
+        # Dispatch management permissions
+        "dispatch_create": [Permission.CREATE_USERS],
+        "dispatch_read": [Permission.VIEW_USERS],
+        "dispatch_update": [Permission.MANAGE_USERS],
+        "dispatch_delete": [Permission.DELETE_USERS],
+        
+        # Installation job permissions
+        "installation_create": [Permission.CREATE_USERS],
+        "installation_read": [Permission.VIEW_USERS],
+        "installation_update": [Permission.MANAGE_USERS],
+        "installation_delete": [Permission.DELETE_USERS],
     }
     
     return fallback_map.get(service_permission, [])
@@ -167,6 +179,18 @@ require_sla_escalate = RBACDependency("sla_escalate")
 # Reports dependencies
 require_service_reports_read = RBACDependency("service_reports_read")
 require_service_reports_export = RBACDependency("service_reports_export")
+
+# Dispatch management dependencies
+require_dispatch_create = RBACDependency("dispatch_create")
+require_dispatch_read = RBACDependency("dispatch_read")
+require_dispatch_update = RBACDependency("dispatch_update")
+require_dispatch_delete = RBACDependency("dispatch_delete")
+
+# Installation job dependencies
+require_installation_create = RBACDependency("installation_create")
+require_installation_read = RBACDependency("installation_read")
+require_installation_update = RBACDependency("installation_update")
+require_installation_delete = RBACDependency("installation_delete")
 
 
 # Helper functions for getting RBAC service
