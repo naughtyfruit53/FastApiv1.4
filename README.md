@@ -37,9 +37,36 @@ A modern, scalable FastAPI-based backend with Next.js Turbopack frontend for the
 - 📱 **Responsive UI**: Modern Material-UI interface
 - 🔔 **Notification System**: Multi-channel notifications (email, SMS, push, in-app)
 
-### 🆕 Service CRM Integration (Planned)
+### 🆕 Service CRM Integration with RBAC System
 
-The TRITIQ ERP platform is being extended to support service-oriented businesses with comprehensive Customer Relationship Management (CRM) capabilities:
+The TRITIQ ERP platform includes a comprehensive Role-Based Access Control (RBAC) system specifically designed for Service CRM operations:
+
+#### Key RBAC Features
+- **30+ Granular Permissions**: Fine-grained control over Service CRM modules
+- **4 Default Service Roles**: Admin, Manager, Support, and Viewer roles
+- **Organization Scoping**: Multi-tenant permission isolation
+- **Dynamic Permission Checking**: Real-time access validation
+- **Comprehensive Management UI**: Full role and permission management interface
+
+#### Service CRM Modules
+- 🛠️ **Service Management**: Service catalog with CRUD permissions
+- 👨‍🔧 **Technician Management**: Workforce management with role-based access
+- 📅 **Appointment Scheduling**: Booking system with permission controls
+- 🎧 **Customer Service**: Support operations with access levels
+- 📋 **Work Orders**: Service tracking with role restrictions
+- 📊 **Service Reports**: Analytics with export permissions
+- ⚙️ **CRM Administration**: System configuration access control
+
+#### Default Service Roles
+
+| Role | Permissions | Use Case |
+|------|-------------|----------|
+| **Service Admin** | All 30+ permissions | Full system administration |
+| **Service Manager** | 15 management permissions | Department supervisors |
+| **Support Agent** | 11 customer service permissions | Support representatives |
+| **Viewer** | 6 read-only permissions | Stakeholders and analysts |
+
+📖 **[Complete RBAC Documentation](./docs/RBAC_DOCUMENTATION.md)**
 
 #### Service Management Features
 - 🛠️ **Service Catalog**: Hierarchical service categories and items with flexible pricing
