@@ -27,7 +27,7 @@ async def get_purchase_orders(
     current_user: User = Depends(get_current_active_user)
 ):
     """Get all purchase orders"""
-    query = db.query(PurchaseOrder).options(joinedload(PurchaseOrder.vendor)).filter(
+    query = db.query(PurchaseOrder).options(joinedload(PurchaseOrder.vendor), joinedload(PurchaseOrder.items)).filter(
         PurchaseOrder.organization_id == current_user.organization_id
     )
     

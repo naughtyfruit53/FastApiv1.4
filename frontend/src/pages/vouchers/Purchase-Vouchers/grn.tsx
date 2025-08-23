@@ -164,12 +164,12 @@ const GoodsReceiptNotePage: React.FC = () => {
   const voucherOptions = useMemo(() => {
     let options = [];
     if (selectedVoucherType === 'purchase-order') {
-      options = purchaseOrdersData || [];
+      options = (purchaseOrdersData || []).filter(po => po.items.some(item => item.pending_quantity > 0));
     } else if (selectedVoucherType === 'purchase-voucher') {
       options = purchaseVouchersData || [];
     }
-    return options.filter(option => !usedVoucherIds.has(option.id));
-  }, [selectedVoucherType, purchaseOrdersData, purchaseVouchersData, usedVoucherIds]);
+    return options;
+  }, [selectedVoucherType, purchaseOrdersData, purchaseVouchersData]);
 
   // Fetch selected voucher details
   const { data: selectedVoucherData } = useQuery({
@@ -190,19 +190,21 @@ const GoodsReceiptNotePage: React.FC = () => {
       remove();
       // Append items from selected voucher
       selectedVoucherData.items.forEach((item: any) => {
+        const prefillQty = selectedVoucherType === 'purchase-order' ? (item.pending_quantity || item.quantity) : item.quantity;
         append({
           product_id: item.product_id,
           product_name: item.product?.name || item.product_name || '', 
           ordered_quantity: item.quantity,
-          received_quantity: 0,
-          accepted_quantity: 0,
+          received_quantity: prefillQty,
+          accepted_quantity: prefillQty,
           rejected_quantity: 0,
           unit_price: item.unit_price, // Keep hidden
           unit: item.unit,
+          po_item_id: selectedVoucherType === 'purchase-order' ? item.id : undefined,
         });
       });
     }
-  }, [selectedVoucherData, setValue, append, remove]);
+  }, [selectedVoucherData, setValue, append, remove, selectedVoucherType]);
 
   // Goods Receipt Note specific handlers
   const handleAddItem = () => {
@@ -224,6 +226,7 @@ const GoodsReceiptNotePage: React.FC = () => {
           unit: field.unit,
           unit_price: field.unit_price,
           total_cost: field.accepted_quantity * field.unit_price,
+          po_item_id: field.po_item_id,
         }));
       }
 

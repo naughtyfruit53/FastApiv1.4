@@ -6,7 +6,7 @@ from typing import List, Optional
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
 from app.models.base import User, Stock
-from app.models.vouchers import GoodsReceiptNote, GoodsReceiptNoteItem
+from app.models.vouchers import GoodsReceiptNote, GoodsReceiptNoteItem, PurchaseOrderItem
 from app.schemas.vouchers import GRNCreate, GRNInDB, GRNUpdate
 from app.services.email_service import send_voucher_email
 from app.services.voucher_service import VoucherNumberService
@@ -118,6 +118,16 @@ async def create_goods_receipt_note(
                 )
                 db.add(stock)
             stock.quantity += item.accepted_quantity
+            
+            # Update PO item if po_item_id provided
+            if item.po_item_id:
+                po_item = db.query(PurchaseOrderItem).filter(
+                    PurchaseOrderItem.id == item.po_item_id
+                ).first()
+                if po_item:
+                    po_item.delivered_quantity += item.accepted_quantity
+                    po_item.pending_quantity -= item.accepted_quantity
+                    db.add(po_item)
         
         db_invoice.total_amount = total_amount
         
@@ -199,6 +209,16 @@ async def update_goods_receipt_note(
                 ).first()
                 if stock:
                     stock.quantity -= old_item.accepted_quantity
+                
+                # Revert PO item if po_item_id
+                if old_item.po_item_id:
+                    po_item = db.query(PurchaseOrderItem).filter(
+                        PurchaseOrderItem.id == old_item.po_item_id
+                    ).first()
+                    if po_item:
+                        po_item.delivered_quantity -= old_item.accepted_quantity
+                        po_item.pending_quantity += old_item.accepted_quantity
+                        db.add(po_item)
             
             db.query(GoodsReceiptNoteItem).filter(GoodsReceiptNoteItem.grn_id == invoice_id).delete()
             
@@ -227,6 +247,16 @@ async def update_goods_receipt_note(
                     )
                     db.add(stock)
                 stock.quantity += item.accepted_quantity
+                
+                # Update PO item if po_item_id
+                if item.po_item_id:
+                    po_item = db.query(PurchaseOrderItem).filter(
+                        PurchaseOrderItem.id == item.po_item_id
+                    ).first()
+                    if po_item:
+                        po_item.delivered_quantity += item.accepted_quantity
+                        po_item.pending_quantity -= item.accepted_quantity
+                        db.add(po_item)
             
             invoice.total_amount = total_amount
         
@@ -272,6 +302,16 @@ async def delete_goods_receipt_note(
             ).first()
             if stock:
                 stock.quantity -= old_item.accepted_quantity
+            
+            # Revert PO item if po_item_id
+            if old_item.po_item_id:
+                po_item = db.query(PurchaseOrderItem).filter(
+                    PurchaseOrderItem.id == old_item.po_item_id
+                ).first()
+                if po_item:
+                    po_item.delivered_quantity -= old_item.accepted_quantity
+                    po_item.pending_quantity += old_item.accepted_quantity
+                    db.add(po_item)
         
         db.query(GoodsReceiptNoteItem).filter(GoodsReceiptNoteItem.grn_id == invoice_id).delete()
         
