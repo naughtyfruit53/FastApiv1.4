@@ -55,6 +55,7 @@ The TRITIQ ERP platform includes a comprehensive Role-Based Access Control (RBAC
 - 🎧 **Customer Service**: Support operations with access levels
 - 📋 **Work Orders**: Service tracking with role restrictions
 - 🚚 **Material Dispatch**: Dispatch order and installation job management with integrated workflow
+- 📦 **Inventory & Parts Management**: Real-time inventory tracking with automated alerts and job integration
 - 📊 **Service Reports**: Analytics with export permissions
 - ⚙️ **CRM Administration**: System configuration access control
 
@@ -74,6 +75,7 @@ The TRITIQ ERP platform includes a comprehensive Role-Based Access Control (RBAC
 - 📅 **Appointment Scheduling**: Advanced booking system with technician availability
 - 👨‍🔧 **Workforce Management**: Technician profiles, skills, and schedule management
 - 🚚 **Material Dispatch System**: Complete dispatch order management with installation scheduling workflow
+- 📦 **Inventory & Parts Management**: Real-time inventory tracking with job integration and automated alerts
 - 📱 **Mobile Workforce App**: Progressive Web App for field technicians
 - 🏪 **Customer Portal**: Self-service booking and service history access
 - 🔗 **ERP Integration**: Seamless integration with existing financial vouchers
@@ -97,6 +99,29 @@ The Material Dispatch System provides end-to-end material dispatch and installat
 
 📖 **[Complete Dispatch API Documentation](./docs/DISPATCH_API_DOCUMENTATION.md)**
 📖 **[Material Dispatch System Documentation](./MATERIAL_DISPATCH_DOCUMENTATION.md)**
+
+#### Inventory & Parts Management Workflow ✅ **IMPLEMENTED**
+The Inventory & Parts Management System provides comprehensive inventory control and parts tracking:
+
+1. **Inventory Tracking**: Real-time stock levels with multi-location support
+2. **Parts Assignment**: Assign specific parts/materials to installation jobs
+3. **Automatic Stock Updates**: Auto-decrement inventory when parts are used in jobs
+4. **Low Stock Alerts**: Automated alerts when inventory falls below reorder levels
+5. **Inventory Transactions**: Complete audit trail for all inventory movements
+6. **Usage Reports**: Detailed reports on inventory usage, valuation, and trends
+
+**Key Features**:
+- ✅ Real-time inventory tracking with location-based stock management
+- ✅ Parts assignment and usage tracking for installation jobs
+- ✅ Automatic low stock and out-of-stock alert generation
+- ✅ Comprehensive transaction history with audit trails
+- ✅ Integration with job management for automatic inventory deduction
+- ✅ Multi-location inventory support with transfer capabilities
+- ✅ Role-based access control for inventory operations
+- ✅ Inventory valuation and usage analytics
+
+📖 **[Complete Inventory API Documentation](./docs/INVENTORY_API_DOCUMENTATION.md)**
+
 - 🔔 **Notification/Engagement Module**: Multi-channel customer communication system ✅ **IMPLEMENTED**
 
 #### Notification/Engagement Features ✅ **COMPLETED**
