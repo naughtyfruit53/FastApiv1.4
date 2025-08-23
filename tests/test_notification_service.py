@@ -121,7 +121,7 @@ class TestNotificationService:
             mock_query.return_value.filter.return_value.all.return_value = [mock_template]
             
             # Mock notification sending
-            with patch.object(self.notification_service, '_send_notification_from_template', return_value=True):
+            with patch.object(self.notification_service, 'send_notification', return_value=Mock()) as mock_send:
                 # Act
                 result = self.notification_service.trigger_automated_notifications(
                     db=self.mock_db,
@@ -157,7 +157,7 @@ class TestNotificationService:
             mock_query.return_value.filter.return_value.all.return_value = [mock_template]
             
             # Mock notification sending
-            with patch.object(self.notification_service, '_send_notification_from_template', return_value=True):
+            with patch.object(self.notification_service, 'send_notification', return_value=Mock()) as mock_send:
                 # Act
                 result = self.notification_service.trigger_automated_notifications(
                     db=self.mock_db,

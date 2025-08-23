@@ -17,10 +17,19 @@ The Notification/Engagement Module provides a comprehensive system for managing 
 - Channel-specific template optimization
 
 ### 🚀 Automated Triggers
-- Event-based notification triggers
-- Customer interaction notifications
-- Service completion alerts
-- Appointment reminders
+- **Job Assignment**: Notifications when dispatch orders are created
+- **Status Updates**: Alerts for job status changes (in_transit, delivered, etc.)
+- **SLA Breaches**: Immediate alerts when response or resolution SLAs are breached
+- **Feedback Requests**: Automated feedback collection after service completion
+- **Service Completion**: Notifications for completed installations and tasks
+- **Customer Interactions**: Engagement-based notification triggers
+- **Appointment Reminders**: Scheduled reminder notifications
+
+### 🔐 Role-Based Access Control
+- **Template Management**: Restricted to administrators and managers only
+- **User Preferences**: All users can manage their own notification preferences
+- **Analytics**: Advanced analytics available to admin roles
+- **Notification Sending**: Controlled access based on user permissions
 
 ### 📊 Analytics & Tracking
 - Delivery status tracking
@@ -354,6 +363,41 @@ Use the analytics dashboard to monitor:
 - Open and click rates
 - Failed notification trends
 - Channel performance comparison
+
+## CRM Integration
+
+The notification system is fully integrated with the Service CRM modules:
+
+### Dispatch Management Integration
+- **Job Assignment**: Automatically triggers notifications when dispatch orders are created
+- **Status Updates**: Sends notifications for dispatch status changes (in_transit, delivered)
+- **Installation Jobs**: Notifications for technician assignments and job updates
+
+### SLA Management Integration  
+- **Breach Monitoring**: Real-time SLA breach detection and notifications
+- **Response Tracking**: Notifications when response deadlines are missed
+- **Resolution Alerts**: Alerts for overdue resolution times
+- **Escalation Triggers**: Automated escalation notifications for critical breaches
+
+### Feedback System Integration
+- **Feedback Requests**: Automated feedback collection after service completion
+- **Review Reminders**: Follow-up notifications for incomplete feedback
+- **Survey Distribution**: Targeted survey notifications based on service type
+
+### Event Triggers
+```python
+# Example: Trigger notification from dispatch service
+trigger_notification_event(
+    db=db,
+    trigger_event="job_assignment",
+    organization_id=org_id,
+    context_data={
+        "dispatch_order_id": order.id,
+        "customer_id": customer_id,
+        "technician_id": technician_id
+    }
+)
+```
 
 ## Support
 
