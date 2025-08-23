@@ -17,7 +17,8 @@ from app.models.base import User, NotificationTemplate, NotificationLog
 from app.schemas.base import (
     NotificationTemplateCreate, NotificationTemplateUpdate, NotificationTemplateInDB,
     NotificationLogInDB, NotificationSendRequest, BulkNotificationRequest,
-    NotificationSendResponse, BulkNotificationResponse
+    NotificationSendResponse, BulkNotificationResponse,
+    NotificationPreferenceCreate, NotificationPreferenceUpdate, NotificationPreferenceInDB
 )
 from app.services.notification_service import NotificationService
 import logging
@@ -431,3 +432,163 @@ async def test_notification_template(
         "test_content": test_content,
         "variables_used": variables
     }
+
+
+# User Preference Endpoints
+
+@router.get("/preferences/{subject_type}/{subject_id}", response_model=List[NotificationPreferenceInDB])
+async def get_user_notification_preferences(
+    subject_type: str,
+    subject_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Get notification preferences for a user or customer."""
+    
+    org_id = ensure_organization_context(current_user)
+    
+    # Validate subject type
+    valid_subject_types = ["user", "customer"]
+    if subject_type not in valid_subject_types:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid subject type. Must be one of: {valid_subject_types}"
+        )
+    
+    preferences = notification_service.get_user_preferences(
+        db=db,
+        organization_id=org_id,
+        subject_type=subject_type,
+        subject_id=subject_id
+    )
+    
+    return preferences
+
+
+@router.post("/preferences", response_model=NotificationPreferenceInDB)
+async def create_notification_preference(
+    preference_data: NotificationPreferenceCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Create or update a notification preference."""
+    
+    org_id = ensure_organization_context(current_user)
+    
+    # Validate subject type
+    valid_subject_types = ["user", "customer"]
+    if preference_data.subject_type not in valid_subject_types:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid subject type. Must be one of: {valid_subject_types}"
+        )
+    
+    # Validate channel
+    valid_channels = ["email", "sms", "push", "in_app"]
+    if preference_data.channel not in valid_channels:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid channel. Must be one of: {valid_channels}"
+        )
+    
+    # Validate notification type
+    valid_types = ["appointment_reminder", "service_completion", "follow_up", "marketing", "system", "job_assignment", "job_update", "feedback_request", "sla_breach"]
+    if preference_data.notification_type not in valid_types:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid notification type. Must be one of: {valid_types}"
+        )
+    
+    try:
+        preference = notification_service.create_user_preference(
+            db=db,
+            organization_id=org_id,
+            preference_data=preference_data.dict()
+        )
+        return preference
+    except Exception as e:
+        logger.error(f"Failed to create notification preference: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create notification preference"
+        )
+
+
+@router.put("/preferences/{preference_id}", response_model=NotificationPreferenceInDB)
+async def update_notification_preference(
+    preference_id: int,
+    update_data: NotificationPreferenceUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Update a notification preference."""
+    
+    org_id = ensure_organization_context(current_user)
+    
+    preference = notification_service.update_user_preference(
+        db=db,
+        preference_id=preference_id,
+        organization_id=org_id,
+        update_data=update_data.dict(exclude_unset=True)
+    )
+    
+    if not preference:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Notification preference not found"
+        )
+    
+    return preference
+
+
+# Event Trigger Endpoints
+
+@router.post("/trigger")
+async def trigger_automated_notifications(
+    trigger_data: Dict[str, Any],
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Trigger automated notifications based on events."""
+    
+    org_id = ensure_organization_context(current_user)
+    
+    # Validate required fields
+    if "trigger_event" not in trigger_data:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="trigger_event is required"
+        )
+    
+    # Validate trigger event
+    valid_events = [
+        "job_assignment", "job_update", "job_completion", 
+        "feedback_request", "sla_breach", "appointment_reminder",
+        "service_completion", "follow_up"
+    ]
+    if trigger_data["trigger_event"] not in valid_events:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid trigger event. Must be one of: {valid_events}"
+        )
+    
+    try:
+        notification_logs = notification_service.trigger_automated_notifications(
+            db=db,
+            trigger_event=trigger_data["trigger_event"],
+            organization_id=org_id,
+            context_data=trigger_data.get("context_data", {})
+        )
+        
+        return {
+            "triggered_notifications": len(notification_logs),
+            "notification_ids": [log.id for log in notification_logs],
+            "message": f"Successfully triggered {len(notification_logs)} notifications"
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to trigger automated notifications: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to trigger automated notifications"
+        )
