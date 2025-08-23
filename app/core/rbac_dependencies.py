@@ -135,6 +135,18 @@ def _get_fallback_permissions(service_permission: str) -> List[str]:
         "completion_record_create": [Permission.CREATE_USERS, Permission.MANAGE_USERS],
         "completion_record_read": [Permission.VIEW_USERS],
         "completion_record_update": [Permission.MANAGE_USERS],
+        
+        # Customer feedback permissions
+        "customer_feedback_submit": [Permission.VIEW_USERS],  # Customers can submit
+        "customer_feedback_read": [Permission.VIEW_USERS],
+        "customer_feedback_update": [Permission.MANAGE_USERS],
+        
+        # Service closure permissions  
+        "service_closure_create": [Permission.MANAGE_USERS],
+        "service_closure_read": [Permission.VIEW_USERS],
+        "service_closure_update": [Permission.MANAGE_USERS],
+        "service_closure_approve": [Permission.MANAGE_USERS, Permission.MANAGE_ORGANIZATIONS],  # Manager only
+        "service_closure_close": [Permission.MANAGE_USERS, Permission.MANAGE_ORGANIZATIONS],    # Manager only
     }
     
     return fallback_map.get(service_permission, [])
@@ -401,3 +413,56 @@ class AssignedTechnicianDependency:
 # Instantiate the dependencies
 require_technician_completion = TechnicianCompletionDependency()
 require_assigned_technician = AssignedTechnicianDependency()
+
+
+# Helper function for direct permission checking (used in services)
+def check_service_permission(user: User, module: str, action: str, db: Session) -> bool:
+    """
+    Check if user has specific service permission.
+    
+    Args:
+        user: Current user
+        module: Permission module (e.g., 'customer_feedback', 'service_closure')
+        action: Permission action (e.g., 'submit', 'approve', 'close')
+        db: Database session
+        
+    Returns:
+        True if user has permission, raises HTTPException if not
+        
+    Raises:
+        HTTPException: If user lacks required permission
+    """
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required"
+        )
+    
+    # Super admins bypass all checks
+    if getattr(user, 'is_super_admin', False):
+        return True
+    
+    # Build permission string
+    permission = f"{module}_{action}"
+    
+    # Check service permission through RBAC
+    rbac_service = RBACService(db)
+    
+    if rbac_service.user_has_service_permission(user.id, permission):
+        logger.info(f"User {user.id} has service permission: {permission}")
+        return True
+    
+    # Check fallback permissions
+    fallback_permissions = _get_fallback_permissions(permission)
+    
+    from app.core.permissions import PermissionChecker
+    for fallback_perm in fallback_permissions:
+        if PermissionChecker.has_permission(user, fallback_perm):
+            logger.info(f"User {user.id} has fallback permission: {fallback_perm}")
+            return True
+    
+    logger.warning(f"User {user.id} denied access - missing permission: {permission}")
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail=f"Insufficient permissions. Required: {permission}"
+    )

@@ -7,7 +7,7 @@ from fastapi.routing import APIRoute
 from app.core.config import settings as config_settings
 from app.core.database import create_tables, SessionLocal
 from app.core.tenant import TenantMiddleware
-# from app.core.seed_super_admin import seed_super_admin  # Temporarily disabled for testing
+from app.core.seed_super_admin import seed_super_admin
 from app.api import users, companies, vendors, customers, products, reports, platform, settings, pincode, customer_analytics, notifications
 from app.api.v1 import stock as v1_stock
 from app.api.v1.vouchers import router as v1_vouchers_router  # Updated import
@@ -298,16 +298,16 @@ async def startup_event():
         create_tables()
         logger.info("Database tables created successfully")
         # Check if database schema is updated and seed super admin if possible
-        # from app.core.seed_super_admin import check_database_schema_updated
-        # db = SessionLocal()
-        # try:
-        #     if check_database_schema_updated(db):
-        #         seed_super_admin(db)
-        #         logger.info("Super admin seeding completed")
-        #     else:
-        #         logger.warning("Database schema is not updated. Run 'alembic upgrade head' to enable super admin seeding.")
-        # finally:
-        #     db.close()
+        from app.core.seed_super_admin import check_database_schema_updated
+        db = SessionLocal()
+        try:
+            if check_database_schema_updated(db):
+                seed_super_admin(db)
+                logger.info("Super admin seeding completed")
+            else:
+                logger.warning("Database schema is not updated. Run 'alembic upgrade head' to enable super admin seeding.")
+        finally:
+            db.close()
     except Exception as e:
         logger.error(f"Failed to initialize application: {e}")
         raise
