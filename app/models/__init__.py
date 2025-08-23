@@ -1,6 +1,7 @@
 from .base import (
     User, Company, Vendor, Customer, Product, Stock, 
-    AuditLog, EmailNotification, PaymentTerm
+    AuditLog, EmailNotification, PaymentTerm,
+    NotificationTemplate, NotificationLog, NotificationPreference
 )
 from .vouchers import (
     BaseVoucher, PurchaseVoucher, PurchaseVoucherItem,
@@ -15,6 +16,7 @@ __all__ = [
     # Base models
     "User", "Company", "Vendor", "Customer", "Product", "Stock",
     "AuditLog", "EmailNotification", "PaymentTerm",
+    "NotificationTemplate", "NotificationLog", "NotificationPreference",
     
     # Voucher models
     "BaseVoucher", "PurchaseVoucher", "PurchaseVoucherItem",
