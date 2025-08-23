@@ -181,6 +181,15 @@ app.include_router(
 )
 logger.info("PDF extraction router included successfully at prefix: /api/v1/pdf-extraction")
 
+# Service CRM RBAC API
+from app.api.v1 import rbac as v1_rbac
+app.include_router(
+    v1_rbac.router,
+    prefix="/api/v1/rbac",
+    tags=["service-crm-rbac"]
+)
+logger.info("Service CRM RBAC router included successfully at prefix: /api/v1/rbac")
+
 # ------------------------------------------------------------------------------
 # LEGACY API ROUTERS (business modules)
 # ------------------------------------------------------------------------------

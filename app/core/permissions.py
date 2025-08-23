@@ -50,6 +50,45 @@ class Permission:
     
     # Organization settings access
     ACCESS_ORG_SETTINGS = "access_org_settings"
+    
+    # Service CRM Module Permissions - CRUD operations per module
+    # Service Management Permissions
+    SERVICE_CREATE = "service_create"
+    SERVICE_READ = "service_read"
+    SERVICE_UPDATE = "service_update"
+    SERVICE_DELETE = "service_delete"
+    
+    # Technician Management Permissions
+    TECHNICIAN_CREATE = "technician_create"
+    TECHNICIAN_READ = "technician_read"
+    TECHNICIAN_UPDATE = "technician_update"
+    TECHNICIAN_DELETE = "technician_delete"
+    
+    # Appointment Management Permissions
+    APPOINTMENT_CREATE = "appointment_create"
+    APPOINTMENT_READ = "appointment_read"
+    APPOINTMENT_UPDATE = "appointment_update"
+    APPOINTMENT_DELETE = "appointment_delete"
+    
+    # Customer Service Permissions
+    CUSTOMER_SERVICE_CREATE = "customer_service_create"
+    CUSTOMER_SERVICE_READ = "customer_service_read"
+    CUSTOMER_SERVICE_UPDATE = "customer_service_update"
+    CUSTOMER_SERVICE_DELETE = "customer_service_delete"
+    
+    # Work Order Permissions
+    WORK_ORDER_CREATE = "work_order_create"
+    WORK_ORDER_READ = "work_order_read"
+    WORK_ORDER_UPDATE = "work_order_update"
+    WORK_ORDER_DELETE = "work_order_delete"
+    
+    # Service Reports Permissions
+    SERVICE_REPORTS_READ = "service_reports_read"
+    SERVICE_REPORTS_EXPORT = "service_reports_export"
+    
+    # CRM Admin Permissions
+    CRM_ADMIN = "crm_admin"
+    CRM_SETTINGS = "crm_settings"
 
 
 class PermissionChecker:

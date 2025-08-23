@@ -1,7 +1,9 @@
 import os
 from typing import Any, Dict, Optional, List
-from pydantic_settings import BaseSettings
-from pydantic import field_validator, ConfigDict
+from pydantic import BaseModel, field_validator, ConfigDict
+
+class BaseSettings(BaseModel):
+    model_config = ConfigDict(env_file=".env", case_sensitive=True)
 
 class Settings(BaseSettings):
     # App Settings
