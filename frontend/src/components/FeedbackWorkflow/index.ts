@@ -3,6 +3,7 @@ export { default as CustomerFeedbackModal } from './CustomerFeedbackModal';
 export { default as ServiceClosureDialog } from './ServiceClosureDialog';
 export { default as FeedbackStatusList } from './FeedbackStatusList';
 export { default as FeedbackWorkflowIntegration } from './FeedbackWorkflowIntegration';
+export { default as FeedbackWorkflowDemo } from './FeedbackWorkflowDemo';
 
 // Export types
 export interface CustomerFeedback {

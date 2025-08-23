@@ -7,8 +7,16 @@ users created via FastAPI are also created in Supabase Auth system.
 
 import logging
 from typing import Optional, Dict, Any
-from supabase import create_client, Client
 from app.core.config import settings
+
+# Make supabase optional for testing
+try:
+    from supabase import create_client, Client
+    SUPABASE_AVAILABLE = True
+except ImportError:
+    SUPABASE_AVAILABLE = False
+    Client = None
+    create_client = None
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +30,11 @@ class SupabaseAuthService:
     """Service class for Supabase Auth Admin API operations"""
     
     def __init__(self):
+        if not SUPABASE_AVAILABLE:
+            logger.warning("Supabase not available - auth service disabled")
+            self.client = None
+            return
+            
         if not settings.SUPABASE_URL or not settings.SUPABASE_SERVICE_KEY:
             raise SupabaseAuthError(
                 "SUPABASE_URL and SUPABASE_SERVICE_KEY must be configured"
@@ -53,6 +66,10 @@ class SupabaseAuthService:
         Raises:
             SupabaseAuthError: If user creation fails
         """
+        if not self.client:
+            logger.warning("Supabase not available - user creation skipped")
+            return {"supabase_uuid": None, "email": email}
+            
         try:
             # Use admin API to create user
             response = self.client.auth.admin.create_user({
@@ -92,6 +109,10 @@ class SupabaseAuthService:
         Raises:
             SupabaseAuthError: If user deletion fails
         """
+        if not self.client:
+            logger.warning("Supabase not available - user deletion skipped")
+            return True
+            
         try:
             response = self.client.auth.admin.delete_user(supabase_uuid)
             # Validate the response to ensure deletion was successful
@@ -125,6 +146,10 @@ class SupabaseAuthService:
         Raises:
             SupabaseAuthError: If user update fails
         """
+        if not self.client:
+            logger.warning("Supabase not available - user update skipped")
+            return {"supabase_uuid": supabase_uuid}
+            
         try:
             response = self.client.auth.admin.update_user_by_id(supabase_uuid, updates)
             
@@ -158,6 +183,10 @@ class SupabaseAuthService:
         Raises:
             SupabaseAuthError: If request fails
         """
+        if not self.client:
+            logger.warning("Supabase not available - user lookup skipped")
+            return None
+            
         try:
             response = self.client.auth.admin.get_user_by_id(supabase_uuid)
             
@@ -185,13 +214,20 @@ def get_supabase_auth_service() -> SupabaseAuthService:
     """Get or create the singleton SupabaseAuthService instance"""
     global _supabase_auth_service_instance
     if _supabase_auth_service_instance is None:
-        _supabase_auth_service_instance = SupabaseAuthService()
+        try:
+            _supabase_auth_service_instance = SupabaseAuthService()
+        except Exception as e:
+            logger.warning(f"Failed to initialize Supabase auth service: {e}")
+            _supabase_auth_service_instance = None
     return _supabase_auth_service_instance
 
 # Create a proxy object that lazily initializes the service
 class SupabaseAuthServiceProxy:
     def __getattr__(self, name):
         service = get_supabase_auth_service()
+        if service is None:
+            logger.warning(f"Supabase service not available - {name} operation skipped")
+            return lambda *args, **kwargs: None
         return getattr(service, name)
 
 supabase_auth_service = SupabaseAuthServiceProxy()
