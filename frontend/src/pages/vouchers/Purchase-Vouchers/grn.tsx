@@ -154,22 +154,23 @@ const GoodsReceiptNotePage: React.FC = () => {
     enabled: isOrgContextReady,
   });
 
-  // Compute used voucher IDs
+  // Compute used voucher IDs, excluding current GRN in edit mode
+  const currentGrnId = mode === 'edit' ? voucherData?.id : null;
   const usedVoucherIds = useMemo(() => {
     if (!grns) return new Set();
-    return new Set(grns.map(grn => grn.purchase_order_id));
-  }, [grns]);
+    return new Set(grns.filter(grn => grn.id !== currentGrnId).map(grn => grn.purchase_order_id));
+  }, [grns, currentGrnId]);
 
   // Filter voucher options to exclude used ones
   const voucherOptions = useMemo(() => {
     let options = [];
     if (selectedVoucherType === 'purchase-order') {
-      options = (purchaseOrdersData || []).filter(po => po.items.some(item => item.pending_quantity > 0));
+      options = purchaseOrdersData || [];
     } else if (selectedVoucherType === 'purchase-voucher') {
       options = purchaseVouchersData || [];
     }
-    return options;
-  }, [selectedVoucherType, purchaseOrdersData, purchaseVouchersData]);
+    return options.filter(option => !usedVoucherIds.has(option.id));
+  }, [selectedVoucherType, purchaseOrdersData, purchaseVouchersData, usedVoucherIds]);
 
   // Fetch selected voucher details
   const { data: selectedVoucherData } = useQuery({
@@ -190,25 +191,31 @@ const GoodsReceiptNotePage: React.FC = () => {
       remove();
       // Append items from selected voucher
       selectedVoucherData.items.forEach((item: any) => {
-        const prefillQty = selectedVoucherType === 'purchase-order' ? (item.pending_quantity || item.quantity) : item.quantity;
         append({
           product_id: item.product_id,
           product_name: item.product?.name || item.product_name || '', 
           ordered_quantity: item.quantity,
-          received_quantity: prefillQty,
-          accepted_quantity: prefillQty,
+          received_quantity: item.pending_quantity || item.quantity,
+          accepted_quantity: item.pending_quantity || item.quantity,
           rejected_quantity: 0,
           unit_price: item.unit_price, // Keep hidden
           unit: item.unit,
-          po_item_id: selectedVoucherType === 'purchase-order' ? item.id : undefined,
         });
       });
     }
-  }, [selectedVoucherData, setValue, append, remove, selectedVoucherType]);
+  }, [selectedVoucherData, setValue, append, remove]);
 
   // Goods Receipt Note specific handlers
   const handleAddItem = () => {
     // No add item for GRN, as items come from voucher
+  };
+
+  const handleCancel = () => {
+    setMode('view');
+    // Optionally refresh or reset form to original voucherData
+    if (voucherData) {
+      reset(voucherData);
+    }
   };
 
   // Custom submit handler to prompt for PDF after save
@@ -226,7 +233,6 @@ const GoodsReceiptNotePage: React.FC = () => {
           unit: field.unit,
           unit_price: field.unit_price,
           total_cost: field.accepted_quantity * field.unit_price,
-          po_item_id: field.po_item_id,
         }));
       }
 
@@ -245,9 +251,6 @@ const GoodsReceiptNotePage: React.FC = () => {
         // Refetch PO/PV to update dropdowns
         refetchPurchaseOrders();
         refetchPurchaseVouchers();
-        if (confirm('Voucher created successfully. Generate PDF?')) {
-          handleGeneratePDF(response.data);
-        }
         // Reset form
         reset();
         setSelectedVoucherType(null);
@@ -257,9 +260,7 @@ const GoodsReceiptNotePage: React.FC = () => {
         response = await api.put('/goods-receipt-notes/' + data.id, data);
         // Refresh index immediately
         await refreshMasterData();
-        if (confirm('Voucher updated successfully. Generate PDF?')) {
-          handleGeneratePDF(response.data);
-        }
+        setMode('view');
       }
       
     } catch (error) {
@@ -327,14 +328,22 @@ const GoodsReceiptNotePage: React.FC = () => {
       setSelectedVoucherId(voucherData.purchase_order_id);
       
       if (mode === 'edit') {
-        mappedData.items.forEach((item, index) => {
-          setValue(`items.${index}.received_quantity`, item.received_quantity);
-          setValue(`items.${index}.accepted_quantity`, item.accepted_quantity);
-          setValue(`items.${index}.rejected_quantity`, item.rejected_quantity);
+        remove();
+        mappedData.items.forEach((item) => {
+          append({
+            product_id: item.product_id,
+            product_name: item.product_name,
+            ordered_quantity: item.ordered_quantity,
+            received_quantity: item.received_quantity,
+            accepted_quantity: item.accepted_quantity,
+            rejected_quantity: item.rejected_quantity,
+            unit_price: item.unit_price,
+            unit: item.unit,
+          });
         });
       }
     }
-  }, [voucherData, mode, reset, setValue]);
+  }, [voucherData, mode, reset, setValue, append, remove]);
 
   const indexContent = (
     <>
@@ -401,11 +410,14 @@ const GoodsReceiptNotePage: React.FC = () => {
           mode={mode}
           voucherType={config.voucherTitle}
           voucherRoute="/vouchers/Purchase-Vouchers/grn"
-          currentId={selectedVendorId}
+          currentId={mode === 'create' ? null : voucherData?.id}
+          onEdit={() => handleEdit(voucherData?.id)}
+          onCreate={handleCreate}
+          onCancel={handleCancel}
         />
       </Box>
 
-      <form onSubmit={handleSubmit(onSubmit)} style={voucherStyles.formContainer}>
+      <form id="voucherForm" onSubmit={handleSubmit(onSubmit)} style={voucherStyles.formContainer}>
         <Grid container spacing={0.5}>
           {/* Voucher Number */}
           <Grid size={6}>

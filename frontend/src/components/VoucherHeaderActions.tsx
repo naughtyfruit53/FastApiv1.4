@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { Box, Button } from '@mui/material';
-import { Add as AddIcon, Edit as EditIcon, PictureAsPdf as PdfIcon } from '@mui/icons-material';
+import { Add as AddIcon, Edit as EditIcon, Close as CloseIcon } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 
 interface VoucherHeaderActionsProps {
@@ -11,12 +11,13 @@ interface VoucherHeaderActionsProps {
   voucherType: string; // e.g., 'Purchase Order', 'Sales Voucher', etc.
   voucherRoute: string; // The base route for this voucher type
   currentId?: number; // Current voucher ID (for edit route)
-  onGeneratePDF?: () => void;
+  onEdit?: () => void;
+  onCreate?: () => void;
+  onCancel?: () => void;
   // Additional props for compatibility
   onModeChange?: (mode: 'create' | 'edit' | 'view') => void;
   onModalOpen?: () => void;
   voucherList?: any[];
-  onEdit?: (voucher: any) => void;
   onView?: (voucher: any) => void;
   isLoading?: boolean;
 }
@@ -26,24 +27,25 @@ const VoucherHeaderActions: React.FC<VoucherHeaderActionsProps> = ({
   voucherType,
   voucherRoute,
   currentId,
-  onGeneratePDF,
+  onEdit,
+  onCreate,
+  onCancel,
   // Additional props for compatibility (ignored for now)
   onModeChange,
   onModalOpen,
   voucherList,
-  onEdit,
   onView,
   isLoading,
 }) => {
   const router = useRouter();
 
-  const handleEdit = () => {
+  const handleEditFallback = () => {
     if (currentId) {
       router.push(`${voucherRoute}?mode=edit&id=${currentId}`);
     }
   };
 
-  const handleCreate = () => {
+  const handleCreateFallback = () => {
     router.push(`${voucherRoute}?mode=create`);
   };
 
@@ -55,7 +57,7 @@ const VoucherHeaderActions: React.FC<VoucherHeaderActionsProps> = ({
             variant="contained" 
             color="success" 
             startIcon={<AddIcon />}
-            onClick={handleCreate}
+            onClick={onCreate ? onCreate : handleCreateFallback}
             sx={{ fontSize: 12, textTransform: 'uppercase' }}
           >
             Create {voucherType.toLowerCase()}
@@ -64,7 +66,7 @@ const VoucherHeaderActions: React.FC<VoucherHeaderActionsProps> = ({
             variant="contained" 
             color="primary" 
             startIcon={<EditIcon />}
-            onClick={handleEdit}
+            onClick={onEdit ? onEdit : handleEditFallback}
             sx={{ fontSize: 12, textTransform: 'uppercase' }}
           >
             Edit {voucherType.toLowerCase()}
@@ -72,29 +74,43 @@ const VoucherHeaderActions: React.FC<VoucherHeaderActionsProps> = ({
         </>
       )}
       {mode === 'edit' && (
+        <>
+          <Button 
+            variant="contained" 
+            color="success" 
+            startIcon={<AddIcon />}
+            onClick={onCreate ? onCreate : handleCreateFallback}
+            sx={{ fontSize: 12, textTransform: 'uppercase' }}
+          >
+            Create {voucherType.toLowerCase()}
+          </Button>
+          <Button 
+            form="voucherForm" 
+            type="submit" 
+            variant="contained" 
+            color="primary" 
+            sx={{ fontSize: 12, textTransform: 'uppercase' }}
+          >
+            Save
+          </Button>
+          <Button 
+            variant="outlined" 
+            startIcon={<CloseIcon />}
+            onClick={onCancel}
+            sx={{ fontSize: 12, textTransform: 'uppercase' }}
+          >
+            Cancel
+          </Button>
+        </>
+      )}
+      {mode === 'create' && (
         <Button 
+          form="voucherForm" 
+          type="submit" 
           variant="contained" 
-          color="success" 
-          startIcon={<AddIcon />}
-          onClick={handleCreate}
+          color="primary" 
           sx={{ fontSize: 12, textTransform: 'uppercase' }}
         >
-          Create {voucherType.toLowerCase()}
-        </Button>
-      )}
-      {(mode === 'view' || mode === 'edit') && onGeneratePDF && (
-        <Button 
-          variant="contained" 
-          color="secondary" 
-          startIcon={<PdfIcon />}
-          onClick={onGeneratePDF}
-          sx={{ fontSize: 12, textTransform: 'uppercase' }}
-        >
-          Generate PDF
-        </Button>
-      )}
-      {mode !== 'view' && (
-        <Button form="voucherForm" type="submit" variant="contained" color="success" sx={{ fontSize: 12 }}>
           Save
         </Button>
       )}
