@@ -15,6 +15,22 @@ from app.services.voucher_service import VoucherNumberService
 
 logger = logging.getLogger(__name__)
 
+# Import notification service for event triggers
+def trigger_notification_event(db: Session, trigger_event: str, organization_id: int, context_data: dict):
+    """Helper function to trigger notification events"""
+    try:
+        from app.services.notification_service import NotificationService
+        notification_service = NotificationService()
+        notification_service.trigger_automated_notifications(
+            db=db,
+            trigger_event=trigger_event,
+            organization_id=organization_id,
+            context_data=context_data
+        )
+    except Exception as e:
+        logger.warning(f"Failed to trigger notification for event {trigger_event}: {e}")
+        # Don't fail the main operation if notifications fail
+
 
 class DispatchNumberService:
     """Service for generating dispatch and installation job numbers"""
@@ -122,6 +138,19 @@ class DispatchService:
         self.db.commit()
         self.db.refresh(dispatch_order)
         
+        # Trigger notification for dispatch order creation
+        trigger_notification_event(
+            db=self.db,
+            trigger_event="job_assignment",
+            organization_id=organization_id,
+            context_data={
+                "dispatch_order_id": dispatch_order.id,
+                "order_number": order_number,
+                "customer_id": customer_id,
+                "created_by_id": created_by_id
+            }
+        )
+        
         logger.info(f"Created dispatch order {order_number} for organization {organization_id}")
         return dispatch_order
     
@@ -157,6 +186,19 @@ class DispatchService:
         
         self.db.commit()
         self.db.refresh(dispatch_order)
+        
+        # Trigger notification for status updates
+        trigger_notification_event(
+            db=self.db,
+            trigger_event="job_update",
+            organization_id=dispatch_order.organization_id,
+            context_data={
+                "dispatch_order_id": dispatch_order.id,
+                "order_number": dispatch_order.order_number,
+                "status": status,
+                "updated_by_id": updated_by_id
+            }
+        )
         
         logger.info(f"Updated dispatch order {dispatch_order.order_number} status to {status}")
         return dispatch_order

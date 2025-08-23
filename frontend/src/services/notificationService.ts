@@ -76,6 +76,33 @@ export interface NotificationLog {
   updated_at?: string;
 }
 
+export interface NotificationPreference {
+  id: number;
+  organization_id: number;
+  subject_type: string;
+  subject_id: number;
+  notification_type: string;
+  channel: string;
+  is_enabled: boolean;
+  settings?: Record<string, any>;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface NotificationPreferenceCreate {
+  subject_type: string;
+  subject_id: number;
+  notification_type: string;
+  channel: string;
+  is_enabled: boolean;
+  settings?: Record<string, any>;
+}
+
+export interface NotificationPreferenceUpdate {
+  is_enabled?: boolean;
+  settings?: Record<string, any>;
+}
+
 export interface NotificationSendRequest {
   template_id?: number;
   recipient_type: string;
@@ -303,4 +330,38 @@ export const notificationQueryKeys = {
     [...notificationQueryKeys.logs(), filters] as const,
   log: (id: number) => [...notificationQueryKeys.logs(), id] as const,
   analytics: (days: number) => [...notificationQueryKeys.all, 'analytics', days] as const,
+  preferences: () => [...notificationQueryKeys.all, 'preferences'] as const,
+  preferencesFor: (subjectType: string, subjectId: number) => 
+    [...notificationQueryKeys.preferences(), subjectType, subjectId] as const,
 } as const;
+
+// Notification Preferences API functions
+export const getNotificationPreferences = async (
+  subjectType: string, 
+  subjectId: number
+): Promise<NotificationPreference[]> => {
+  const response = await api.get(`/notifications/preferences/${subjectType}/${subjectId}`);
+  return response.data;
+};
+
+export const createNotificationPreference = async (
+  preferenceData: NotificationPreferenceCreate
+): Promise<NotificationPreference> => {
+  const response = await api.post('/notifications/preferences', preferenceData);
+  return response.data;
+};
+
+export const updateNotificationPreference = async (
+  preferenceId: number,
+  updateData: NotificationPreferenceUpdate
+): Promise<NotificationPreference> => {
+  const response = await api.put(`/notifications/preferences/${preferenceId}`, updateData);
+  return response.data;
+};
+
+export const triggerNotificationEvent = async (
+  eventData: { trigger_event: string; context_data: Record<string, any> }
+): Promise<any> => {
+  const response = await api.post('/notifications/trigger', eventData);
+  return response.data;
+};

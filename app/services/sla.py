@@ -19,6 +19,22 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# Import notification service for event triggers
+def trigger_notification_event(db: Session, trigger_event: str, organization_id: int, context_data: dict):
+    """Helper function to trigger notification events"""
+    try:
+        from app.services.notification_service import NotificationService
+        notification_service = NotificationService()
+        notification_service.trigger_automated_notifications(
+            db=db,
+            trigger_event=trigger_event,
+            organization_id=organization_id,
+            context_data=context_data
+        )
+    except Exception as e:
+        logger.warning(f"Failed to trigger notification for event {trigger_event}: {e}")
+        # Don't fail the main operation if notifications fail
+
 
 class SLAService:
     """Service for managing SLA policies and tracking"""
@@ -251,14 +267,44 @@ class SLAService:
                 tracking.response_deadline, 
                 tracking.first_response_at
             )
+            old_status = tracking.response_status
             tracking.response_status = SLAStatusEnum.MET if tracking.response_breach_hours <= 0 else SLAStatusEnum.BREACHED
+            
+            # Trigger notification if status changed to breached
+            if old_status != SLAStatusEnum.BREACHED and tracking.response_status == SLAStatusEnum.BREACHED:
+                trigger_notification_event(
+                    db=self.db,
+                    trigger_event="sla_breach",
+                    organization_id=organization_id,
+                    context_data={
+                        "tracking_id": tracking.id,
+                        "ticket_id": tracking.ticket_id,
+                        "breach_type": "response",
+                        "breach_hours": tracking.response_breach_hours
+                    }
+                )
         
         if "resolved_at" in update_data:
             tracking.resolution_breach_hours = self._calculate_breach_hours(
                 tracking.resolution_deadline,
                 tracking.resolved_at
             )
+            old_status = tracking.resolution_status
             tracking.resolution_status = SLAStatusEnum.MET if tracking.resolution_breach_hours <= 0 else SLAStatusEnum.BREACHED
+            
+            # Trigger notification if status changed to breached
+            if old_status != SLAStatusEnum.BREACHED and tracking.resolution_status == SLAStatusEnum.BREACHED:
+                trigger_notification_event(
+                    db=self.db,
+                    trigger_event="sla_breach",
+                    organization_id=organization_id,
+                    context_data={
+                        "tracking_id": tracking.id,
+                        "ticket_id": tracking.ticket_id,
+                        "breach_type": "resolution",
+                        "breach_hours": tracking.resolution_breach_hours
+                    }
+                )
         
         tracking.updated_at = datetime.utcnow()
         self.db.commit()
