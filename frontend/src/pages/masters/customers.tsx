@@ -23,7 +23,8 @@ import {
   Email,
   Phone,
   Person,
-  Visibility
+  Visibility,
+  Analytics
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { masterDataService } from '../../services/authService';
@@ -32,6 +33,7 @@ import { bulkImportCustomers } from '../../services/masterService';
 import Grid from '@mui/material/Grid';
 import { useAuth } from '../../context/AuthContext';
 import AddCustomerModal from '../../components/AddCustomerModal';
+import CustomerAnalyticsModal from '../../components/CustomerAnalyticsModal';
 
 const CustomersPage: React.FC = () => {
   const router = useRouter();
@@ -40,6 +42,11 @@ const CustomersPage: React.FC = () => {
   const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
   const [addCustomerLoading, setAddCustomerLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [analyticsModal, setAnalyticsModal] = useState<{
+    open: boolean;
+    customerId?: number;
+    customerName?: string;
+  }>({ open: false });
   const queryClient = useQueryClient();
 
   const { data: customers, isLoading: customersLoading } = useQuery({
@@ -181,6 +188,18 @@ const CustomersPage: React.FC = () => {
                       />
                     </TableCell>
                     <TableCell>
+                      <IconButton 
+                        size="small" 
+                        title="View Analytics"
+                        onClick={() => setAnalyticsModal({
+                          open: true,
+                          customerId: item.id,
+                          customerName: item.name
+                        })}
+                        color="info"
+                      >
+                        <Analytics />
+                      </IconButton>
                       <IconButton disabled size="small" title="Edit functionality temporarily disabled">
                         <Edit />
                       </IconButton>
@@ -202,6 +221,16 @@ const CustomersPage: React.FC = () => {
           onAdd={handleCustomerAdd}
           loading={addCustomerLoading}
         />
+
+        {/* Customer Analytics Modal */}
+        {analyticsModal.customerId && (
+          <CustomerAnalyticsModal
+            open={analyticsModal.open}
+            onClose={() => setAnalyticsModal({ open: false })}
+            customerId={analyticsModal.customerId}
+            customerName={analyticsModal.customerName}
+          />
+        )}
       </Box>
     </Container>
   );
