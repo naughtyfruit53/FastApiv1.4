@@ -4,7 +4,7 @@
 Pydantic schemas for Service Analytics API endpoints
 """
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from typing import Dict, List, Optional, Any, Union
 from datetime import datetime, date
 from enum import Enum
@@ -46,13 +46,6 @@ class AnalyticsRequest(BaseModel):
     period: Optional[ReportPeriod] = Field(ReportPeriod.MONTH, description="Predefined period")
     technician_id: Optional[int] = Field(None, description="Filter by specific technician")
     customer_id: Optional[int] = Field(None, description="Filter by specific customer")
-
-    @validator('end_date')
-    def end_date_must_be_after_start_date(cls, v, values):
-        if v and 'start_date' in values and values['start_date']:
-            if v < values['start_date']:
-                raise ValueError('end_date must be after start_date')
-        return v
 
 
 class ReportConfigurationRequest(BaseModel):

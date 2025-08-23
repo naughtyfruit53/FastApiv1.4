@@ -1,11 +1,11 @@
 # Revised app.models.base.py
-from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Text, ForeignKey, JSON, Index, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Text, ForeignKey, JSON, Index, UniqueConstraint, Date
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 from app.core.database import Base
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, date
 
 # Platform User Model - For SaaS platform-level users
 class PlatformUser(Base):
@@ -1688,7 +1688,7 @@ class AnalyticsSummary(Base):
     
     # Summary details
     summary_type: Mapped[str] = mapped_column(String, nullable=False, index=True)  # 'daily', 'weekly', 'monthly', 'technician', 'customer'
-    summary_date: Mapped[date] = mapped_column(nullable=False, index=True)
+    summary_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
     
     # Aggregated metrics
     total_jobs: Mapped[int] = mapped_column(Integer, default=0)
