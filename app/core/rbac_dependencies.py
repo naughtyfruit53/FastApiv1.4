@@ -105,6 +105,13 @@ def _get_fallback_permissions(service_permission: str) -> List[str]:
         # Admin permissions
         "crm_admin": [Permission.MANAGE_ORGANIZATIONS, Permission.SUPER_ADMIN],
         "crm_settings": [Permission.MANAGE_ORGANIZATIONS, Permission.ACCESS_ORG_SETTINGS],
+        
+        # SLA management permissions
+        "sla_create": [Permission.CREATE_USERS],
+        "sla_read": [Permission.VIEW_USERS],
+        "sla_update": [Permission.MANAGE_USERS],
+        "sla_delete": [Permission.DELETE_USERS],
+        "sla_escalate": [Permission.MANAGE_USERS],
     }
     
     return fallback_map.get(service_permission, [])
@@ -149,6 +156,13 @@ require_work_order_create = RBACDependency("work_order_create")
 require_work_order_read = RBACDependency("work_order_read")
 require_work_order_update = RBACDependency("work_order_update")
 require_work_order_delete = RBACDependency("work_order_delete")
+
+# SLA management dependencies
+require_sla_create = RBACDependency("sla_create")
+require_sla_read = RBACDependency("sla_read")
+require_sla_update = RBACDependency("sla_update")
+require_sla_delete = RBACDependency("sla_delete")
+require_sla_escalate = RBACDependency("sla_escalate")
 
 # Reports dependencies
 require_service_reports_read = RBACDependency("service_reports_read")

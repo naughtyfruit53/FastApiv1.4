@@ -896,6 +896,7 @@ class Ticket(Base):
     created_by: Mapped[Optional["User"]] = relationship("User", foreign_keys=[created_by_id])
     history: Mapped[List["TicketHistory"]] = relationship("TicketHistory", back_populates="ticket", cascade="all, delete-orphan")
     attachments: Mapped[List["TicketAttachment"]] = relationship("TicketAttachment", back_populates="ticket", cascade="all, delete-orphan")
+    sla_tracking: Mapped[Optional["SLATracking"]] = relationship("SLATracking", back_populates="ticket", uselist=False, cascade="all, delete-orphan")
     
     __table_args__ = (
         # Unique ticket number per organization
@@ -990,4 +991,114 @@ class TicketAttachment(Base):
         Index('idx_ticket_attachment_org_ticket', 'organization_id', 'ticket_id'),
         Index('idx_ticket_attachment_type', 'file_type'),
         Index('idx_ticket_attachment_uploaded_by', 'uploaded_by_id'),
+    )
+
+
+# SLA Management Models
+class SLAPolicy(Base):
+    """
+    Model for defining SLA policies for ticket management.
+    Policies define response and resolution time requirements.
+    """
+    __tablename__ = "sla_policies"
+    
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    
+    # Multi-tenant field
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
+    
+    # Policy identification and details
+    name: Mapped[str] = mapped_column(String, nullable=False)  # e.g., "Critical Support", "Standard Maintenance"
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    
+    # Applicability criteria
+    priority: Mapped[Optional[str]] = mapped_column(String, nullable=True)  # 'low', 'medium', 'high', 'urgent' - null means applies to all
+    ticket_type: Mapped[Optional[str]] = mapped_column(String, nullable=True)  # 'support', 'maintenance', etc. - null means applies to all
+    customer_tier: Mapped[Optional[str]] = mapped_column(String, nullable=True)  # 'premium', 'standard', etc. - null means applies to all
+    
+    # SLA time definitions (in hours)
+    response_time_hours: Mapped[float] = mapped_column(Float, nullable=False)  # Time to first response
+    resolution_time_hours: Mapped[float] = mapped_column(Float, nullable=False)  # Time to resolution
+    
+    # Escalation rules
+    escalation_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    escalation_threshold_percent: Mapped[float] = mapped_column(Float, default=80.0)  # Escalate at 80% of SLA time
+    
+    # Status and configuration
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    is_default: Mapped[bool] = mapped_column(Boolean, default=False)  # Default policy for unmatched tickets
+    
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+    created_by_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)
+    
+    # Relationships
+    organization: Mapped["Organization"] = relationship("Organization")
+    created_by: Mapped[Optional["User"]] = relationship("User")
+    sla_tracking: Mapped[List["SLATracking"]] = relationship("SLATracking", back_populates="policy", cascade="all, delete-orphan")
+    
+    __table_args__ = (
+        UniqueConstraint('organization_id', 'name', name='uq_sla_policy_org_name'),
+        Index('idx_sla_policy_org_active', 'organization_id', 'is_active'),
+        Index('idx_sla_policy_priority', 'priority'),
+        Index('idx_sla_policy_ticket_type', 'ticket_type'),
+        Index('idx_sla_policy_default', 'is_default'),
+    )
+
+
+class SLATracking(Base):
+    """
+    Model for tracking SLA compliance for individual tickets.
+    Tracks response times, resolution times, and escalation status.
+    """
+    __tablename__ = "sla_tracking"
+    
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    
+    # Multi-tenant field
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
+    
+    # References
+    ticket_id: Mapped[int] = mapped_column(Integer, ForeignKey("tickets.id"), nullable=False, unique=True)  # One SLA tracking per ticket
+    policy_id: Mapped[int] = mapped_column(Integer, ForeignKey("sla_policies.id"), nullable=False)
+    
+    # SLA deadlines (calculated from policy and ticket creation time)
+    response_deadline: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    resolution_deadline: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    
+    # Actual response and resolution times
+    first_response_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    resolved_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    
+    # SLA status tracking
+    response_status: Mapped[str] = mapped_column(String, nullable=False, default="pending")  # 'pending', 'met', 'breached'
+    resolution_status: Mapped[str] = mapped_column(String, nullable=False, default="pending")  # 'pending', 'met', 'breached'
+    
+    # Escalation tracking
+    escalation_triggered: Mapped[bool] = mapped_column(Boolean, default=False)
+    escalation_triggered_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    escalation_level: Mapped[int] = mapped_column(Integer, default=0)  # 0 = no escalation, 1+ = escalation levels
+    
+    # Breach calculations (in hours, negative = met SLA, positive = breached)
+    response_breach_hours: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    resolution_breach_hours: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    organization: Mapped["Organization"] = relationship("Organization")
+    ticket: Mapped["Ticket"] = relationship("Ticket")
+    policy: Mapped["SLAPolicy"] = relationship("SLAPolicy", back_populates="sla_tracking")
+    
+    __table_args__ = (
+        Index('idx_sla_tracking_org_ticket', 'organization_id', 'ticket_id'),
+        Index('idx_sla_tracking_policy', 'policy_id'),
+        Index('idx_sla_tracking_response_status', 'response_status'),
+        Index('idx_sla_tracking_resolution_status', 'resolution_status'),
+        Index('idx_sla_tracking_escalation', 'escalation_triggered'),
+        Index('idx_sla_tracking_response_deadline', 'response_deadline'),
+        Index('idx_sla_tracking_resolution_deadline', 'resolution_deadline'),
     )

@@ -6,7 +6,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 # Determine database URL with fallback to SQLite
-database_url = settings.DATABASE_URL
+database_url = settings.DATABASE_URL or "sqlite:///./tritiq_erp.db"
 if not database_url:
     raise ValueError("DATABASE_URL is required in .env file for database connection. Please configure it to connect to the main server.")
 
