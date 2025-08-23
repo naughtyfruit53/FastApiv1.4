@@ -82,7 +82,7 @@ async def get_sla_policy(
     organization_id: int = Path(..., description="Organization ID"),
     policy_id: int = Path(..., description="SLA Policy ID"),
     sla_service: SLAService = Depends(get_sla_service),
-    current_user: User = Depends(lambda: require_service_permission("sla_read")),
+    current_user: User = Depends(require_sla_read),
     _: int = Depends(require_same_organization)
 ):
     """Get a specific SLA policy"""
@@ -104,7 +104,7 @@ async def update_sla_policy(
     policy_id: int = Path(..., description="SLA Policy ID"),
     policy_update: SLAPolicyUpdate = ...,
     sla_service: SLAService = Depends(get_sla_service),
-    current_user: User = Depends(lambda: require_service_permission("sla_update")),
+    current_user: User = Depends(require_sla_update),
     _: int = Depends(require_same_organization)
 ):
     """Update an SLA policy"""
@@ -137,7 +137,7 @@ async def delete_sla_policy(
     organization_id: int = Path(..., description="Organization ID"),
     policy_id: int = Path(..., description="SLA Policy ID"),
     sla_service: SLAService = Depends(get_sla_service),
-    current_user: User = Depends(lambda: require_service_permission("sla_delete")),
+    current_user: User = Depends(require_sla_delete),
     _: int = Depends(require_same_organization)
 ):
     """Delete an SLA policy"""
@@ -211,7 +211,7 @@ async def get_ticket_sla(
     organization_id: int = Path(..., description="Organization ID"),
     ticket_id: int = Path(..., description="Ticket ID"),
     sla_service: SLAService = Depends(get_sla_service),
-    current_user: User = Depends(lambda: require_service_permission("sla_read")),
+    current_user: User = Depends(require_sla_read),
     _: int = Depends(require_same_organization)
 ):
     """Get SLA tracking for a specific ticket"""
@@ -239,7 +239,7 @@ async def update_sla_tracking(
     tracking_id: int = Path(..., description="SLA Tracking ID"),
     tracking_update: SLATrackingUpdate = ...,
     sla_service: SLAService = Depends(get_sla_service),
-    current_user: User = Depends(lambda: require_service_permission("sla_update")),
+    current_user: User = Depends(require_sla_update),
     _: int = Depends(require_same_organization)
 ):
     """Update SLA tracking (typically for system use)"""
@@ -268,7 +268,7 @@ async def get_breached_slas(
     organization_id: int = Path(..., description="Organization ID"),
     limit: int = Query(50, description="Maximum number of results", le=200),
     sla_service: SLAService = Depends(get_sla_service),
-    current_user: User = Depends(lambda: require_service_permission("sla_read")),
+    current_user: User = Depends(require_sla_read),
     _: int = Depends(require_same_organization)
 ):
     """Get tickets with breached SLAs"""
@@ -282,7 +282,7 @@ async def get_breached_slas(
 async def get_escalation_candidates(
     organization_id: int = Path(..., description="Organization ID"),
     sla_service: SLAService = Depends(get_sla_service),
-    current_user: User = Depends(lambda: require_service_permission("sla_read")),
+    current_user: User = Depends(require_sla_read),
     _: int = Depends(require_same_organization)
 ):
     """Get tickets that are candidates for escalation"""
@@ -297,7 +297,7 @@ async def trigger_escalation(
     organization_id: int = Path(..., description="Organization ID"),
     tracking_id: int = Path(..., description="SLA Tracking ID"),
     sla_service: SLAService = Depends(get_sla_service),
-    current_user: User = Depends(lambda: require_service_permission("sla_escalate")),
+    current_user: User = Depends(require_sla_escalate),
     _: int = Depends(require_same_organization)
 ):
     """Trigger escalation for an SLA tracking record"""
@@ -333,7 +333,7 @@ async def get_sla_metrics(
     end_date: Optional[datetime] = Query(None, description="End date for metrics (ISO format)"),
     days: int = Query(30, description="Number of days to look back if dates not specified", ge=1, le=365),
     sla_service: SLAService = Depends(get_sla_service),
-    current_user: User = Depends(lambda: require_service_permission("sla_read")),
+    current_user: User = Depends(require_sla_read),
     _: int = Depends(require_same_organization)
 ):
     """Get SLA performance metrics for a date range"""
@@ -363,7 +363,7 @@ async def process_ticket_response(
     ticket_id: int = Path(..., description="Ticket ID"),
     response_time: Optional[datetime] = Query(None, description="Response time (defaults to now)"),
     sla_service: SLAService = Depends(get_sla_service),
-    current_user: User = Depends(lambda: require_service_permission("sla_update")),
+    current_user: User = Depends(require_sla_update),
     _: int = Depends(require_same_organization)
 ):
     """Process first response for a ticket and update SLA tracking"""
@@ -400,7 +400,7 @@ async def process_ticket_resolution(
     ticket_id: int = Path(..., description="Ticket ID"),
     resolution_time: Optional[datetime] = Query(None, description="Resolution time (defaults to now)"),
     sla_service: SLAService = Depends(get_sla_service),
-    current_user: User = Depends(lambda: require_service_permission("sla_update")),
+    current_user: User = Depends(require_sla_update),
     _: int = Depends(require_same_organization)
 ):
     """Process ticket resolution and update SLA tracking"""
