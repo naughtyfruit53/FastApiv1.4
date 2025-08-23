@@ -11,7 +11,7 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 
 from app.services.notification_service import NotificationService
-from app.models.base import NotificationTemplate, NotificationLog, Customer, User
+from app.models.base import NotificationTemplate, NotificationLog, NotificationPreference, Customer, User
 from app.schemas.base import NotificationTemplateCreate, NotificationSendRequest
 
 
@@ -288,6 +288,183 @@ class TestNotificationService:
         # Assert
         assert len(result) == 2
         self.mock_db.query.assert_called_once()
+
+    def test_check_user_preference_enabled(self):
+        """Test checking user preference when enabled."""
+        # Arrange
+        mock_preference = Mock()
+        mock_preference.is_enabled = True
+        
+        self.mock_db.query.return_value.filter.return_value.first.return_value = mock_preference
+        
+        # Act
+        result = self.notification_service.check_user_preference(
+            self.mock_db, self.organization_id, "user", 1, "job_assignment", "email"
+        )
+        
+        # Assert
+        assert result is True
+
+    def test_check_user_preference_disabled(self):
+        """Test checking user preference when disabled."""
+        # Arrange
+        mock_preference = Mock()
+        mock_preference.is_enabled = False
+        
+        self.mock_db.query.return_value.filter.return_value.first.return_value = mock_preference
+        
+        # Act
+        result = self.notification_service.check_user_preference(
+            self.mock_db, self.organization_id, "user", 1, "job_assignment", "email"
+        )
+        
+        # Assert
+        assert result is False
+
+    def test_check_user_preference_default_enabled(self):
+        """Test checking user preference when no preference set (defaults to enabled)."""
+        # Arrange
+        self.mock_db.query.return_value.filter.return_value.first.return_value = None
+        
+        # Act
+        result = self.notification_service.check_user_preference(
+            self.mock_db, self.organization_id, "user", 1, "job_assignment", "email"
+        )
+        
+        # Assert
+        assert result is True
+
+    def test_create_user_preference_new(self):
+        """Test creating a new user preference."""
+        # Arrange
+        preference_data = {
+            "subject_type": "user",
+            "subject_id": 1,
+            "notification_type": "job_assignment",
+            "channel": "email",
+            "is_enabled": True
+        }
+        
+        self.mock_db.query.return_value.filter.return_value.first.return_value = None
+        mock_preference = Mock()
+        mock_preference.id = 1
+        
+        self.mock_db.add.return_value = None
+        self.mock_db.commit.return_value = None
+        self.mock_db.refresh.return_value = None
+        
+        # Act
+        with patch.object(NotificationPreference, '__init__', return_value=None):
+            result = self.notification_service.create_user_preference(
+                self.mock_db, self.organization_id, preference_data
+            )
+        
+        # The method should return a preference object
+        assert result is not None
+
+    def test_trigger_automated_notifications(self):
+        """Test triggering automated notifications."""
+        # Arrange
+        trigger_event = "job_assignment"
+        context_data = {"job_id": 1, "customer_id": 1}
+        
+        mock_templates = [Mock(id=1, trigger_event=trigger_event, is_active=True)]
+        self.mock_db.query.return_value.filter.return_value.all.return_value = mock_templates
+        
+        with patch.object(self.notification_service, '_get_trigger_recipients') as mock_get_recipients:
+            with patch.object(self.notification_service, 'check_user_preference') as mock_check_pref:
+                with patch.object(self.notification_service, 'send_notification') as mock_send:
+                    mock_get_recipients.return_value = [{"type": "user", "id": 1, "identifier": "test@example.com"}]
+                    mock_check_pref.return_value = True
+                    mock_send.return_value = Mock(id=1)
+                    
+                    # Act
+                    result = self.notification_service.trigger_automated_notifications(
+                        self.mock_db, trigger_event, self.organization_id, context_data
+                    )
+                    
+                    # Assert
+                    assert len(result) == 1
+                    mock_send.assert_called_once()
+
+    def test_get_notification_logs_with_filters(self):
+        """Test getting notification logs with filters."""
+        # Arrange
+        mock_logs = [Mock(id=1), Mock(id=2)]
+        mock_query = Mock()
+        mock_query.filter.return_value = mock_query
+        mock_query.order_by.return_value = mock_query
+        mock_query.offset.return_value = mock_query
+        mock_query.limit.return_value = mock_query
+        mock_query.all.return_value = mock_logs
+        
+        self.mock_db.query.return_value = mock_query
+        
+        # Act
+        result = self.notification_service.get_notification_logs(
+            self.mock_db, self.organization_id, status="sent", channel="email"
+        )
+        
+        # Assert
+        assert len(result) == 2
+        self.mock_db.query.assert_called_once()
+
+    def test_update_template_success(self):
+        """Test successful template update."""
+        # Arrange
+        template_id = 1
+        update_data = {"name": "Updated Template", "is_active": False}
+        
+        mock_template = Mock()
+        mock_template.name = "Old Template"
+        mock_template.is_active = True
+        
+        with patch.object(self.notification_service, 'get_template', return_value=mock_template):
+            self.mock_db.commit.return_value = None
+            self.mock_db.refresh.return_value = None
+            
+            # Act
+            result = self.notification_service.update_template(
+                self.mock_db, template_id, self.organization_id, update_data
+            )
+            
+            # Assert
+            assert result == mock_template
+            assert mock_template.name == "Updated Template"
+            assert mock_template.is_active is False
+
+    def test_delete_template_success(self):
+        """Test successful template deletion (soft delete)."""
+        # Arrange
+        template_id = 1
+        mock_template = Mock()
+        mock_template.is_active = True
+        
+        with patch.object(self.notification_service, 'get_template', return_value=mock_template):
+            self.mock_db.commit.return_value = None
+            
+            # Act
+            result = self.notification_service.delete_template(
+                self.mock_db, template_id, self.organization_id
+            )
+            
+            # Assert
+            assert result is True
+            assert mock_template.is_active is False
+
+    def test_delete_template_not_found(self):
+        """Test template deletion when template not found."""
+        # Arrange
+        template_id = 999
+        
+        with patch.object(self.notification_service, 'get_template', return_value=None):
+            # Act
+            result = self.notification_service.delete_template(
+                self.mock_db, template_id, self.organization_id
+            )
+            
+            # Assert
+            assert result is False
 
 
 if __name__ == "__main__":

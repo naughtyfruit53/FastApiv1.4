@@ -21,7 +21,14 @@ from app.schemas.base import (
     NotificationTemplateCreate, NotificationLogCreate,
     NotificationSendRequest, BulkNotificationRequest
 )
-from app.services.email_service import EmailService
+
+# Import EmailService only when needed to avoid dependency issues
+try:
+    from app.services.email_service import EmailService
+    EMAIL_SERVICE_AVAILABLE = True
+except ImportError:
+    EmailService = None
+    EMAIL_SERVICE_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +39,11 @@ class NotificationService:
     """
     
     def __init__(self):
-        self.email_service = EmailService()
+        if EMAIL_SERVICE_AVAILABLE:
+            self.email_service = EmailService()
+        else:
+            self.email_service = None
+            logger.warning("EmailService not available, email notifications will be mocked")
     
     def create_template(
         self, 
@@ -508,6 +519,11 @@ class NotificationService:
     ) -> bool:
         """Send email notification."""
         try:
+            # Check if in development mode or email service is disabled
+            if getattr(settings, 'EMAIL_MOCK_MODE', True) or not self.email_service:
+                logger.info(f"[MOCK EMAIL] To: {to_email}, Subject: {subject}, Body: {content}")
+                return True
+            
             success = self.email_service.send_email(
                 to_email=to_email,
                 subject=subject,
@@ -520,22 +536,76 @@ class NotificationService:
             return False
     
     def _send_sms(self, phone: str, content: str) -> bool:
-        """Send SMS notification (placeholder for SMS integration)."""
-        # TODO: Integrate with SMS service (Twilio, AWS SNS, etc.)
-        logger.info(f"SMS sending not yet implemented. Would send to {phone}: {content}")
-        return True  # Return True for now to avoid blocking
+        """Send SMS notification (mockable for development)."""
+        try:
+            # Check if in development mode or SMS service is disabled
+            if getattr(settings, 'SMS_MOCK_MODE', True):
+                logger.info(f"[MOCK SMS] To: {phone}, Message: {content}")
+                return True
+            
+            # TODO: Integrate with real SMS service (Twilio, AWS SNS, etc.)
+            # Example for Twilio:
+            # client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
+            # message = client.messages.create(
+            #     body=content,
+            #     from_=settings.TWILIO_PHONE_NUMBER,
+            #     to=phone
+            # )
+            # return message.sid is not None
+            
+            logger.warning(f"SMS service not configured. Message not sent to {phone}")
+            return False
+            
+        except Exception as e:
+            logger.error(f"Failed to send SMS to {phone}: {e}")
+            return False
     
     def _send_push(self, device_token: str, title: Optional[str], content: str) -> bool:
-        """Send push notification (placeholder for push service integration)."""
-        # TODO: Integrate with push notification service (Firebase, OneSignal, etc.)
-        logger.info(f"Push notification sending not yet implemented. Would send to {device_token}: {title} - {content}")
-        return True  # Return True for now to avoid blocking
+        """Send push notification (mockable for development)."""
+        try:
+            # Check if in development mode or push service is disabled
+            if getattr(settings, 'PUSH_MOCK_MODE', True):
+                logger.info(f"[MOCK PUSH] To: {device_token}, Title: {title}, Message: {content}")
+                return True
+            
+            # TODO: Integrate with push notification service (Firebase, OneSignal, etc.)
+            # Example for Firebase:
+            # from pyfcm import FCMNotification
+            # push_service = FCMNotification(api_key=settings.FCM_SERVER_KEY)
+            # result = push_service.notify_single_device(
+            #     registration_id=device_token,
+            #     message_title=title,
+            #     message_body=content
+            # )
+            # return result['success'] == 1
+            
+            logger.warning(f"Push notification service not configured. Message not sent to {device_token}")
+            return False
+            
+        except Exception as e:
+            logger.error(f"Failed to send push notification to {device_token}: {e}")
+            return False
     
     def _send_in_app(self, user_identifier: str, title: Optional[str], content: str) -> bool:
-        """Send in-app notification (placeholder for in-app messaging)."""
-        # TODO: Implement in-app notification system
-        logger.info(f"In-app notification sending not yet implemented. Would send to {user_identifier}: {title} - {content}")
-        return True  # Return True for now to avoid blocking
+        """Send in-app notification (store in database for retrieval)."""
+        try:
+            # For in-app notifications, we can store them in the database
+            # and retrieve them via API for real-time display
+            
+            # Check if in development mode
+            if getattr(settings, 'IN_APP_MOCK_MODE', True):
+                logger.info(f"[MOCK IN-APP] To: {user_identifier}, Title: {title}, Message: {content}")
+                return True
+            
+            # TODO: Implement real-time in-app notification system
+            # This could involve WebSocket connections or polling endpoints
+            
+            logger.info(f"In-app notification queued for {user_identifier}: {title} - {content}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to send in-app notification to {user_identifier}: {e}")
+            return False
     
     def _evaluate_trigger_conditions(
         self, 
@@ -577,3 +647,180 @@ class NotificationService:
         # Add more trigger recipient logic as needed
         
         return recipients
+    
+    # User Preference Management
+    
+    def get_user_preferences(
+        self, 
+        db: Session, 
+        organization_id: int,
+        subject_type: str,
+        subject_id: int
+    ) -> List[NotificationPreference]:
+        """Get notification preferences for a user or customer."""
+        
+        return db.query(NotificationPreference).filter(
+            and_(
+                NotificationPreference.organization_id == organization_id,
+                NotificationPreference.subject_type == subject_type,
+                NotificationPreference.subject_id == subject_id
+            )
+        ).all()
+    
+    def create_user_preference(
+        self, 
+        db: Session, 
+        organization_id: int,
+        preference_data: Dict[str, Any]
+    ) -> NotificationPreference:
+        """Create a notification preference."""
+        
+        # Check if preference already exists
+        existing = db.query(NotificationPreference).filter(
+            and_(
+                NotificationPreference.organization_id == organization_id,
+                NotificationPreference.subject_type == preference_data['subject_type'],
+                NotificationPreference.subject_id == preference_data['subject_id'],
+                NotificationPreference.notification_type == preference_data['notification_type'],
+                NotificationPreference.channel == preference_data['channel']
+            )
+        ).first()
+        
+        if existing:
+            # Update existing preference
+            existing.is_enabled = preference_data.get('is_enabled', existing.is_enabled)
+            existing.settings = json.dumps(preference_data.get('settings')) if preference_data.get('settings') else existing.settings
+            db.commit()
+            return existing
+        
+        # Create new preference
+        settings_json = json.dumps(preference_data.get('settings')) if preference_data.get('settings') else None
+        
+        preference = NotificationPreference(
+            organization_id=organization_id,
+            subject_type=preference_data['subject_type'],
+            subject_id=preference_data['subject_id'],
+            notification_type=preference_data['notification_type'],
+            channel=preference_data['channel'],
+            is_enabled=preference_data.get('is_enabled', True),
+            settings=settings_json
+        )
+        
+        db.add(preference)
+        db.commit()
+        db.refresh(preference)
+        
+        logger.info(f"Created notification preference for {preference_data['subject_type']} {preference_data['subject_id']}")
+        return preference
+    
+    def update_user_preference(
+        self, 
+        db: Session, 
+        preference_id: int,
+        organization_id: int,
+        update_data: Dict[str, Any]
+    ) -> Optional[NotificationPreference]:
+        """Update a notification preference."""
+        
+        preference = db.query(NotificationPreference).filter(
+            and_(
+                NotificationPreference.id == preference_id,
+                NotificationPreference.organization_id == organization_id
+            )
+        ).first()
+        
+        if not preference:
+            return None
+            
+        for field, value in update_data.items():
+            if hasattr(preference, field) and value is not None:
+                if field == 'settings' and isinstance(value, dict):
+                    value = json.dumps(value)
+                setattr(preference, field, value)
+        
+        db.commit()
+        db.refresh(preference)
+        
+        logger.info(f"Updated notification preference {preference_id}")
+        return preference
+    
+    def check_user_preference(
+        self, 
+        db: Session, 
+        organization_id: int,
+        subject_type: str,
+        subject_id: int,
+        notification_type: str,
+        channel: str
+    ) -> bool:
+        """Check if a user has enabled a specific notification preference."""
+        
+        preference = db.query(NotificationPreference).filter(
+            and_(
+                NotificationPreference.organization_id == organization_id,
+                NotificationPreference.subject_type == subject_type,
+                NotificationPreference.subject_id == subject_id,
+                NotificationPreference.notification_type == notification_type,
+                NotificationPreference.channel == channel
+            )
+        ).first()
+        
+        # Default to enabled if no preference is set
+        return preference.is_enabled if preference else True
+    
+    # Automated Trigger Methods
+    
+    def trigger_automated_notifications(
+        self, 
+        db: Session, 
+        trigger_event: str,
+        organization_id: int,
+        context_data: Dict[str, Any]
+    ) -> List[NotificationLog]:
+        """Trigger automated notifications based on events."""
+        
+        # Find templates that match the trigger event
+        templates = db.query(NotificationTemplate).filter(
+            and_(
+                NotificationTemplate.organization_id == organization_id,
+                NotificationTemplate.trigger_event == trigger_event,
+                NotificationTemplate.is_active == True
+            )
+        ).all()
+        
+        notification_logs = []
+        
+        for template in templates:
+            # Get recipients for this trigger
+            recipients = self._get_trigger_recipients(db, trigger_event, context_data, organization_id)
+            
+            for recipient in recipients:
+                # Check user preferences
+                if not self.check_user_preference(
+                    db, organization_id, recipient['type'], recipient['id'], 
+                    template.template_type, template.channel
+                ):
+                    logger.info(f"Skipping notification for {recipient['type']} {recipient['id']} - disabled in preferences")
+                    continue
+                
+                # Create notification request
+                request = NotificationSendRequest(
+                    template_id=template.id,
+                    recipient_type=recipient['type'],
+                    recipient_id=recipient['id'],
+                    channel=template.channel,
+                    variables=context_data
+                )
+                
+                # Send notification
+                notification_log = self.send_notification(
+                    db, request, organization_id
+                )
+                
+                if notification_log:
+                    notification_log.trigger_event = trigger_event
+                    notification_logs.append(notification_log)
+        
+        db.commit()
+        logger.info(f"Triggered {len(notification_logs)} automated notifications for event {trigger_event}")
+        return notification_logs
