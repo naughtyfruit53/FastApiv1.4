@@ -25,6 +25,8 @@ class ServiceModule(str, Enum):
     WORK_ORDER = "work_order"
     SERVICE_REPORTS = "service_reports"
     CRM_ADMIN = "crm_admin"
+    CUSTOMER_FEEDBACK = "customer_feedback"
+    SERVICE_CLOSURE = "service_closure"
 
 
 class ServiceAction(str, Enum):
@@ -34,6 +36,9 @@ class ServiceAction(str, Enum):
     DELETE = "delete"
     EXPORT = "export"
     ADMIN = "admin"
+    SUBMIT = "submit"  # For customer feedback submission
+    APPROVE = "approve"  # For service closure approval
+    CLOSE = "close"  # For service closure
 
 
 # Service Permission Schemas

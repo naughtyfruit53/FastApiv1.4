@@ -533,17 +533,57 @@ class CompletionRecordService:
         return completion_record
     
     def _trigger_customer_feedback_workflow(self, completion_record):
-        """Trigger customer feedback workflow (integration point for next phase)"""
-        # This will be implemented in the next phase of the customer feedback flow
-        # For now, we just mark that a feedback request should be sent
-        
+        """Trigger customer feedback workflow (now implemented)"""
         try:
             # Set feedback request flag
             completion_record.feedback_request_sent = True
             completion_record.feedback_request_sent_at = datetime.now(timezone.utc)
             self.db.commit()
             
-            logger.info(f"Marked completion record {completion_record.id} for customer feedback workflow")
+            # Import here to avoid circular imports
+            from app.services.email_service import EmailService
+            
+            # Send feedback request email to customer
+            if hasattr(completion_record, 'installation_job') and completion_record.installation_job:
+                job = completion_record.installation_job
+                if hasattr(job, 'customer') and job.customer:
+                    customer = job.customer
+                    
+                    # Create feedback request email
+                    email_service = EmailService(self.db)
+                    
+                    feedback_url = f"/feedback/submit?job_id={job.id}&completion_id={completion_record.id}"
+                    
+                    email_body = f"""
+                    Dear {customer.company_name or customer.contact_person},
+                    
+                    We hope you're satisfied with the service completed on {completion_record.completion_date.strftime('%Y-%m-%d')}.
+                    
+                    We would greatly appreciate your feedback to help us improve our services.
+                    
+                    Please click the link below to submit your feedback:
+                    {feedback_url}
+                    
+                    Thank you for your time!
+                    
+                    Best regards,
+                    Service Team
+                    """
+                    
+                    try:
+                        email_service.send_email(
+                            to_email=customer.email,
+                            subject="Service Feedback Request",
+                            body=email_body,
+                            organization_id=completion_record.organization_id
+                        )
+                        logger.info(f"Feedback request email sent to customer {customer.id} for completion {completion_record.id}")
+                    except Exception as e:
+                        logger.error(f"Failed to send feedback request email: {e}")
+                        # Don't fail the completion if email fails
+            
+            logger.info(f"Triggered customer feedback workflow for completion record {completion_record.id}")
+            
         except Exception as e:
             logger.error(f"Error triggering customer feedback workflow: {e}")
             # Don't fail the completion if feedback workflow fails
