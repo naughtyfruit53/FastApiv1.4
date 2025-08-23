@@ -124,6 +124,17 @@ def _get_fallback_permissions(service_permission: str) -> List[str]:
         "installation_read": [Permission.VIEW_USERS],
         "installation_update": [Permission.MANAGE_USERS],
         "installation_delete": [Permission.DELETE_USERS],
+        
+        # Installation task permissions
+        "installation_task_create": [Permission.CREATE_USERS],
+        "installation_task_read": [Permission.VIEW_USERS],
+        "installation_task_update": [Permission.MANAGE_USERS],
+        "installation_task_delete": [Permission.DELETE_USERS],
+        
+        # Completion record permissions
+        "completion_record_create": [Permission.CREATE_USERS, Permission.MANAGE_USERS],
+        "completion_record_read": [Permission.VIEW_USERS],
+        "completion_record_update": [Permission.MANAGE_USERS],
     }
     
     return fallback_map.get(service_permission, [])
@@ -267,3 +278,126 @@ def require_same_organization(
         return target_organization_id
     
     return check_organization
+
+
+# Installation task dependencies
+require_installation_task_create = RBACDependency("installation_task_create")
+require_installation_task_read = RBACDependency("installation_task_read")
+require_installation_task_update = RBACDependency("installation_task_update")
+require_installation_task_delete = RBACDependency("installation_task_delete")
+
+# Completion record dependencies
+require_completion_record_create = RBACDependency("completion_record_create")
+require_completion_record_read = RBACDependency("completion_record_read")
+require_completion_record_update = RBACDependency("completion_record_update")
+
+
+class TechnicianCompletionDependency:
+    """Special dependency for technician-only completion actions"""
+    
+    def __call__(self, 
+                 current_user: User = Depends(lambda: None),
+                 db: Session = Depends(get_db)) -> User:
+        """Check if current user can mark installations as complete"""
+        
+        if not current_user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Authentication required"
+            )
+        
+        # Super admins bypass all checks
+        if getattr(current_user, 'is_super_admin', False):
+            return current_user
+        
+        # Check if user has completion permission
+        rbac_service = RBACService(db)
+        
+        if rbac_service.user_has_service_permission(current_user.id, "completion_record_create"):
+            return current_user
+        
+        # Fallback check for installation update permission
+        if rbac_service.user_has_service_permission(current_user.id, "installation_update"):
+            return current_user
+        
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only assigned technicians can mark installation jobs as complete"
+        )
+
+
+class AssignedTechnicianDependency:
+    """Dependency to ensure only assigned technician can complete specific job"""
+    
+    def __init__(self, job_id_param: str = "job_id"):
+        self.job_id_param = job_id_param
+    
+    def __call__(self, 
+                 current_user: User = Depends(lambda: None),
+                 db: Session = Depends(get_db),
+                 request: Request = None) -> User:
+        """Check if current user is assigned to the specific installation job"""
+        
+        if not current_user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Authentication required"
+            )
+        
+        # Super admins bypass all checks
+        if getattr(current_user, 'is_super_admin', False):
+            return current_user
+        
+        # Extract job_id from request
+        job_id = None
+        if request:
+            # Try to get from path parameters first
+            path_params = getattr(request, 'path_params', {})
+            job_id = path_params.get(self.job_id_param)
+            
+            # If not in path, try query parameters
+            if not job_id:
+                query_params = dict(request.query_params)
+                job_id = query_params.get(self.job_id_param)
+        
+        if not job_id:
+            # Allow if we can't determine job_id (will be handled by business logic)
+            return current_user
+        
+        try:
+            job_id = int(job_id)
+        except (ValueError, TypeError):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid job ID"
+            )
+        
+        # Check if user is assigned to this job
+        from app.models.base import InstallationJob
+        job = db.query(InstallationJob).filter(
+            InstallationJob.id == job_id,
+            InstallationJob.organization_id == current_user.organization_id
+        ).first()
+        
+        if not job:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Installation job not found"
+            )
+        
+        # Check if user is the assigned technician
+        if job.assigned_technician_id != current_user.id:
+            # Check if user has management permissions as fallback
+            rbac_service = RBACService(db)
+            if not rbac_service.user_has_service_permission(current_user.id, "installation_update"):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Only the assigned technician can complete this installation job"
+                )
+        
+        return current_user
+
+
+# Instantiate the dependencies
+require_technician_completion = TechnicianCompletionDependency()
+require_assigned_technician = AssignedTechnicianDependency()

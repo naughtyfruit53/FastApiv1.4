@@ -10,7 +10,7 @@ from typing import Optional, List
 from datetime import datetime, timezone
 import logging
 
-from app.models.base import DispatchOrder, DispatchItem, InstallationJob, User
+from app.models.base import DispatchOrder, DispatchItem, InstallationJob, InstallationTask, CompletionRecord, User
 from app.services.voucher_service import VoucherNumberService
 
 logger = logging.getLogger(__name__)
@@ -270,3 +270,280 @@ class InstallationJobService:
         
         logger.info(f"Updated installation job {job.job_number} status to {status}")
         return job
+
+
+class InstallationTaskService:
+    """Service for installation task business logic"""
+    
+    def __init__(self, db: Session):
+        self.db = db
+    
+    def generate_task_number(self, organization_id: int) -> str:
+        """Generate a unique task number"""
+        current_year = datetime.now().year
+        current_month = datetime.now().month
+        fiscal_year = f"{str(current_year)[-2:]}{str(current_year + 1 if current_month > 3 else current_year)[-2:]}"
+        
+        prefix = "IT"
+        
+        # Import here to avoid circular imports
+        from app.models.base import InstallationTask
+        
+        # Get the latest task number for this prefix, fiscal year, and organization
+        latest_task = self.db.query(InstallationTask).filter(
+            InstallationTask.organization_id == organization_id,
+            InstallationTask.task_number.like(f"{prefix}/{fiscal_year}/%")
+        ).order_by(InstallationTask.task_number.desc()).first()
+        
+        if latest_task:
+            # Extract sequence number and increment
+            try:
+                last_sequence = int(latest_task.task_number.split('/')[-1])
+                next_sequence = last_sequence + 1
+            except (ValueError, IndexError):
+                next_sequence = 1
+        else:
+            next_sequence = 1
+        
+        return f"{prefix}/{fiscal_year}/{next_sequence:05d}"
+    
+    def create_installation_task(
+        self,
+        organization_id: int,
+        installation_job_id: int,
+        title: str,
+        created_by_id: int,
+        **kwargs
+    ):
+        """Create a new installation task"""
+        from app.models.base import InstallationTask
+        
+        # Generate task number
+        task_number = self.generate_task_number(organization_id)
+        
+        # Create installation task
+        task = InstallationTask(
+            organization_id=organization_id,
+            installation_job_id=installation_job_id,
+            task_number=task_number,
+            title=title,
+            created_by_id=created_by_id,
+            **kwargs
+        )
+        
+        self.db.add(task)
+        self.db.commit()
+        self.db.refresh(task)
+        
+        logger.info(f"Created installation task {task.task_number} for job {installation_job_id}")
+        return task
+    
+    def update_task_status(
+        self,
+        task_id: int,
+        status: str,
+        updated_by_id: int,
+        **kwargs
+    ):
+        """Update installation task status with automatic timing"""
+        from app.models.base import InstallationTask
+        
+        task = self.db.query(InstallationTask).filter(
+            InstallationTask.id == task_id
+        ).first()
+        
+        if not task:
+            raise ValueError(f"Installation task {task_id} not found")
+        
+        # Update status
+        task.status = status
+        task.updated_by_id = updated_by_id
+        
+        # Auto-update timing based on status
+        if status == "in_progress" and not task.started_at:
+            task.started_at = datetime.now(timezone.utc)
+        elif status == "completed" and not task.completed_at:
+            task.completed_at = datetime.now(timezone.utc)
+        
+        # Update any additional fields
+        for key, value in kwargs.items():
+            if hasattr(task, key):
+                setattr(task, key, value)
+        
+        self.db.commit()
+        self.db.refresh(task)
+        
+        logger.info(f"Updated installation task {task.task_number} status to {status}")
+        return task
+    
+    def assign_technician(
+        self,
+        task_id: int,
+        technician_id: int,
+        updated_by_id: int
+    ):
+        """Assign a technician to an installation task"""
+        from app.models.base import InstallationTask
+        
+        task = self.db.query(InstallationTask).filter(
+            InstallationTask.id == task_id
+        ).first()
+        
+        if not task:
+            raise ValueError(f"Installation task {task_id} not found")
+        
+        # Verify technician belongs to same organization
+        technician = self.db.query(User).filter(
+            User.id == technician_id,
+            User.organization_id == task.organization_id
+        ).first()
+        
+        if not technician:
+            raise ValueError(f"Technician {technician_id} not found in organization")
+        
+        task.assigned_technician_id = technician_id
+        task.updated_by_id = updated_by_id
+        
+        self.db.commit()
+        self.db.refresh(task)
+        
+        logger.info(f"Assigned technician {technician_id} to task {task.task_number}")
+        return task
+
+
+class CompletionRecordService:
+    """Service for completion record business logic"""
+    
+    def __init__(self, db: Session):
+        self.db = db
+    
+    def create_completion_record(
+        self,
+        organization_id: int,
+        installation_job_id: int,
+        completed_by_id: int,
+        completion_date: datetime,
+        work_performed: str,
+        **kwargs
+    ):
+        """Create a completion record for an installation job"""
+        from app.models.base import CompletionRecord, InstallationJob
+        
+        # Verify installation job exists and belongs to organization
+        job = self.db.query(InstallationJob).filter(
+            InstallationJob.id == installation_job_id,
+            InstallationJob.organization_id == organization_id
+        ).first()
+        
+        if not job:
+            raise ValueError(f"Installation job {installation_job_id} not found")
+        
+        # Verify technician is assigned to the job
+        if job.assigned_technician_id != completed_by_id:
+            raise ValueError("Only the assigned technician can mark the job as complete")
+        
+        # Check if completion record already exists
+        existing_record = self.db.query(CompletionRecord).filter(
+            CompletionRecord.installation_job_id == installation_job_id
+        ).first()
+        
+        if existing_record:
+            raise ValueError("Completion record already exists for this job")
+        
+        # Calculate duration if start and end times provided
+        total_duration_minutes = None
+        if kwargs.get('actual_start_time') and kwargs.get('actual_end_time'):
+            start_time = kwargs['actual_start_time']
+            end_time = kwargs['actual_end_time']
+            duration = end_time - start_time
+            total_duration_minutes = int(duration.total_seconds() / 60)
+        
+        # Create completion record
+        completion_record = CompletionRecord(
+            organization_id=organization_id,
+            installation_job_id=installation_job_id,
+            completed_by_id=completed_by_id,
+            completion_date=completion_date,
+            work_performed=work_performed,
+            total_duration_minutes=total_duration_minutes,
+            **kwargs
+        )
+        
+        self.db.add(completion_record)
+        
+        # Update installation job status to completed
+        job.status = "completed"
+        if completion_record.actual_start_time:
+            job.actual_start_time = completion_record.actual_start_time
+        if completion_record.actual_end_time:
+            job.actual_end_time = completion_record.actual_end_time
+        if completion_record.work_performed:
+            job.completion_notes = completion_record.work_performed
+        if completion_record.customer_feedback_notes:
+            job.customer_feedback = completion_record.customer_feedback_notes
+        if completion_record.customer_rating:
+            job.customer_rating = completion_record.customer_rating
+        
+        self.db.commit()
+        self.db.refresh(completion_record)
+        
+        logger.info(f"Created completion record for installation job {job.job_number}")
+        
+        # TODO: Trigger customer feedback workflow here
+        # This is the integration point for the next phase
+        self._trigger_customer_feedback_workflow(completion_record)
+        
+        return completion_record
+    
+    def update_completion_record(
+        self,
+        completion_record_id: int,
+        organization_id: int,
+        **kwargs
+    ):
+        """Update a completion record"""
+        from app.models.base import CompletionRecord
+        
+        completion_record = self.db.query(CompletionRecord).filter(
+            CompletionRecord.id == completion_record_id,
+            CompletionRecord.organization_id == organization_id
+        ).first()
+        
+        if not completion_record:
+            raise ValueError(f"Completion record {completion_record_id} not found")
+        
+        # Recalculate duration if times are updated
+        if 'actual_start_time' in kwargs or 'actual_end_time' in kwargs:
+            start_time = kwargs.get('actual_start_time', completion_record.actual_start_time)
+            end_time = kwargs.get('actual_end_time', completion_record.actual_end_time)
+            
+            if start_time and end_time:
+                duration = end_time - start_time
+                kwargs['total_duration_minutes'] = int(duration.total_seconds() / 60)
+        
+        # Update fields
+        for key, value in kwargs.items():
+            if hasattr(completion_record, key):
+                setattr(completion_record, key, value)
+        
+        self.db.commit()
+        self.db.refresh(completion_record)
+        
+        logger.info(f"Updated completion record {completion_record_id}")
+        return completion_record
+    
+    def _trigger_customer_feedback_workflow(self, completion_record):
+        """Trigger customer feedback workflow (integration point for next phase)"""
+        # This will be implemented in the next phase of the customer feedback flow
+        # For now, we just mark that a feedback request should be sent
+        
+        try:
+            # Set feedback request flag
+            completion_record.feedback_request_sent = True
+            completion_record.feedback_request_sent_at = datetime.now(timezone.utc)
+            self.db.commit()
+            
+            logger.info(f"Marked completion record {completion_record.id} for customer feedback workflow")
+        except Exception as e:
+            logger.error(f"Error triggering customer feedback workflow: {e}")
+            # Don't fail the completion if feedback workflow fails
