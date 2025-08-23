@@ -18,8 +18,10 @@ import { getVoucherConfig, numberToWords, GST_SLABS, getVoucherStyles } from '..
 import { getStock } from '../../../services/masterService';
 import { voucherService } from '../../../services/vouchersService';
 import api from '../../../lib/api';  // Import api for direct call
+import { useAuth } from '../../../context/AuthContext';  // Assume companyState is available here
 
 const PurchaseOrderPage: React.FC = () => {
+  const { companyState } = useAuth();  // Assume companyState is fetched from AuthContext (e.g., 'MH' for Maharashtra)
   const config = getVoucherConfig('purchase-order');
   const voucherStyles = getVoucherStyles();
   const {
@@ -78,6 +80,7 @@ const PurchaseOrderPage: React.FC = () => {
     voucherList,
     vendorList,
     productList,
+    voucherData,
     nextVoucherNumber,
     sortedVouchers,
     latestVouchers,
@@ -143,6 +146,14 @@ const PurchaseOrderPage: React.FC = () => {
     });
   };
 
+  const handleCancel = () => {
+    setMode('view');
+    // Reset form to original voucherData
+    if (voucherData) {
+      reset(voucherData);
+    }
+  };
+
   // Custom submit handler to prompt for PDF after save
   const onSubmit = async (data: any) => {
     try {
@@ -173,6 +184,7 @@ const PurchaseOrderPage: React.FC = () => {
         if (confirm('Voucher updated successfully. Generate PDF?')) {
           handleGeneratePDF(response.data);
         }
+        setMode('view');
       }
       
       // Refresh voucher list to show latest at top
@@ -249,6 +261,7 @@ const PurchaseOrderPage: React.FC = () => {
   
   // Enhanced handleEdit to fetch complete data
   const handleEditWithData = async (voucher: any) => {
+    if (!voucher || !voucher.id) return;
     try {
       const response = await api.get(`/purchase-orders/${voucher.id}`);
       const fullVoucherData = response.data;
@@ -262,6 +275,7 @@ const PurchaseOrderPage: React.FC = () => {
   
   // Enhanced handleView to fetch complete data
   const handleViewWithData = async (voucher: any) => {
+    if (!voucher || !voucher.id) return;
     try {
       const response = await api.get(`/purchase-orders/${voucher.id}`);
       const fullVoucherData = response.data;
@@ -272,6 +286,35 @@ const PurchaseOrderPage: React.FC = () => {
       handleView(voucher);
     }
   };
+
+  // Handle data population for view and edit modes
+  useEffect(() => {
+    if (voucherData && (mode === 'view' || mode === 'edit')) {
+      const formattedData = {
+        ...voucherData,
+        date: voucherData.date ? voucherData.date.split('T')[0] : '',
+      };
+      reset(formattedData);
+      if (mode === 'edit') {
+        remove();
+        voucherData.items.forEach((item: any) => {
+          append({
+            ...item,
+            product_id: item.product_id,
+            product_name: item.product?.name || item.product_name || '',
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            discount_percentage: item.discount_percentage || 0,
+            gst_rate: item.gst_rate || 18,
+            amount: item.total_amount,
+            unit: item.unit,
+            current_stock: item.current_stock || 0,
+            reorder_level: item.reorder_level || 0
+          });
+        });
+      }
+    }
+  }, [voucherData, mode, reset, append, remove]);
 
   const indexContent = (
     <>
@@ -340,11 +383,14 @@ const PurchaseOrderPage: React.FC = () => {
           mode={mode}
           voucherType={config.voucherTitle}
           voucherRoute="/vouchers/Purchase-Vouchers/purchase-order"
-          currentId={selectedVendorId}
+          currentId={mode !== 'create' ? voucherData?.id : null}
+          onEdit={() => voucherData && voucherData.id && handleEditWithData(voucherData)}
+          onCreate={handleCreate}
+          onCancel={handleCancel}
         />
       </Box>
 
-      <form onSubmit={handleSubmit(onSubmit)} style={voucherStyles.formContainer}>
+      <form id="voucherForm" onSubmit={handleSubmit(onSubmit)} style={voucherStyles.formContainer}>
         <Grid container spacing={1}>
           {/* Voucher Number */}
           <Grid size={6}>
@@ -494,7 +540,7 @@ const PurchaseOrderPage: React.FC = () => {
                               {...control.register(`items.${index}.quantity`, { valueAsNumber: true })}
                               disabled={mode === 'view'}
                               size="small"
-                              sx={{ width: 60 }}
+                              sx={{ width: 100 }}  // Increased width for qty field
                             />
                             <Typography sx={{ ml: 1, fontSize: 12 }}>{watch(`items.${index}.unit`)}</Typography>
                           </Box>
@@ -585,16 +631,43 @@ const PurchaseOrderPage: React.FC = () => {
                       ₹{totalSubtotal.toLocaleString()}
                     </Typography>
                   </Grid>
-                  <Grid size={6}>
-                    <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14 }}>
-                      GST:
-                    </Typography>
-                  </Grid>
-                  <Grid size={6}>
-                    <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14, fontWeight: 'bold' }}>
-                      ₹{totalGst.toLocaleString()}
-                    </Typography>
-                  </Grid>
+                  {selectedVendor?.state === companyState ? (
+                    <>
+                      <Grid size={6}>
+                        <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14 }}>
+                          CGST:
+                        </Typography>
+                      </Grid>
+                      <Grid size={6}>
+                        <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14, fontWeight: 'bold' }}>
+                          ₹{(totalGst / 2).toLocaleString()}
+                        </Typography>
+                      </Grid>
+                      <Grid size={6}>
+                        <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14 }}>
+                          SGST:
+                        </Typography>
+                      </Grid>
+                      <Grid size={6}>
+                        <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14, fontWeight: 'bold' }}>
+                          ₹{(totalGst / 2).toLocaleString()}
+                        </Typography>
+                      </Grid>
+                    </>
+                  ) : (
+                    <>
+                      <Grid size={6}>
+                        <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14 }}>
+                          IGST:
+                        </Typography>
+                      </Grid>
+                      <Grid size={6}>
+                        <Typography variant="body2" sx={{ textAlign: 'right', fontSize: 14, fontWeight: 'bold' }}>
+                          ₹{totalGst.toLocaleString()}
+                        </Typography>
+                      </Grid>
+                    </>
+                  )}
                   <Grid size={6}>
                     <Typography variant="h6" sx={{ textAlign: 'right', fontSize: 16, fontWeight: 'bold' }}>
                       Total:
@@ -621,23 +694,6 @@ const PurchaseOrderPage: React.FC = () => {
               inputProps={{ style: { fontSize: 14 } }}
               size="small"
             />
-          </Grid>
-
-          {/* Action buttons - removed Generate PDF */}
-          <Grid size={12}>
-            <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
-              {mode !== 'view' && (
-                <Button 
-                  type="submit" 
-                  variant="contained" 
-                  color="success" 
-                  disabled={createMutation.isPending || updateMutation.isPending}
-                  sx={{ fontSize: 12 }}
-                >
-                  Save
-                </Button>
-              )}
-            </Box>
           </Grid>
         </Grid>
       </form>
