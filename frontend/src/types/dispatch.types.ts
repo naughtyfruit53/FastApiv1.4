@@ -129,3 +129,14 @@ export const hasInstallationViewPermission = (userRole: string): boolean => {
   const allowedRoles = ['org_admin', 'admin', 'manager', 'support', 'technician', 'standard_user'];
   return allowedRoles.includes(userRole);
 };
+
+// Additional permission checks for new functionality
+export const hasTaskManagementPermission = (userRole: string): boolean => {
+  const allowedRoles = ['org_admin', 'admin', 'manager'];
+  return allowedRoles.includes(userRole);
+};
+
+export const hasCompletionPermission = (userRole: string): boolean => {
+  const allowedRoles = ['org_admin', 'admin', 'manager', 'technician'];
+  return allowedRoles.includes(userRole);
+};
