@@ -730,3 +730,115 @@ class OTPVerification(Base):
         Index('idx_otp_email_purpose', 'email', 'purpose'),
         Index('idx_otp_expires', 'expires_at'),
     )
+
+
+# Service CRM RBAC Models
+class ServiceRole(Base):
+    """Service CRM roles (admin, manager, support, viewer)"""
+    __tablename__ = "service_roles"
+    
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    
+    # Multi-tenant field
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
+    
+    # Role details
+    name: Mapped[str] = mapped_column(String, nullable=False)  # admin, manager, support, viewer
+    display_name: Mapped[str] = mapped_column(String, nullable=False)  # Human-readable name
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    organization: Mapped["Organization"] = relationship("Organization")
+    user_assignments: Mapped[List["UserServiceRole"]] = relationship("UserServiceRole", back_populates="role")
+    role_permissions: Mapped[List["ServiceRolePermission"]] = relationship("ServiceRolePermission", back_populates="role")
+    
+    __table_args__ = (
+        UniqueConstraint('organization_id', 'name', name='uq_service_role_org_name'),
+        Index('idx_service_role_org_active', 'organization_id', 'is_active'),
+    )
+
+
+class ServicePermission(Base):
+    """Service CRM permissions for granular access control"""
+    __tablename__ = "service_permissions"
+    
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    
+    # Permission details
+    name: Mapped[str] = mapped_column(String, unique=True, nullable=False, index=True)  # e.g., service_create, technician_read
+    display_name: Mapped[str] = mapped_column(String, nullable=False)  # Human-readable name
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    module: Mapped[str] = mapped_column(String, nullable=False, index=True)  # service, technician, appointment, etc.
+    action: Mapped[str] = mapped_column(String, nullable=False, index=True)  # create, read, update, delete
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    role_permissions: Mapped[List["ServiceRolePermission"]] = relationship("ServiceRolePermission", back_populates="permission")
+    
+    __table_args__ = (
+        Index('idx_service_permission_module_action', 'module', 'action'),
+    )
+
+
+class ServiceRolePermission(Base):
+    """Many-to-many relationship between Service roles and permissions"""
+    __tablename__ = "service_role_permissions"
+    
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    
+    # Foreign keys
+    role_id: Mapped[int] = mapped_column(Integer, ForeignKey("service_roles.id"), nullable=False)
+    permission_id: Mapped[int] = mapped_column(Integer, ForeignKey("service_permissions.id"), nullable=False)
+    
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    role: Mapped["ServiceRole"] = relationship("ServiceRole", back_populates="role_permissions")
+    permission: Mapped["ServicePermission"] = relationship("ServicePermission", back_populates="role_permissions")
+    
+    __table_args__ = (
+        UniqueConstraint('role_id', 'permission_id', name='uq_service_role_permission'),
+        Index('idx_service_role_permission_role', 'role_id'),
+        Index('idx_service_role_permission_permission', 'permission_id'),
+    )
+
+
+class UserServiceRole(Base):
+    """Many-to-many relationship between Users and Service roles"""
+    __tablename__ = "user_service_roles"
+    
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    
+    # Foreign keys
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)
+    role_id: Mapped[int] = mapped_column(Integer, ForeignKey("service_roles.id"), nullable=False)
+    
+    # Assignment details
+    assigned_by_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    user: Mapped["User"] = relationship("User", foreign_keys=[user_id])
+    role: Mapped["ServiceRole"] = relationship("ServiceRole", back_populates="user_assignments")
+    assigned_by: Mapped[Optional["User"]] = relationship("User", foreign_keys=[assigned_by_id])
+    
+    __table_args__ = (
+        UniqueConstraint('user_id', 'role_id', name='uq_user_service_role'),
+        Index('idx_user_service_role_user', 'user_id'),
+        Index('idx_user_service_role_role', 'role_id'),
+        Index('idx_user_service_role_active', 'is_active'),
+    )
