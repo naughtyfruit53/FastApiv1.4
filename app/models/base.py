@@ -842,3 +842,152 @@ class UserServiceRole(Base):
         Index('idx_user_service_role_role', 'role_id'),
         Index('idx_user_service_role_active', 'is_active'),
     )
+
+
+class Ticket(Base):
+    """
+    Model for customer support tickets in the Service CRM.
+    Supports multi-tenant architecture with organization-level isolation.
+    """
+    __tablename__ = "tickets"
+    
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    
+    # Multi-tenant field
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
+    
+    # Ticket identification
+    ticket_number: Mapped[str] = mapped_column(String, nullable=False, index=True)  # Auto-generated unique ticket number
+    
+    # Customer and assignment
+    customer_id: Mapped[int] = mapped_column(Integer, ForeignKey("customers.id"), nullable=False)
+    assigned_to_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)  # Assigned technician/user
+    created_by_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)  # Who created the ticket
+    
+    # Ticket details
+    title: Mapped[str] = mapped_column(String, nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(String, nullable=False, default="open")  # 'open', 'in_progress', 'resolved', 'closed', 'cancelled'
+    priority: Mapped[str] = mapped_column(String, nullable=False, default="medium")  # 'low', 'medium', 'high', 'urgent'
+    ticket_type: Mapped[str] = mapped_column(String, nullable=False, default="support")  # 'support', 'maintenance', 'installation', 'complaint'
+    
+    # Resolution details
+    resolution: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    resolved_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    closed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    
+    # SLA and business metrics
+    due_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    estimated_hours: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    actual_hours: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    
+    # Customer satisfaction
+    customer_rating: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)  # 1-5 rating
+    customer_feedback: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    organization: Mapped["Organization"] = relationship("Organization")
+    customer: Mapped["Customer"] = relationship("Customer")
+    assigned_to: Mapped[Optional["User"]] = relationship("User", foreign_keys=[assigned_to_id])
+    created_by: Mapped[Optional["User"]] = relationship("User", foreign_keys=[created_by_id])
+    history: Mapped[List["TicketHistory"]] = relationship("TicketHistory", back_populates="ticket", cascade="all, delete-orphan")
+    attachments: Mapped[List["TicketAttachment"]] = relationship("TicketAttachment", back_populates="ticket", cascade="all, delete-orphan")
+    
+    __table_args__ = (
+        # Unique ticket number per organization
+        UniqueConstraint('organization_id', 'ticket_number', name='uq_ticket_org_number'),
+        Index('idx_ticket_org_status', 'organization_id', 'status'),
+        Index('idx_ticket_org_priority', 'organization_id', 'priority'),
+        Index('idx_ticket_org_type', 'organization_id', 'ticket_type'),
+        Index('idx_ticket_org_customer', 'organization_id', 'customer_id'),
+        Index('idx_ticket_org_assigned', 'organization_id', 'assigned_to_id'),
+        Index('idx_ticket_created_at', 'created_at'),
+        Index('idx_ticket_due_date', 'due_date'),
+    )
+
+
+class TicketHistory(Base):
+    """
+    Model for tracking ticket status changes and updates.
+    Provides audit trail for all ticket modifications.
+    """
+    __tablename__ = "ticket_history"
+    
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    
+    # Multi-tenant field
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
+    
+    # Ticket reference
+    ticket_id: Mapped[int] = mapped_column(Integer, ForeignKey("tickets.id"), nullable=False)
+    
+    # Change details
+    action: Mapped[str] = mapped_column(String, nullable=False)  # 'created', 'status_changed', 'assigned', 'updated', 'commented'
+    field_changed: Mapped[Optional[str]] = mapped_column(String, nullable=True)  # Which field was changed
+    old_value: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # Previous value
+    new_value: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # New value
+    comment: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # Additional comments
+    
+    # User who made the change
+    changed_by_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)
+    
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    organization: Mapped["Organization"] = relationship("Organization")
+    ticket: Mapped["Ticket"] = relationship("Ticket", back_populates="history")
+    changed_by: Mapped[Optional["User"]] = relationship("User")
+    
+    __table_args__ = (
+        Index('idx_ticket_history_org_ticket', 'organization_id', 'ticket_id'),
+        Index('idx_ticket_history_action', 'action'),
+        Index('idx_ticket_history_created_at', 'created_at'),
+        Index('idx_ticket_history_user', 'changed_by_id'),
+    )
+
+
+class TicketAttachment(Base):
+    """
+    Model for file attachments on tickets.
+    Follows the same pattern as CustomerFile and VendorFile.
+    """
+    __tablename__ = "ticket_attachments"
+    
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    
+    # Multi-tenant field
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
+    
+    # Ticket reference
+    ticket_id: Mapped[int] = mapped_column(Integer, ForeignKey("tickets.id"), nullable=False)
+    
+    # File details
+    filename: Mapped[str] = mapped_column(String, nullable=False)
+    original_filename: Mapped[str] = mapped_column(String, nullable=False)
+    file_path: Mapped[str] = mapped_column(String, nullable=False)
+    file_size: Mapped[int] = mapped_column(Integer, nullable=False)
+    content_type: Mapped[str] = mapped_column(String, nullable=False)
+    file_type: Mapped[str] = mapped_column(String, nullable=False, default="general")  # general, screenshot, document, etc.
+    
+    # Upload details
+    uploaded_by_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)
+    
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    organization: Mapped["Organization"] = relationship("Organization")
+    ticket: Mapped["Ticket"] = relationship("Ticket", back_populates="attachments")
+    uploaded_by: Mapped[Optional["User"]] = relationship("User")
+    
+    __table_args__ = (
+        Index('idx_ticket_attachment_org_ticket', 'organization_id', 'ticket_id'),
+        Index('idx_ticket_attachment_type', 'file_type'),
+        Index('idx_ticket_attachment_uploaded_by', 'uploaded_by_id'),
+    )

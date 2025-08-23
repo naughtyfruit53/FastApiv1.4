@@ -86,31 +86,37 @@ Organization (existing)
 ### Entity Relationship Diagram (ASCII)
 
 ```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│   Organization  │────▶│   ServiceItem   │────▶│ ServiceCategory │
-│   (existing)    │     │                 │     │                 │
-└─────────────────┘     └─────────────────┘     └─────────────────┘
-         │                       │
-         │                       │
-         ▼                       ▼
-┌─────────────────┐     ┌─────────────────┐
-│   Technician    │     │  Appointment    │
-│                 │     │                 │
-└─────────────────┘     └─────────────────┘
-         │                       │
-         │                       │
-         ▼                       ▼
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│TechnicianSkills │     │ServiceExecution │────▶│   Customer      │
-│                 │     │                 │     │  (existing)     │
-└─────────────────┘     └─────────────────┘     └─────────────────┘
-                                 │                       │
-                                 │                       │
-                                 ▼                       ▼
-                        ┌─────────────────┐     ┌─────────────────┐
-                        │  ServiceNotes   │     │ ServiceHistory  │
-                        │                 │     │                 │
-                        └─────────────────┘     └─────────────────┘
+                                   Organization
+                                       │
+                      ┌────────────────┼────────────────┐
+                      │                │                │
+                  Customer         ServiceItem      Technician
+                      │                │                │
+                      │                │                │
+               ┌──────┴──────┐        │        ┌──────┴──────┐
+               │             │        │        │             │
+        CustomerContact CustomerPrefs │   TechSkills  TechSchedule
+               │             │        │        │             │
+               │             │        │        │             │
+               └─────────────┴────────┼────────┴─────────────┘
+                                      │
+                                 Appointment
+                                      │
+                                      │
+                              ServiceExecution
+                                      │
+                       ┌──────────────┼──────────────┐
+                       │              │              │
+                 ServiceNotes    ServicePhotos  PartsUsed
+                       │              │              │
+                       │              │              │
+                       └──────────────┼──────────────┘
+                                      │
+                                   Ticket ◄─────── Customer
+                                      │
+                               ┌──────┴──────┐
+                               │             │
+                         TicketHistory  TicketAttachment
 ```
 
 ## 🗄️ Database Schema Extensions
@@ -201,6 +207,32 @@ customer_contacts:
   - is_primary, is_active, created_at, updated_at
 ```
 
+#### 5. Ticket Management Tables
+
+```sql
+-- Customer support tickets
+tickets:
+  - id, organization_id, ticket_number (unique per org), customer_id
+  - assigned_to_id (FK to users), created_by_id (FK to users)
+  - title, description, status (open, in_progress, resolved, closed, cancelled)
+  - priority (low, medium, high, urgent), ticket_type (support, maintenance, installation, complaint)
+  - resolution, resolved_at, closed_at, due_date
+  - estimated_hours, actual_hours, customer_rating (1-5), customer_feedback
+  - created_at, updated_at
+
+-- Ticket status change history and audit trail
+ticket_history:
+  - id, organization_id, ticket_id, action (created, status_changed, assigned, updated, commented)
+  - field_changed, old_value, new_value, comment
+  - changed_by_id (FK to users), created_at
+
+-- Ticket file attachments
+ticket_attachments:
+  - id, organization_id, ticket_id, filename, original_filename
+  - file_path, file_size, content_type, file_type (general, screenshot, document)
+  - uploaded_by_id (FK to users), created_at, updated_at
+```
+
 ### Database Indexes Strategy
 
 ```sql
@@ -210,6 +242,16 @@ CREATE INDEX idx_appointments_technician_date ON appointments(technician_id, app
 CREATE INDEX idx_appointments_customer ON appointments(customer_id, status);
 CREATE INDEX idx_service_executions_status ON service_executions(status, started_at);
 CREATE INDEX idx_technician_skills_lookup ON technician_skills(technician_id, skill_name);
+
+-- Ticket management indexes
+CREATE INDEX idx_ticket_org_status ON tickets(organization_id, status);
+CREATE INDEX idx_ticket_org_priority ON tickets(organization_id, priority);
+CREATE INDEX idx_ticket_org_customer ON tickets(organization_id, customer_id);
+CREATE INDEX idx_ticket_org_assigned ON tickets(organization_id, assigned_to_id);
+CREATE INDEX idx_ticket_created_at ON tickets(created_at);
+CREATE INDEX idx_ticket_due_date ON tickets(due_date);
+CREATE INDEX idx_ticket_history_org_ticket ON ticket_history(organization_id, ticket_id);
+CREATE INDEX idx_ticket_attachment_org_ticket ON ticket_attachments(organization_id, ticket_id);
 ```
 
 ## 🔌 API Endpoint Architecture
@@ -299,6 +341,34 @@ GET    /api/v1/organizations/{org_id}/customers/{id}/upcoming-appointments
 GET    /api/v1/organizations/{org_id}/customers/{id}/service-preferences
 ```
 
+#### Ticket Management APIs
+```
+# Ticket CRUD operations
+GET    /api/v1/organizations/{org_id}/tickets
+POST   /api/v1/organizations/{org_id}/tickets
+GET    /api/v1/organizations/{org_id}/tickets/{ticket_id}
+PUT    /api/v1/organizations/{org_id}/tickets/{ticket_id}
+DELETE /api/v1/organizations/{org_id}/tickets/{ticket_id}
+
+# Ticket status and assignment
+PUT    /api/v1/organizations/{org_id}/tickets/{ticket_id}/status
+PUT    /api/v1/organizations/{org_id}/tickets/{ticket_id}/assign
+PUT    /api/v1/organizations/{org_id}/tickets/{ticket_id}/priority
+
+# Ticket history and comments
+GET    /api/v1/organizations/{org_id}/tickets/{ticket_id}/history
+POST   /api/v1/organizations/{org_id}/tickets/{ticket_id}/comments
+
+# Ticket attachments
+GET    /api/v1/organizations/{org_id}/tickets/{ticket_id}/attachments
+POST   /api/v1/organizations/{org_id}/tickets/{ticket_id}/attachments
+DELETE /api/v1/organizations/{org_id}/tickets/{ticket_id}/attachments/{attachment_id}
+
+# Ticket analytics and reporting
+GET    /api/v1/organizations/{org_id}/tickets/analytics
+GET    /api/v1/organizations/{org_id}/tickets/metrics
+```
+
 ## 🚀 Implementation Roadmap
 
 ### Phase 1: Foundation (PRs 1-3)
@@ -310,7 +380,7 @@ GET    /api/v1/organizations/{org_id}/customers/{id}/service-preferences
 | 2 | Service Catalog APIs | Service categories, items, pricing management | 4 days |
 | 3 | Technician Management | Technician profiles, skills, schedule management | 4 days |
 
-### Phase 2: Core Functionality (PRs 4-6)
+### Phase 2: Core Functionality (PRs 4-7)
 **Timeline: 3-4 weeks**
 
 | PR # | Scope | Description | Estimated Effort |
@@ -318,33 +388,34 @@ GET    /api/v1/organizations/{org_id}/customers/{id}/service-preferences
 | 4 | Appointment System | Booking, scheduling, availability logic | 6 days |
 | 5 | Service Execution | Work tracking, notes, completion workflow | 5 days |
 | 6 | Customer Integration | Service history, preferences, extended customer data | 4 days |
+| 7 | Ticket Management | **✅ IMPLEMENTED** - Ticket models, history, attachments for support CRM | 3 days |
 
-### Phase 3: User Interfaces (PRs 7-9)
+### Phase 3: User Interfaces (PRs 8-10)
 **Timeline: 3-4 weeks**
 
 | PR # | Scope | Description | Estimated Effort |
 |------|-------|-------------|------------------|
-| 7 | Admin Dashboard | Service management, technician admin, reporting UI | 7 days |
-| 8 | Customer Portal | Self-service booking, history, preferences UI | 6 days |
-| 9 | Mobile Workforce | Technician mobile app interface | 6 days |
+| 8 | Admin Dashboard | Service management, technician admin, reporting UI | 7 days |
+| 9 | Customer Portal | Self-service booking, history, preferences UI | 6 days |
+| 10 | Mobile Workforce | Technician mobile app interface | 6 days |
 
-### Phase 4: Advanced Features (PRs 10-12)
+### Phase 4: Advanced Features (PRs 11-13)
 **Timeline: 2-3 weeks**
 
 | PR # | Scope | Description | Estimated Effort |
 |------|-------|-------------|------------------|
-| 10 | Financial Integration | Service invoicing, revenue tracking, payment integration | 5 days |
-| 11 | Notifications & Automation | Email/SMS notifications, automated workflows | 4 days |
-| 12 | Analytics & Reporting | Service metrics, technician performance, customer insights | 5 days |
+| 11 | Financial Integration | Service invoicing, revenue tracking, payment integration | 5 days |
+| 12 | Notifications & Automation | Email/SMS notifications, automated workflows | 4 days |
+| 13 | Analytics & Reporting | Service metrics, technician performance, customer insights | 5 days |
 
-### Phase 5: Compliance & Production (PRs 13-15)
+### Phase 5: Compliance & Production (PRs 14-16)
 **Timeline: 2 weeks**
 
 | PR # | Scope | Description | Estimated Effort |
 |------|-------|-------------|------------------|
-| 13 | Security & Compliance | Data privacy, audit trails, access controls | 4 days |
-| 14 | Performance Optimization | Caching, indexing, query optimization | 3 days |
-| 15 | Documentation & Training | User guides, API documentation, training materials | 3 days |
+| 14 | Security & Compliance | Data privacy, audit trails, access controls | 4 days |
+| 15 | Performance Optimization | Caching, indexing, query optimization | 3 days |
+| 16 | Documentation & Training | User guides, API documentation, training materials | 3 days |
 
 ## 🔐 Security & Compliance Considerations
 

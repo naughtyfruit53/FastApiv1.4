@@ -1,7 +1,8 @@
 from .base import (
     User, Company, Vendor, Customer, Product, Stock, 
     AuditLog, EmailNotification, PaymentTerm,
-    NotificationTemplate, NotificationLog, NotificationPreference
+    NotificationTemplate, NotificationLog, NotificationPreference,
+    Ticket, TicketHistory, TicketAttachment
 )
 from .vouchers import (
     BaseVoucher, PurchaseVoucher, PurchaseVoucherItem,
@@ -17,6 +18,9 @@ __all__ = [
     "User", "Company", "Vendor", "Customer", "Product", "Stock",
     "AuditLog", "EmailNotification", "PaymentTerm",
     "NotificationTemplate", "NotificationLog", "NotificationPreference",
+    
+    # Ticket management models
+    "Ticket", "TicketHistory", "TicketAttachment",
     
     # Voucher models
     "BaseVoucher", "PurchaseVoucher", "PurchaseVoucherItem",
