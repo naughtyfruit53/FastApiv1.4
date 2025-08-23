@@ -1273,6 +1273,7 @@ class InstallationJob(Base):
     # New relationships for tasks and completion
     tasks: Mapped[List["InstallationTask"]] = relationship("InstallationTask", back_populates="installation_job", cascade="all, delete-orphan", order_by="InstallationTask.sequence_order")
     completion_record: Mapped[Optional["CompletionRecord"]] = relationship("CompletionRecord", back_populates="installation_job", uselist=False, cascade="all, delete-orphan")
+    parts_used: Mapped[List["JobParts"]] = relationship("JobParts", back_populates="job", cascade="all, delete-orphan")
     
     __table_args__ = (
         # Unique job number per organization
@@ -1733,4 +1734,167 @@ class AnalyticsSummary(Base):
         Index('idx_analytics_summary_technician', 'technician_id'),
         Index('idx_analytics_summary_customer', 'customer_id'),
         Index('idx_analytics_summary_calculated_at', 'calculated_at'),
+    )
+
+
+# Inventory & Parts Management Models
+class InventoryTransaction(Base):
+    """
+    Model for tracking all inventory transactions (in/out/adjustments).
+    Provides audit trail for all inventory movements.
+    """
+    __tablename__ = "inventory_transactions"
+    
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    
+    # Multi-tenant field
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
+    
+    # Transaction details
+    product_id: Mapped[int] = mapped_column(Integer, ForeignKey("products.id"), nullable=False)
+    transaction_type: Mapped[str] = mapped_column(String, nullable=False)  # 'receipt', 'issue', 'adjustment', 'transfer'
+    quantity: Mapped[float] = mapped_column(Float, nullable=False)  # Positive for receipts, negative for issues
+    unit: Mapped[str] = mapped_column(String, nullable=False)
+    location: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    
+    # Reference information
+    reference_type: Mapped[Optional[str]] = mapped_column(String, nullable=True)  # 'job', 'purchase', 'manual', 'transfer'
+    reference_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)  # ID of job, purchase order, etc.
+    reference_number: Mapped[Optional[str]] = mapped_column(String, nullable=True)  # Human-readable reference
+    
+    # Transaction metadata
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    unit_cost: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    total_cost: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    
+    # Stock levels after transaction
+    stock_before: Mapped[float] = mapped_column(Float, nullable=False)
+    stock_after: Mapped[float] = mapped_column(Float, nullable=False)
+    
+    # User tracking
+    created_by_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)
+    
+    # Metadata
+    transaction_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    organization: Mapped["Organization"] = relationship("Organization")
+    product: Mapped["Product"] = relationship("Product")
+    created_by: Mapped[Optional["User"]] = relationship("User")
+    
+    __table_args__ = (
+        Index('idx_inventory_transaction_org_product', 'organization_id', 'product_id'),
+        Index('idx_inventory_transaction_org_type', 'organization_id', 'transaction_type'),
+        Index('idx_inventory_transaction_org_date', 'organization_id', 'transaction_date'),
+        Index('idx_inventory_transaction_reference', 'reference_type', 'reference_id'),
+        Index('idx_inventory_transaction_created_at', 'created_at'),
+    )
+
+
+class JobParts(Base):
+    """
+    Model for tracking parts/materials used in installation jobs.
+    Links job completion with inventory consumption.
+    """
+    __tablename__ = "job_parts"
+    
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    
+    # Multi-tenant field
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
+    
+    # Job and product references
+    job_id: Mapped[int] = mapped_column(Integer, ForeignKey("installation_jobs.id"), nullable=False)
+    product_id: Mapped[int] = mapped_column(Integer, ForeignKey("products.id"), nullable=False)
+    
+    # Quantity and usage details
+    quantity_required: Mapped[float] = mapped_column(Float, nullable=False)
+    quantity_used: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    unit: Mapped[str] = mapped_column(String, nullable=False)
+    
+    # Status tracking
+    status: Mapped[str] = mapped_column(String, nullable=False, default="planned")  # 'planned', 'allocated', 'used', 'returned'
+    
+    # Usage details
+    location_used: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    
+    # Cost tracking
+    unit_cost: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    total_cost: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    
+    # User tracking
+    allocated_by_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)
+    used_by_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)
+    
+    # Metadata
+    allocated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    used_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    organization: Mapped["Organization"] = relationship("Organization")
+    job: Mapped["InstallationJob"] = relationship("InstallationJob", back_populates="parts_used")
+    product: Mapped["Product"] = relationship("Product")
+    allocated_by: Mapped[Optional["User"]] = relationship("User", foreign_keys=[allocated_by_id])
+    used_by: Mapped[Optional["User"]] = relationship("User", foreign_keys=[used_by_id])
+    
+    __table_args__ = (
+        UniqueConstraint('job_id', 'product_id', name='uq_job_parts_job_product'),
+        Index('idx_job_parts_org_job', 'organization_id', 'job_id'),
+        Index('idx_job_parts_org_product', 'organization_id', 'product_id'),
+        Index('idx_job_parts_org_status', 'organization_id', 'status'),
+        Index('idx_job_parts_used_at', 'used_at'),
+    )
+
+
+class InventoryAlert(Base):
+    """
+    Model for tracking inventory alerts and notifications.
+    Manages low stock alerts and reorder notifications.
+    """
+    __tablename__ = "inventory_alerts"
+    
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    
+    # Multi-tenant field
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
+    
+    # Alert details
+    product_id: Mapped[int] = mapped_column(Integer, ForeignKey("products.id"), nullable=False)
+    alert_type: Mapped[str] = mapped_column(String, nullable=False)  # 'low_stock', 'out_of_stock', 'reorder'
+    current_stock: Mapped[float] = mapped_column(Float, nullable=False)
+    reorder_level: Mapped[float] = mapped_column(Float, nullable=False)
+    location: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    
+    # Alert status
+    status: Mapped[str] = mapped_column(String, nullable=False, default="active")  # 'active', 'acknowledged', 'resolved'
+    priority: Mapped[str] = mapped_column(String, nullable=False, default="medium")  # 'low', 'medium', 'high', 'critical'
+    
+    # Response tracking
+    acknowledged_by_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)
+    acknowledged_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    resolved_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    
+    # Additional details
+    message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    suggested_order_quantity: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    organization: Mapped["Organization"] = relationship("Organization")
+    product: Mapped["Product"] = relationship("Product")
+    acknowledged_by: Mapped[Optional["User"]] = relationship("User")
+    
+    __table_args__ = (
+        Index('idx_inventory_alert_org_product', 'organization_id', 'product_id'),
+        Index('idx_inventory_alert_org_status', 'organization_id', 'status'),
+        Index('idx_inventory_alert_org_priority', 'organization_id', 'priority'),
+        Index('idx_inventory_alert_type', 'alert_type'),
+        Index('idx_inventory_alert_created_at', 'created_at'),
     )

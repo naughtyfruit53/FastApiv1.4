@@ -69,6 +69,9 @@ from app.api.v1 import dispatch as v1_dispatch
 # Add import for feedback and service closure workflow
 from app.api.v1 import feedback as v1_feedback
 
+# Add import for inventory management
+from app.api.v1 import inventory as v1_inventory
+
 # Create FastAPI app
 app = FastAPI(
     title=config_settings.PROJECT_NAME,
@@ -263,6 +266,10 @@ logger.info("Dispatch router included successfully at prefix: /api/v1/dispatch")
 # Include feedback and service closure router
 app.include_router(v1_feedback.router, prefix="/api/v1/feedback", tags=["feedback-closure"])
 logger.info("Feedback and service closure router included successfully at prefix: /api/v1/feedback")
+
+# Include inventory management router
+app.include_router(v1_inventory.router, prefix="/api/v1/inventory", tags=["inventory-management"])
+logger.info("Inventory management router included successfully at prefix: /api/v1/inventory")
 
 # Include service analytics router
 from app.api.v1 import service_analytics as v1_service_analytics
