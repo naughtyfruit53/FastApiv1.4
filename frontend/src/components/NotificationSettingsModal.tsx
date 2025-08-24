@@ -40,8 +40,13 @@ import {
   getNotificationTemplates,
   createNotificationTemplate,
   updateNotificationTemplate,
+  getNotificationPreferences,
+  createNotificationPreference,
+  updateNotificationPreference,
   notificationQueryKeys,
   NotificationTemplate,
+  NotificationPreference,
+  NotificationPreferenceCreate,
   NOTIFICATION_CHANNELS,
   TEMPLATE_TYPES,
   getChannelDisplayName,
@@ -88,17 +93,7 @@ const NotificationSettingsModal: React.FC<NotificationSettingsModalProps> = ({
   // Fetch current preferences
   const { data: currentPreferences = [], isLoading } = useQuery({
     queryKey: ['notification-preferences', userType, userId],
-    queryFn: async () => {
-      // TODO: Implement API call to get user preferences
-      // For now, return mock data
-      return [
-        { notification_type: 'job_assignment', channel: 'email', is_enabled: true },
-        { notification_type: 'job_assignment', channel: 'in_app', is_enabled: true },
-        { notification_type: 'sla_breach', channel: 'email', is_enabled: true },
-        { notification_type: 'sla_breach', channel: 'sms', is_enabled: true },
-        { notification_type: 'marketing', channel: 'email', is_enabled: false },
-      ];
-    },
+    queryFn: () => getNotificationPreferences(userType, userId),
     enabled: open,
   });
 
@@ -126,18 +121,39 @@ const NotificationSettingsModal: React.FC<NotificationSettingsModalProps> = ({
   // Save preferences mutation
   const savePreferencesMutation = useMutation({
     mutationFn: async (prefs: PreferenceState) => {
-      // TODO: Implement API call to save preferences
-      console.log('Saving preferences:', prefs);
+      // Convert preferences to API calls
+      const promises: Promise<any>[] = [];
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      for (const [notificationType, channels] of Object.entries(prefs)) {
+        for (const [channel, isEnabled] of Object.entries(channels)) {
+          const preferenceData: NotificationPreferenceCreate = {
+            subject_type: userType,
+            subject_id: userId,
+            notification_type: notificationType,
+            channel,
+            is_enabled: isEnabled
+          };
+          
+          // Check if preference already exists and update or create
+          const existing = currentPreferences.find(
+            p => p.notification_type === notificationType && p.channel === channel
+          );
+          
+          if (existing) {
+            promises.push(updateNotificationPreference(existing.id, { is_enabled: isEnabled }));
+          } else {
+            promises.push(createNotificationPreference(preferenceData));
+          }
+        }
+      }
       
+      await Promise.all(promises);
       return { success: true };
     },
     onSuccess: () => {
       toast.success('Notification preferences saved successfully');
       setHasChanges(false);
-      queryClient.invalidateQueries({ queryKey: ['notification-preferences'] });
+      queryClient.invalidateQueries({ queryKey: notificationQueryKeys.preferencesFor(userType, userId) });
     },
     onError: (error) => {
       toast.error('Failed to save notification preferences');

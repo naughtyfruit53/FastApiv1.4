@@ -13,6 +13,7 @@ from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
 from app.core.tenant import TenantQueryMixin
 from app.core.org_restrictions import ensure_organization_context
+from app.core.rbac_dependencies import require_notification_admin
 from app.models.base import User, NotificationTemplate, NotificationLog
 from app.schemas.base import (
     NotificationTemplateCreate, NotificationTemplateUpdate, NotificationTemplateInDB,
@@ -58,7 +59,7 @@ async def get_notification_templates(
 async def create_notification_template(
     template_data: NotificationTemplateCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_notification_admin)
 ):
     """Create a new notification template."""
     
@@ -121,7 +122,7 @@ async def update_notification_template(
     template_id: int,
     update_data: NotificationTemplateUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_notification_admin)
 ):
     """Update a notification template."""
     
@@ -150,7 +151,7 @@ async def update_notification_template(
 async def delete_notification_template(
     template_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_notification_admin)
 ):
     """Delete (deactivate) a notification template."""
     

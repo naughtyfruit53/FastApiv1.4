@@ -24,6 +24,22 @@ from app.schemas.feedback import (
 
 logger = logging.getLogger(__name__)
 
+# Import notification service for event triggers
+def trigger_notification_event(db: Session, trigger_event: str, organization_id: int, context_data: dict):
+    """Helper function to trigger notification events"""
+    try:
+        from app.services.notification_service import NotificationService
+        notification_service = NotificationService()
+        notification_service.trigger_automated_notifications(
+            db=db,
+            trigger_event=trigger_event,
+            organization_id=organization_id,
+            context_data=context_data
+        )
+    except Exception as e:
+        logger.warning(f"Failed to trigger notification for event {trigger_event}: {e}")
+        # Don't fail the main operation if notifications fail
+
 
 class CustomerFeedbackService:
     """Service for customer feedback operations"""
@@ -120,6 +136,18 @@ class CustomerFeedbackService:
                 completion_record.feedback_request_sent = True
                 completion_record.feedback_request_sent_at = datetime.utcnow()
                 self.db.commit()
+                
+                # Trigger notification for feedback request
+                trigger_notification_event(
+                    db=self.db,
+                    trigger_event="feedback_request",
+                    organization_id=organization_id,
+                    context_data={
+                        "completion_record_id": completion_record.id,
+                        "installation_job_id": feedback_data.installation_job_id,
+                        "customer_id": feedback_data.customer_id
+                    }
+                )
         
         logger.info(f"Created customer feedback {feedback.id} for job {feedback_data.installation_job_id}")
         return feedback

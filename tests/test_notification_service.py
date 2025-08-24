@@ -97,6 +97,78 @@ class TestNotificationService:
         # Assert
         assert result == expected
     
+    def test_trigger_automated_notifications_job_assignment(self):
+        """Test automated notification triggering for job assignment."""
+        # Arrange
+        trigger_event = "job_assignment"
+        context_data = {
+            "dispatch_order_id": 123,
+            "order_number": "DO/24/00001",
+            "customer_id": 1,
+            "created_by_id": 2
+        }
+        
+        # Mock template query
+        mock_template = Mock()
+        mock_template.id = 1
+        mock_template.template_type = "job_assignment"
+        mock_template.channel = "email"
+        mock_template.subject = "Job assigned: {order_number}"
+        mock_template.body = "Your job {order_number} has been assigned"
+        mock_template.is_active = True
+        
+        with patch.object(self.mock_db, 'query') as mock_query:
+            mock_query.return_value.filter.return_value.all.return_value = [mock_template]
+            
+            # Mock notification sending
+            with patch.object(self.notification_service, 'send_notification', return_value=Mock()) as mock_send:
+                # Act
+                result = self.notification_service.trigger_automated_notifications(
+                    db=self.mock_db,
+                    trigger_event=trigger_event,
+                    organization_id=self.organization_id,
+                    context_data=context_data
+                )
+        
+        # Assert
+        assert isinstance(result, list)
+    
+    def test_trigger_automated_notifications_sla_breach(self):
+        """Test automated notification triggering for SLA breach."""
+        # Arrange
+        trigger_event = "sla_breach"
+        context_data = {
+            "tracking_id": 456,
+            "ticket_id": 789,
+            "breach_type": "response",
+            "breach_hours": 2.5
+        }
+        
+        # Mock template query
+        mock_template = Mock()
+        mock_template.id = 2
+        mock_template.template_type = "sla_breach"
+        mock_template.channel = "email"
+        mock_template.subject = "SLA Breach Alert"
+        mock_template.body = "SLA breach detected for ticket {ticket_id}"
+        mock_template.is_active = True
+        
+        with patch.object(self.mock_db, 'query') as mock_query:
+            mock_query.return_value.filter.return_value.all.return_value = [mock_template]
+            
+            # Mock notification sending
+            with patch.object(self.notification_service, 'send_notification', return_value=Mock()) as mock_send:
+                # Act
+                result = self.notification_service.trigger_automated_notifications(
+                    db=self.mock_db,
+                    trigger_event=trigger_event,
+                    organization_id=self.organization_id,
+                    context_data=context_data
+                )
+        
+        # Assert
+        assert isinstance(result, list)
+    
     def test_get_recipient_info_customer(self):
         """Test getting customer recipient information."""
         # Arrange

@@ -106,6 +106,10 @@ def _get_fallback_permissions(service_permission: str) -> List[str]:
         "crm_admin": [Permission.MANAGE_ORGANIZATIONS, Permission.SUPER_ADMIN],
         "crm_settings": [Permission.MANAGE_ORGANIZATIONS, Permission.ACCESS_ORG_SETTINGS],
         
+        # Notification management permissions
+        "notification_admin": [Permission.MANAGE_ORGANIZATIONS, Permission.SUPER_ADMIN],
+        "notification_manage": [Permission.MANAGE_USERS, Permission.CREATE_USERS],
+        
         # SLA management permissions
         "sla_create": [Permission.CREATE_USERS],
         "sla_read": [Permission.VIEW_USERS],
@@ -166,6 +170,10 @@ def require_service_permission(permission: str, organization_scoped: bool = True
 # Common service permission dependencies
 require_service_admin = RBACDependency("crm_admin")
 require_service_settings = RBACDependency("crm_settings")
+
+# Notification management dependencies 
+require_notification_admin = RBACDependency("notification_admin")
+require_notification_manage = RBACDependency("notification_manage")
 
 # Service management dependencies
 require_service_create = RBACDependency("service_create")
